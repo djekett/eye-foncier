@@ -1,13 +1,19 @@
 """
-EYE-FONCIER — Plateforme WebSIG de Transaction Foncière Sécurisée
+EYE-FONCIER — Plateforme WebSIG de Transaction Fonciere Securisee
 Settings
 """
+import logging
 import os
 import sys
 from pathlib import Path
 from datetime import timedelta
 
+from dotenv import load_dotenv
+
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+# Charger les variables d'environnement depuis .env
+load_dotenv(BASE_DIR / ".env")
 
 # ─── GDAL / GEOS — détection automatique ─────────────────────────────
 if sys.platform == "win32":
@@ -23,14 +29,19 @@ if sys.platform == "win32":
         "GEOS_LIBRARY_PATH", OSGEO4W + r"\bin\geos_c.dll"
     )
 
-SECRET_KEY = os.environ.get(
-    "DJANGO_SECRET_KEY",
-    "django-insecure-eyf0nc13r-d3v-k3y-ch4ng3-1n-pr0duct10n!",
-)
+SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "")
+if not SECRET_KEY:
+    if os.environ.get("DJANGO_DEBUG", "False").lower() in ("true", "1", "yes"):
+        SECRET_KEY = "django-insecure-dev-only-key-do-not-use-in-production"
+    else:
+        raise ValueError(
+            "DJANGO_SECRET_KEY est obligatoire en production. "
+            "Definissez-le dans le fichier .env ou les variables d'environnement."
+        )
 
-DEBUG = os.environ.get("DJANGO_DEBUG", "True").lower() in ("true", "1", "yes")
+DEBUG = os.environ.get("DJANGO_DEBUG", "False").lower() in ("true", "1", "yes")
 
-ALLOWED_HOSTS = os.environ.get("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1,0.0.0.0").split(",")
+ALLOWED_HOSTS = os.environ.get("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
 
 # ──────────────────────────────────────────────
 # Applications
@@ -60,6 +71,8 @@ INSTALLED_APPS = [
     "analysis.apps.AnalysisConfig",
     "content.apps.ContentConfig",
     "notifications.apps.NotificationsConfig",
+    # Documentation API
+    "drf_spectacular",
 ]
 
 # ──────────────────────────────────────────────
@@ -122,6 +135,11 @@ JAZZMIN_SETTINGS = {
         "auth.Group": "fas fa-users-cog",
         "notifications.Notification": "fas fa-bell",
         "notifications.NotificationPreference": "fas fa-sliders-h",
+        "transactions.Dispute": "fas fa-gavel",
+        "transactions.DisputeEvidence": "fas fa-folder-open",
+        "transactions.DisputeMessage": "fas fa-comments",
+        "transactions.Invoice": "fas fa-file-invoice",
+        "transactions.ContractSignature": "fas fa-signature",
     },
     "custom_links": {
         "parcelles": [{
@@ -227,11 +245,11 @@ WSGI_APPLICATION = "eyefoncier.wsgi.application"
 DATABASES = {
     "default": {
         "ENGINE": "django.contrib.gis.db.backends.postgis",
-        "NAME": "websig_foncier",
-        "USER": "postgres",
-        "PASSWORD": "Lynkwb123.",
-        "HOST": "localhost",
-        "PORT": "5432",
+        "NAME": os.environ.get("DATABASE_NAME", "websig_foncier"),
+        "USER": os.environ.get("DATABASE_USER", "postgres"),
+        "PASSWORD": os.environ.get("DATABASE_PASSWORD", ""),
+        "HOST": os.environ.get("DATABASE_HOST", "localhost"),
+        "PORT": os.environ.get("DATABASE_PORT", "5432"),
     }
 }
 
@@ -358,7 +376,11 @@ REST_FRAMEWORK = {
         "anon": "60/minute",
         "user": "200/minute",
     },
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
 }
+
+# drf-spectacular (Swagger / OpenAPI)
+from eyefoncier.swagger import SPECTACULAR_SETTINGS  # noqa: E402
 
 SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(hours=2),
@@ -483,6 +505,56 @@ TWILIO_CONTENT_SIDS = {}
 PLATFORM_URL = os.environ.get("PLATFORM_URL", "https://eye-foncier.com")
 
 # ──────────────────────────────────────────────
+# Sentry — Monitoring & Error Tracking
+# ──────────────────────────────────────────────
+SENTRY_DSN = os.environ.get("SENTRY_DSN", "")
+
+if SENTRY_DSN:
+    import sentry_sdk
+    from sentry_sdk.integrations.django import DjangoIntegration
+    from sentry_sdk.integrations.celery import CeleryIntegration
+    from sentry_sdk.integrations.redis import RedisIntegration
+    from sentry_sdk.integrations.logging import LoggingIntegration
+
+    sentry_sdk.init(
+        dsn=SENTRY_DSN,
+        integrations=[
+            DjangoIntegration(
+                transaction_style="url",
+                middleware_spans=True,
+            ),
+            CeleryIntegration(monitor_beat_tasks=True),
+            RedisIntegration(),
+            LoggingIntegration(level=logging.INFO, event_level=logging.ERROR),
+        ],
+        environment=os.environ.get("SENTRY_ENVIRONMENT", "development"),
+        release=os.environ.get("SENTRY_RELEASE", "eye-foncier@1.0.0"),
+        # Envoyer 20% des transactions en production pour les performances
+        traces_sample_rate=float(os.environ.get("SENTRY_TRACES_SAMPLE_RATE", "0.2")),
+        # Profiling (optionnel)
+        profiles_sample_rate=float(os.environ.get("SENTRY_PROFILES_SAMPLE_RATE", "0.1")),
+        # Ne pas envoyer les donnees sensibles
+        send_default_pii=False,
+        # Filtrer les erreurs non pertinentes
+        before_send=lambda event, hint: _sentry_before_send(event, hint),
+    )
+
+
+def _sentry_before_send(event, hint):
+    """Filtre les erreurs avant envoi a Sentry."""
+    # Ignorer les erreurs 404 (trop de bruit)
+    if "logger" in event and event.get("logger") == "django.security.DisallowedHost":
+        return None
+    # Ignorer les erreurs de throttling
+    exc_info = hint.get("exc_info")
+    if exc_info:
+        exc_type = exc_info[0]
+        if exc_type and exc_type.__name__ in ("Throttled", "PermissionDenied"):
+            return None
+    return event
+
+
+# ──────────────────────────────────────────────
 # Celery — File d'attente asynchrone
 # ──────────────────────────────────────────────
 CELERY_BROKER_URL = os.environ.get("CELERY_BROKER_URL", REDIS_URL or "redis://localhost:6379/1")
@@ -503,6 +575,23 @@ CELERY_BEAT_SCHEDULE = {
     },
     "cleanup-old-logs": {
         "task": "notifications.tasks.cleanup_old_logs",
+        "schedule": 86400.0,  # Une fois par jour
+    },
+    # ── Transactions — Timeouts & Expirations ──
+    "check-escrow-timeouts": {
+        "task": "transactions.tasks.check_escrow_timeouts",
+        "schedule": 3600.0,  # Toutes les heures
+    },
+    "check-dispute-deadlines": {
+        "task": "transactions.tasks.check_dispute_deadlines",
+        "schedule": 3600.0,  # Toutes les heures
+    },
+    "check-cotation-expiration": {
+        "task": "transactions.tasks.check_cotation_expiration",
+        "schedule": 3600.0,  # Toutes les heures
+    },
+    "daily-transaction-report": {
+        "task": "transactions.tasks.generate_daily_transaction_report",
         "schedule": 86400.0,  # Une fois par jour
     },
 }

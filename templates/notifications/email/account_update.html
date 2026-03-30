@@ -1,0 +1,37 @@
+{% extends "notifications/email_base.html" %}
+{% block email_content %}
+<tr>
+    <td style="padding:32px">
+        <h2 style="color:#0B3D2E;margin:0 0 16px;font-size:18px;font-weight:700">
+            {{ title }}
+        </h2>
+
+        <p style="color:#374151;font-size:15px;line-height:1.6;margin:0 0 24px">
+            Bonjour {{ recipient.first_name|default:"cher utilisateur" }},<br>
+            {{ message }}
+        </p>
+
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f1f5f9;border-radius:8px;margin:0 0 24px;border:1px solid #e2e8f0">
+            <tr>
+                <td style="padding:16px">
+                    <p style="color:#475569;font-size:13px;margin:0;line-height:1.6">
+                        Si vous n'etes pas a l'origine de cette modification, veuillez securiser votre compte immediatement en modifiant votre mot de passe.
+                    </p>
+                </td>
+            </tr>
+        </table>
+
+        {% if data.action_url %}
+        <table role="presentation" cellspacing="0" cellpadding="0" style="margin:0 auto">
+            <tr>
+                <td style="background:#475569;border-radius:8px;padding:12px 28px">
+                    <a href="{{ data.action_url }}" style="color:#ffffff;text-decoration:none;font-weight:700;font-size:14px">
+                        Acceder a mon compte
+                    </a>
+                </td>
+            </tr>
+        </table>
+        {% endif %}
+    </td>
+</tr>
+{% endblock %}

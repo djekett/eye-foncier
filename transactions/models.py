@@ -629,3 +629,6 @@ class Invoice(models.Model):
 
 # ── Import des modèles Cotation / Boutique / Vérification ──
 from .cotation_models import Cotation, Boutique, VerificationRequest  # noqa: F401, E402
+
+# ── Import des modèles Litiges ──
+from .dispute_models import Dispute, DisputeEvidence, DisputeMessage  # noqa: F401, E402

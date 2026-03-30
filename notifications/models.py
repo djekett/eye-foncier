@@ -18,6 +18,7 @@ class Notification(models.Model):
         PAYMENT_REMINDER = "payment_reminder", _("Rappel de paiement")
         ESCROW_UPDATE = "escrow_update", _("Mise à jour séquestre")
         SCORING_UPDATE = "scoring_update", _("Mise à jour scoring")
+        NEW_ORDER = "new_order", _("Nouvelle commande")
         # Parcelles
         PARCELLE_PUBLISHED = "parcelle_published", _("Parcelle publiée")
         PARCELLE_VALIDATED = "parcelle_validated", _("Parcelle validée")
@@ -36,6 +37,9 @@ class Notification(models.Model):
         DOCUMENT_READY = "document_ready", _("Document disponible")
         ACCOUNT_UPDATE = "account_update", _("Mise à jour compte")
         WELCOME = "welcome", _("Bienvenue")
+        # Boutique
+        BOUTIQUE_ACTIVATED = "boutique_activated", _("Boutique activée")
+        BOUTIQUE_UPDATE = "boutique_update", _("Mise à jour boutique")
         # Système
         SYSTEM = "system", _("Système")
 

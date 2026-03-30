@@ -98,13 +98,29 @@ class BuyerProfileAPIView(generics.RetrieveUpdateAPIView):
 
 
 class ParcelleMatchesAPIView(generics.ListAPIView):
-    """Buyers matchés pour une parcelle (vue vendeur)."""
+    """Buyers matches pour une parcelle (vue vendeur uniquement)."""
 
     serializer_class = MatchScoreSerializer
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
+        from parcelles.models import Parcelle
+        from rest_framework.exceptions import PermissionDenied
+
         parcelle_pk = self.kwargs["pk"]
+
+        # Verification : seul le proprietaire peut voir les acheteurs matches
+        try:
+            parcelle = Parcelle.objects.get(pk=parcelle_pk)
+        except Parcelle.DoesNotExist:
+            return MatchScore.objects.none()
+
+        user = self.request.user
+        if parcelle.owner != user and not user.is_admin_role:
+            raise PermissionDenied(
+                "Vous n'avez pas acces aux correspondances de cette parcelle."
+            )
+
         return MatchScore.objects.filter(
             parcelle_id=parcelle_pk,
             final_score__gte=50,
