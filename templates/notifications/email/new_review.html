@@ -1,0 +1,49 @@
+{% extends "notifications/email_base.html" %}
+{% block email_content %}
+<tr>
+    <td style="padding:32px">
+        <h2 style="color:#0B3D2E;margin:0 0 16px;font-size:18px;font-weight:700">
+            {{ title }}
+        </h2>
+
+        <p style="color:#374151;font-size:15px;line-height:1.6;margin:0 0 20px">
+            Bonjour {{ recipient.first_name|default:"cher utilisateur" }},<br>
+            {{ message }}
+        </p>
+
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#fefce8;border-radius:8px;margin:0 0 24px;border:1px solid #fde68a">
+            <tr>
+                <td style="padding:16px">
+                    {% if data.user_name %}
+                    <p style="color:#374151;font-size:13px;margin:0 0 6px">
+                        <strong style="color:#92400e">De :</strong> {{ data.user_name }}
+                    </p>
+                    {% endif %}
+                    {% if data.parcelle_lot %}
+                    <p style="color:#374151;font-size:13px;margin:0 0 6px">
+                        <strong style="color:#92400e">Parcelle :</strong> Lot {{ data.parcelle_lot }}
+                    </p>
+                    {% endif %}
+                    {% if data.reaction_type %}
+                    <p style="color:#374151;font-size:13px;margin:0">
+                        <strong style="color:#92400e">Type :</strong> {{ data.reaction_type }}
+                    </p>
+                    {% endif %}
+                </td>
+            </tr>
+        </table>
+
+        {% if data.action_url %}
+        <table role="presentation" cellspacing="0" cellpadding="0" style="margin:0 auto">
+            <tr>
+                <td style="background:#d97706;border-radius:8px;padding:12px 28px">
+                    <a href="{{ data.action_url }}" style="color:#ffffff;text-decoration:none;font-weight:700;font-size:14px">
+                        Voir la parcelle
+                    </a>
+                </td>
+            </tr>
+        </table>
+        {% endif %}
+    </td>
+</tr>
+{% endblock %}

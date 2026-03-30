@@ -23,25 +23,27 @@ logger = logging.getLogger("transactions")
 
 @acheteur_required
 def reserve_parcelle_view(request, parcelle_pk):
-    """Réservation d'une parcelle par un acheteur.
+    """Reservation d'une parcelle par un acheteur.
 
-    PREREQUIS : Cotation de 10 % payée et validée.
-    « Ne réserve pas une parcelle qui veut, mais qui peut. »
+    PREREQUIS : Cotation de 10 % payee et validee.
+    « Ne reserve pas une parcelle qui veut, mais qui peut. »
     """
+    from django.db import transaction as db_transaction
+
     parcelle = get_object_or_404(Parcelle, pk=parcelle_pk)
 
     if parcelle.status != Parcelle.Status.DISPONIBLE:
         messages.warning(request, "Cette parcelle n'est plus disponible.")
         return redirect("parcelles:detail", pk=parcelle_pk)
 
-    # ── GARDE COTATION : vérifier qu'une cotation validée existe ──
+    # -- GARDE COTATION : verifier qu'une cotation validee existe --
     from .cotation_service import check_cotation_access
     cotation = check_cotation_access(request.user, parcelle)
     if not cotation or not cotation.is_valid:
         messages.warning(
             request,
             "Vous devez d'abord payer la cotation (10 % du prix) "
-            "avant de pouvoir réserver cette parcelle."
+            "avant de pouvoir reserver cette parcelle."
         )
         return redirect("transactions:cotation_create", parcelle_pk=parcelle_pk)
 
@@ -52,46 +54,62 @@ def reserve_parcelle_view(request, parcelle_pk):
 
             use_escrow = form.cleaned_data.get("use_escrow", False)
 
-            # Montant = prix total - cotation déjà payée
-            remaining_amount = parcelle.price - cotation.amount
+            try:
+                with db_transaction.atomic():
+                    # Verrouillage optimiste : re-lecture avec lock
+                    parcelle_locked = (
+                        Parcelle.objects
+                        .select_for_update(skip_locked=False)
+                        .get(pk=parcelle_pk)
+                    )
+                    if parcelle_locked.status != Parcelle.Status.DISPONIBLE:
+                        messages.warning(
+                            request,
+                            "Cette parcelle vient d'etre reservee par un autre acheteur."
+                        )
+                        return redirect("parcelles:detail", pk=parcelle_pk)
 
-            tx = Transaction.objects.create(
-                parcelle=parcelle,
-                buyer=request.user,
-                seller=parcelle.owner,
-                amount=parcelle.price,
-                status=Transaction.Status.PENDING,
-                payment_method="escrow" if use_escrow else "",
-                notes=form.cleaned_data.get("notes", ""),
-            )
+                    tx = Transaction.objects.create(
+                        parcelle=parcelle_locked,
+                        buyer=request.user,
+                        seller=parcelle_locked.owner,
+                        amount=parcelle_locked.price,
+                        status=Transaction.Status.PENDING,
+                        payment_method="escrow" if use_escrow else "",
+                        notes=form.cleaned_data.get("notes", ""),
+                    )
 
-            # Lier la cotation à la transaction
-            cotation.transaction = tx
-            cotation.save(update_fields=["transaction"])
+                    # Lier la cotation a la transaction
+                    cotation.transaction = tx
+                    cotation.save(update_fields=["transaction"])
 
-            # Demande d'approbation au vendeur
-            request_approval(tx, "reserve", request.user)
+                # Demande d'approbation au vendeur (hors transaction pour eviter deadlock)
+                request_approval(tx, "reserve", request.user)
 
-            AccessLog.objects.create(
-                user=request.user,
-                action=AccessLog.ActionType.RESERVATION,
-                resource_type="Parcelle",
-                resource_id=str(parcelle.pk),
-                details={
-                    "transaction": str(tx.pk),
-                    "amount": str(tx.amount),
-                    "cotation": str(cotation.pk),
-                    "cotation_amount": str(cotation.amount),
-                },
-            )
+                AccessLog.objects.create(
+                    user=request.user,
+                    action=AccessLog.ActionType.RESERVATION,
+                    resource_type="Parcelle",
+                    resource_id=str(parcelle.pk),
+                    details={
+                        "transaction": str(tx.pk),
+                        "amount": str(tx.amount),
+                        "cotation": str(cotation.pk),
+                        "cotation_amount": str(cotation.amount),
+                    },
+                )
 
-            messages.success(
-                request,
-                f"Demande de réservation envoyée au vendeur de {parcelle.lot_number}. "
-                f"Référence : {tx.reference}. "
-                f"Cotation de {cotation.amount:,.0f} FCFA déduite du prix total.",
-            )
-            return redirect("transactions:detail", pk=tx.pk)
+                messages.success(
+                    request,
+                    f"Demande de reservation envoyee au vendeur de {parcelle.lot_number}. "
+                    f"Reference : {tx.reference}. "
+                    f"Cotation de {cotation.amount:,.0f} FCFA deduite du prix total.",
+                )
+                return redirect("transactions:detail", pk=tx.pk)
+
+            except Exception as e:
+                logger.error("Erreur reservation parcelle %s: %s", parcelle_pk, e)
+                messages.error(request, "Une erreur est survenue lors de la reservation.")
     else:
         form = ReservationForm()
 
