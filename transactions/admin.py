@@ -260,3 +260,6 @@ class TransactionApprovalAdmin(admin.ModelAdmin):
 
 # ── Import des admins Cotation / Boutique / Vérification ──
 from .cotation_admin import *  # noqa: F401, F403
+
+# ── Import des admins Litiges ──
+from .dispute_admin import *  # noqa: F401, F403

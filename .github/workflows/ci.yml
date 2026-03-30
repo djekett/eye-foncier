@@ -1,0 +1,260 @@
+# ============================================
+# EYE-FONCIER — Pipeline CI/CD
+# Tests, Linting, Securite, Deploy
+# ============================================
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+env:
+  PYTHON_VERSION: "3.11"
+  DJANGO_SETTINGS_MODULE: eyefoncier.settings
+  DJANGO_DEBUG: "True"
+  DJANGO_SECRET_KEY: "ci-test-secret-key-not-for-production"
+  DATABASE_NAME: test_eyefoncier
+  DATABASE_USER: postgres
+  DATABASE_PASSWORD: postgres
+  DATABASE_HOST: localhost
+  DATABASE_PORT: "5432"
+
+jobs:
+  # ──────────────────────────────────────────
+  # Job 1 : Lint & Format
+  # ──────────────────────────────────────────
+  lint:
+    name: Lint & Format
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+
+      - name: Install linters
+        run: pip install flake8 isort black
+
+      - name: Flake8 (erreurs critiques)
+        run: |
+          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics \
+            --exclude=migrations,staticfiles,.venv,node_modules
+
+      - name: Flake8 (warnings)
+        run: |
+          flake8 . --count --max-line-length=120 --statistics \
+            --exclude=migrations,staticfiles,.venv,node_modules \
+            --ignore=E501,W503,E203 \
+            --exit-zero
+
+      - name: isort (check import order)
+        run: |
+          isort --check-only --diff --profile black \
+            --skip migrations --skip staticfiles --skip .venv .
+
+  # ──────────────────────────────────────────
+  # Job 2 : Security Check
+  # ──────────────────────────────────────────
+  security:
+    name: Security Audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+
+      - name: Install security tools
+        run: pip install safety bandit
+
+      - name: Safety (dependency vulnerabilities)
+        run: safety check -r requirements.txt --output text || true
+
+      - name: Bandit (code security scan)
+        run: |
+          bandit -r . -x ./migrations,./staticfiles,./.venv,./tests \
+            -ll --format txt || true
+
+      - name: Check for hardcoded secrets
+        run: |
+          echo "=== Scanning for hardcoded secrets ==="
+          # Chercher des patterns suspects (mots de passe en dur, cles API)
+          if grep -rn --include="*.py" -E "(PASSWORD|SECRET|API_KEY)\s*=\s*['\"][^'\"]*[a-zA-Z0-9]{8,}" \
+             --exclude-dir=migrations --exclude-dir=.venv --exclude-dir=staticfiles \
+             --exclude="*.pyc" . | grep -v "os.environ" | grep -v "settings\." | grep -v "#"; then
+            echo "WARNING: Potential hardcoded secrets found!"
+            exit 1
+          else
+            echo "No hardcoded secrets detected."
+          fi
+
+  # ──────────────────────────────────────────
+  # Job 3 : Tests Django + PostGIS
+  # ──────────────────────────────────────────
+  test:
+    name: Tests Django
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgis/postgis:16-3.4
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: test_eyefoncier
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+
+      - name: Install system dependencies (GDAL/GEOS)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gdal-bin libgdal-dev libgeos-dev libproj-dev
+
+      - name: Install Python dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest pytest-django pytest-cov
+
+      - name: Run migrations
+        env:
+          REDIS_URL: redis://localhost:6379/1
+        run: python manage.py migrate --noinput
+
+      - name: Run tests with coverage
+        env:
+          REDIS_URL: redis://localhost:6379/1
+        run: |
+          pytest --cov=. --cov-report=xml --cov-report=term-missing \
+            --ignore=staticfiles --ignore=.venv -v
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage.xml
+
+  # ──────────────────────────────────────────
+  # Job 4 : Django System Checks
+  # ──────────────────────────────────────────
+  django-checks:
+    name: Django Checks
+    runs-on: ubuntu-latest
+    needs: [lint]
+    services:
+      postgres:
+        image: postgis/postgis:16-3.4
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: test_eyefoncier
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gdal-bin libgdal-dev libgeos-dev libproj-dev
+
+      - name: Install Python dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Django check
+        run: python manage.py check --deploy 2>&1 || true
+
+      - name: Check migrations
+        run: python manage.py makemigrations --check --dry-run
+
+  # ──────────────────────────────────────────
+  # Job 5 : Deploy (staging / production)
+  # ──────────────────────────────────────────
+  deploy-staging:
+    name: Deploy Staging
+    runs-on: ubuntu-latest
+    needs: [test, security, django-checks]
+    if: github.ref == 'refs/heads/develop' && github.event_name == 'push'
+    environment:
+      name: staging
+      url: https://staging.eye-foncier.com
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy to staging server
+        env:
+          DEPLOY_KEY: ${{ secrets.STAGING_DEPLOY_KEY }}
+          STAGING_HOST: ${{ secrets.STAGING_HOST }}
+        run: |
+          echo "Deploying to staging..."
+          # SSH deploy script (a configurer selon l'hebergeur)
+          # ssh -i $DEPLOY_KEY user@$STAGING_HOST "cd /app && git pull && ./deploy.sh"
+          echo "Staging deployment placeholder - configure with your hosting provider"
+
+  deploy-production:
+    name: Deploy Production
+    runs-on: ubuntu-latest
+    needs: [test, security, django-checks]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    environment:
+      name: production
+      url: https://eye-foncier.com
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy to production
+        env:
+          DEPLOY_KEY: ${{ secrets.PRODUCTION_DEPLOY_KEY }}
+          PRODUCTION_HOST: ${{ secrets.PRODUCTION_HOST }}
+        run: |
+          echo "Deploying to production..."
+          # SSH deploy + migrations + collectstatic + restart
+          echo "Production deployment placeholder - configure with your hosting provider"
