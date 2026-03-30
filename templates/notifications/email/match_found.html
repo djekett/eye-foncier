@@ -1,0 +1,64 @@
+{% extends "notifications/email_base.html" %}
+{% block email_content %}
+<tr>
+    <td style="padding:32px">
+        <table role="presentation" cellspacing="0" cellpadding="0" style="margin:0 0 20px">
+            <tr>
+                <td style="background:#f3e8ff;border-radius:50%;width:48px;height:48px;text-align:center;vertical-align:middle">
+                    <span style="font-size:24px">&#127919;</span>
+                </td>
+                <td style="padding-left:16px">
+                    <h2 style="color:#7c3aed;margin:0;font-size:20px;font-weight:700">
+                        Correspondance trouvee !
+                    </h2>
+                </td>
+            </tr>
+        </table>
+
+        <p style="color:#374151;font-size:15px;line-height:1.6;margin:0 0 24px">
+            Bonjour {{ recipient.first_name|default:"cher utilisateur" }},<br>
+            {{ message }}
+        </p>
+
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#faf5ff;border-radius:12px;margin:0 0 24px;border:1px solid #e9d5ff">
+            <tr>
+                <td style="padding:20px">
+                    {% if data.parcelle_lot %}
+                    <p style="color:#374151;font-size:14px;margin:0 0 8px">
+                        <strong style="color:#6b21a8">Parcelle :</strong> Lot {{ data.parcelle_lot }}{% if data.parcelle_title %} — {{ data.parcelle_title }}{% endif %}
+                    </p>
+                    {% endif %}
+                    {% if data.score %}
+                    <p style="color:#374151;font-size:14px;margin:0 0 8px">
+                        <strong style="color:#6b21a8">Score de compatibilite :</strong>
+                        <span style="color:#7c3aed;font-weight:700;font-size:16px">{{ data.score }}%</span>
+                    </p>
+                    {% endif %}
+                    {% if data.price %}
+                    <p style="color:#374151;font-size:14px;margin:0 0 8px">
+                        <strong style="color:#6b21a8">Prix :</strong> {{ data.price }} FCFA
+                    </p>
+                    {% endif %}
+                    {% if data.surface %}
+                    <p style="color:#374151;font-size:14px;margin:0">
+                        <strong style="color:#6b21a8">Surface :</strong> {{ data.surface }} m2
+                    </p>
+                    {% endif %}
+                </td>
+            </tr>
+        </table>
+
+        {% if data.action_url %}
+        <table role="presentation" cellspacing="0" cellpadding="0" style="margin:0 auto">
+            <tr>
+                <td style="background:#7c3aed;border-radius:8px;padding:14px 32px">
+                    <a href="{{ data.action_url }}" style="color:#ffffff;text-decoration:none;font-weight:700;font-size:15px">
+                        Voir la parcelle
+                    </a>
+                </td>
+            </tr>
+        </table>
+        {% endif %}
+    </td>
+</tr>
+{% endblock %}

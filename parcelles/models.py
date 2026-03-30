@@ -1,11 +1,40 @@
 """
-Modèles GIS — EYE-FONCIER
-Zone > Îlot > Parcelle avec géométries PostGIS
+Modeles GIS — EYE-FONCIER
+Zone > Ilot > Parcelle avec geometries PostGIS
 """
 import uuid
 from django.contrib.gis.db import models
+from django.db.models import Count, Q, Subquery, OuterRef
 from django.utils.translation import gettext_lazy as _
 from django.conf import settings
+
+
+class ParcelleQuerySet(models.QuerySet):
+    """QuerySet optimise pour eviter les N+1 queries."""
+
+    def with_likes_count(self):
+        """Annote le nombre de likes (evite N+1 sur likes_count property)."""
+        return self.annotate(
+            _likes_count=Count(
+                "reactions",
+                filter=Q(reactions__reaction_type="like"),
+            )
+        )
+
+    def with_main_image(self):
+        """Prefetch la premiere image (evite N+1 sur main_image property)."""
+        from django.db.models import Prefetch
+        return self.prefetch_related(
+            Prefetch(
+                "medias",
+                queryset=ParcelleMedia.objects.filter(media_type="image").order_by("created_at"),
+                to_attr="_prefetched_images",
+            )
+        )
+
+    def optimized(self):
+        """Applique toutes les optimisations standard."""
+        return self.with_likes_count().with_main_image().select_related("zone", "owner")
 
 
 class Zone(models.Model):
@@ -196,17 +225,52 @@ class Parcelle(models.Model):
             models.Index(fields=["zone"]),
             models.Index(fields=["price"]),
             models.Index(fields=["surface_m2"]),
+            models.Index(fields=["owner"]),
+            models.Index(fields=["owner", "-created_at"]),
         ]
 
     def __str__(self):
         return f"Lot {self.lot_number} — {self.title}"
 
+    def clean(self):
+        """Validation metier avant sauvegarde."""
+        from django.core.exceptions import ValidationError
+
+        if self.geometry:
+            # Valider que la geometrie est correcte (pas d'auto-intersection)
+            if not self.geometry.valid:
+                # Tenter de reparer automatiquement
+                repaired = self.geometry.buffer(0)
+                if repaired.valid:
+                    self.geometry = repaired
+                else:
+                    raise ValidationError({
+                        "geometry": "La geometrie est invalide (auto-intersection detectee). "
+                                    "Veuillez corriger les contours de la parcelle."
+                    })
+
+            # Surface minimum (1 m2)
+            if self.geometry.area == 0:
+                raise ValidationError({
+                    "geometry": "La geometrie a une surface nulle. "
+                                "Verifiez les coordonnees."
+                })
+
+        if self.price is not None and self.price < 0:
+            raise ValidationError({"price": "Le prix ne peut pas etre negatif."})
+
+        if self.surface_m2 is not None and self.surface_m2 <= 0:
+            raise ValidationError({"surface_m2": "La surface doit etre superieure a zero."})
+
     def save(self, *args, **kwargs):
-        # Auto-calcul du prix au m²
+        # Auto-calcul du prix au m2
         if self.price and self.surface_m2 and self.surface_m2 > 0:
             self.price_per_m2 = int(self.price / self.surface_m2)
-        # Auto-calcul du centroïde
+        # Auto-calcul du centroide
         if self.geometry:
+            # Reparer silencieusement les geometries invalides
+            if not self.geometry.valid:
+                self.geometry = self.geometry.buffer(0)
             self.centroid = self.geometry.centroid
         # Badge de confiance
         if self.title_holder_name and self.owner:
@@ -262,12 +326,22 @@ class Parcelle(models.Model):
             return "Faible"
         return "Incomplet"
 
+    # Manager optimise
+    objects = ParcelleQuerySet.as_manager()
+
     @property
     def likes_count(self):
+        """Nombre de likes. Utilise l'annotation _likes_count si disponible."""
+        if hasattr(self, "_likes_count"):
+            return self._likes_count
         return self.reactions.filter(reaction_type="like").count()
 
     @property
     def main_image(self):
+        """URL de l'image principale. Utilise le prefetch si disponible."""
+        if hasattr(self, "_prefetched_images"):
+            images = self._prefetched_images
+            return images[0].file.url if images else None
         img = self.medias.filter(media_type="image").first()
         return img.file.url if img else None
 

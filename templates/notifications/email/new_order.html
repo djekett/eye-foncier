@@ -1,0 +1,82 @@
+{% extends "notifications/email_base.html" %}
+{% block email_content %}
+<tr>
+    <td style="padding:32px">
+        <table role="presentation" cellspacing="0" cellpadding="0" style="margin:0 0 20px">
+            <tr>
+                <td style="background:#e0f2fe;border-radius:50%;width:48px;height:48px;text-align:center;vertical-align:middle">
+                    <span style="font-size:24px">&#128230;</span>
+                </td>
+                <td style="padding-left:16px">
+                    <h2 style="color:#2563eb;margin:0;font-size:20px;font-weight:700">
+                        Nouvelle reservation
+                    </h2>
+                </td>
+            </tr>
+        </table>
+
+        <p style="color:#374151;font-size:15px;line-height:1.6;margin:0 0 24px">
+            Bonjour {{ recipient.first_name|default:"cher utilisateur" }},<br>
+            {{ message }}
+        </p>
+
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#eff6ff;border-radius:12px;margin:0 0 24px;border:1px solid #bfdbfe">
+            <tr>
+                <td style="padding:20px">
+                    <p style="color:#0B3D2E;font-size:14px;font-weight:700;margin:0 0 12px;text-transform:uppercase;letter-spacing:0.5px">
+                        Details de la reservation
+                    </p>
+                    {% if data.reference %}
+                    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin-bottom:8px">
+                        <tr>
+                            <td style="color:#6b7280;font-size:13px;padding:4px 0" width="40%">Reference</td>
+                            <td style="color:#1e293b;font-size:13px;font-weight:600;padding:4px 0;font-family:monospace">{{ data.reference }}</td>
+                        </tr>
+                    </table>
+                    {% endif %}
+                    {% if data.parcelle_lot %}
+                    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin-bottom:8px">
+                        <tr>
+                            <td style="color:#6b7280;font-size:13px;padding:4px 0" width="40%">Parcelle</td>
+                            <td style="color:#1e293b;font-size:13px;font-weight:600;padding:4px 0">Lot {{ data.parcelle_lot }}</td>
+                        </tr>
+                    </table>
+                    {% endif %}
+                    {% if data.amount %}
+                    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin-bottom:8px">
+                        <tr>
+                            <td style="color:#6b7280;font-size:13px;padding:4px 0" width="40%">Montant</td>
+                            <td style="color:#2563eb;font-size:16px;font-weight:700;padding:4px 0">{{ data.amount }} FCFA</td>
+                        </tr>
+                    </table>
+                    {% endif %}
+                    {% if data.buyer_name %}
+                    <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+                        <tr>
+                            <td style="color:#6b7280;font-size:13px;padding:4px 0" width="40%">Acheteur</td>
+                            <td style="color:#1e293b;font-size:13px;font-weight:600;padding:4px 0">{{ data.buyer_name }}</td>
+                        </tr>
+                    </table>
+                    {% endif %}
+                </td>
+            </tr>
+        </table>
+
+        <p style="color:#6b7280;font-size:13px;line-height:1.5;margin:0 0 24px">
+            Connectez-vous a votre tableau de bord pour gerer cette reservation et suivre l'avancement de la transaction.
+        </p>
+
+        {% if data.action_url %}
+        <table role="presentation" cellspacing="0" cellpadding="0" style="margin:0 auto">
+            <tr>
+                <td style="background:#2563eb;border-radius:8px;padding:14px 32px">
+                    <a href="{{ data.action_url }}" style="color:#ffffff;text-decoration:none;font-weight:700;font-size:15px">
+                        Gerer la reservation
+                    </a>
+                </td>
+            </tr>
+        </table>
+        {% endif %}
+    </td>
+</tr>
+{% endblock %}

@@ -25,36 +25,43 @@ logger = logging.getLogger("cotation")
 # COTATION D'ACHAT (CLIENT → PARCELLE)
 # ═══════════════════════════════════════════════════════════
 
+@db_transaction.atomic
 def create_achat_cotation(buyer, parcelle):
     """
-    Crée une cotation d'achat (10 % du prix de la parcelle).
+    Cree une cotation d'achat (10 % du prix de la parcelle).
+    Protege contre les doubles cotations via select_for_update.
 
     Args:
         buyer: User — l'acheteur
-        parcelle: Parcelle — la parcelle visée
+        parcelle: Parcelle — la parcelle visee
 
     Returns:
         Cotation
 
     Raises:
         ValueError — si la parcelle n'est pas disponible ou si
-                      l'acheteur a déjà une cotation active
+                      l'acheteur a deja une cotation active
     """
-    # Vérifications métier
+    # Verifications metier
     if parcelle.status != "disponible":
         raise ValueError("Cette parcelle n'est plus disponible.")
 
     if not buyer.is_acheteur:
         raise ValueError("Seuls les acheteurs peuvent payer une cotation d'achat.")
 
-    # Vérifier qu'il n'y a pas déjà une cotation active
-    existing = Cotation.objects.filter(
-        payer=buyer,
-        parcelle=parcelle,
-        status__in=[Cotation.Status.PAID, Cotation.Status.VALIDATED],
-    ).exists()
+    # Verifier qu'il n'y a pas deja une cotation active (avec verrou)
+    existing = (
+        Cotation.objects
+        .select_for_update()
+        .filter(
+            payer=buyer,
+            parcelle=parcelle,
+            status__in=[Cotation.Status.PAID, Cotation.Status.VALIDATED],
+        )
+        .exists()
+    )
     if existing:
-        raise ValueError("Vous avez déjà une cotation active pour cette parcelle.")
+        raise ValueError("Vous avez deja une cotation active pour cette parcelle.")
 
     # Calcul du montant (10 %)
     amount = Cotation.compute_cotation_amount(parcelle.price)
@@ -69,7 +76,7 @@ def create_achat_cotation(buyer, parcelle):
     )
 
     logger.info(
-        "Cotation d'achat créée : %s par %s pour parcelle %s — %s FCFA",
+        "Cotation d'achat creee : %s par %s pour parcelle %s — %s FCFA",
         cotation.reference, buyer, parcelle.lot_number, amount,
     )
     return cotation

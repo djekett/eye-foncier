@@ -1,5 +1,5 @@
 """
-EYE-FONCIER — Plateforme WebSIG de Transaction Foncière Sécurisée
+EYE-FONCIER — Plateforme WebSIG de Transaction Fonciere Securisee
 Settings
 """
 import os
@@ -7,7 +7,12 @@ import sys
 from pathlib import Path
 from datetime import timedelta
 
+from dotenv import load_dotenv
+
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+# Charger les variables d'environnement depuis .env
+load_dotenv(BASE_DIR / ".env")
 
 # ─── GDAL / GEOS — détection automatique ─────────────────────────────
 if sys.platform == "win32":
@@ -23,14 +28,19 @@ if sys.platform == "win32":
         "GEOS_LIBRARY_PATH", OSGEO4W + r"\bin\geos_c.dll"
     )
 
-SECRET_KEY = os.environ.get(
-    "DJANGO_SECRET_KEY",
-    "django-insecure-eyf0nc13r-d3v-k3y-ch4ng3-1n-pr0duct10n!",
-)
+SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "")
+if not SECRET_KEY:
+    if os.environ.get("DJANGO_DEBUG", "False").lower() in ("true", "1", "yes"):
+        SECRET_KEY = "django-insecure-dev-only-key-do-not-use-in-production"
+    else:
+        raise ValueError(
+            "DJANGO_SECRET_KEY est obligatoire en production. "
+            "Definissez-le dans le fichier .env ou les variables d'environnement."
+        )
 
-DEBUG = os.environ.get("DJANGO_DEBUG", "True").lower() in ("true", "1", "yes")
+DEBUG = os.environ.get("DJANGO_DEBUG", "False").lower() in ("true", "1", "yes")
 
-ALLOWED_HOSTS = os.environ.get("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1,0.0.0.0").split(",")
+ALLOWED_HOSTS = os.environ.get("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
 
 # ──────────────────────────────────────────────
 # Applications
@@ -227,11 +237,11 @@ WSGI_APPLICATION = "eyefoncier.wsgi.application"
 DATABASES = {
     "default": {
         "ENGINE": "django.contrib.gis.db.backends.postgis",
-        "NAME": "websig_foncier",
-        "USER": "postgres",
-        "PASSWORD": "Lynkwb123.",
-        "HOST": "localhost",
-        "PORT": "5432",
+        "NAME": os.environ.get("DATABASE_NAME", "websig_foncier"),
+        "USER": os.environ.get("DATABASE_USER", "postgres"),
+        "PASSWORD": os.environ.get("DATABASE_PASSWORD", ""),
+        "HOST": os.environ.get("DATABASE_HOST", "localhost"),
+        "PORT": os.environ.get("DATABASE_PORT", "5432"),
     }
 }
 
