@@ -1,0 +1,96 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}Mes Factures — {{ SITE_NAME }}{% endblock %}
+
+{% block content %}
+<div class="ef-page-header ef-reveal">
+    <h2 style="color:var(--green-900);font-family:var(--font-display)">
+        <i class="bi bi-receipt-cutoff" style="color:var(--orange)"></i> Factures
+    </h2>
+</div>
+
+<div class="ef-page-content">
+
+    <!-- Filtres -->
+    <div class="ef-card ef-reveal" style="margin-bottom:1.5rem">
+        <div class="ef-card-body" style="display:flex;align-items:center;gap:.75rem;flex-wrap:wrap">
+            <form method="get" style="display:flex;align-items:center;gap:.75rem;flex-wrap:wrap;width:100%">
+                <div class="ef-form-group" style="margin-bottom:0;min-width:150px">
+                    <select name="type" class="ef-form-control" onchange="this.form.submit()">
+                        <option value="">Tous les types</option>
+                        <option value="cotation" {% if request.GET.type == "cotation" %}selected{% endif %}>Cotation</option>
+                        <option value="boutique" {% if request.GET.type == "boutique" %}selected{% endif %}>Boutique</option>
+                        <option value="promotion" {% if request.GET.type == "promotion" %}selected{% endif %}>Promotion</option>
+                        <option value="certification" {% if request.GET.type == "certification" %}selected{% endif %}>Certification</option>
+                        <option value="visite" {% if request.GET.type == "visite" %}selected{% endif %}>Visite</option>
+                    </select>
+                </div>
+                <div class="ef-form-group" style="margin-bottom:0;min-width:150px">
+                    <select name="status" class="ef-form-control" onchange="this.form.submit()">
+                        <option value="">Tous les statuts</option>
+                        <option value="draft" {% if request.GET.status == "draft" %}selected{% endif %}>Brouillon</option>
+                        <option value="issued" {% if request.GET.status == "issued" %}selected{% endif %}>Emise</option>
+                        <option value="paid" {% if request.GET.status == "paid" %}selected{% endif %}>Payee</option>
+                        <option value="overdue" {% if request.GET.status == "overdue" %}selected{% endif %}>En retard</option>
+                    </select>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Liste factures -->
+    {% if invoices %}
+    <div class="ef-stagger">
+        {% for inv in invoices %}
+        <div class="ef-card" style="margin-bottom:1rem">
+            <div class="ef-card-body" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem">
+                <!-- Gauche : infos facture -->
+                <div style="display:flex;align-items:center;gap:14px">
+                    <div style="width:44px;height:44px;border-radius:var(--radius-md);display:flex;align-items:center;justify-content:center;font-size:1.2rem;
+                        {% if inv.status == 'paid' %}background:#dcfce7;color:#166534{% elif inv.status == 'issued' %}background:#fef3c7;color:#92400e{% elif inv.status == 'overdue' %}background:#fee2e2;color:#991b1b{% else %}background:var(--gray-100);color:var(--gray-400){% endif %}">
+                        <i class="bi bi-{% if inv.status == 'paid' %}check-circle-fill{% elif inv.status == 'overdue' %}exclamation-triangle-fill{% else %}file-earmark-text{% endif %}"></i>
+                    </div>
+                    <div>
+                        <p style="margin:0;font-weight:700;color:var(--dark);font-size:.92rem">{{ inv.invoice_number }}</p>
+                        <p style="margin:2px 0 0;font-size:.8rem;color:var(--gray-400)">
+                            {{ inv.get_invoice_type_display }} — {{ inv.issued_at|date:"d/m/Y" }}
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Centre : montant -->
+                <div style="text-align:center">
+                    <p style="margin:0;font-weight:800;font-size:1.1rem;color:var(--green-900);font-family:'Courier New',monospace">
+                        {{ inv.total|floatformat:0 }} FCFA
+                    </p>
+                    <span style="display:inline-block;padding:2px 10px;border-radius:12px;font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;
+                        {% if inv.status == 'paid' %}background:#dcfce7;color:#166534{% elif inv.status == 'issued' %}background:#fef3c7;color:#92400e{% elif inv.status == 'overdue' %}background:#fee2e2;color:#991b1b{% else %}background:var(--gray-100);color:var(--gray-400){% endif %}">
+                        {{ inv.get_status_display }}
+                    </span>
+                </div>
+
+                <!-- Droite : actions -->
+                <div style="display:flex;gap:6px">
+                    <a href="{% url 'transactions:invoice_detail' inv.pk %}" class="ef-btn ef-btn-outline-primary" style="font-size:.8rem;padding:6px 14px">
+                        <i class="bi bi-eye"></i> Voir
+                    </a>
+                    {% if inv.pdf_file %}
+                    <a href="{% url 'transactions:invoice_pdf' inv.pk %}" class="ef-btn ef-btn-primary" style="font-size:.8rem;padding:6px 14px" target="_blank">
+                        <i class="bi bi-download"></i> PDF
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    {% else %}
+    <div class="ef-card ef-reveal" style="text-align:center;padding:60px 20px">
+        <i class="bi bi-receipt" style="font-size:3rem;color:var(--gray-300)"></i>
+        <h4 style="color:var(--green-900);margin:16px 0 8px">Aucune facture</h4>
+        <p style="color:var(--gray-400)">Vos factures apparaitront ici après chaque paiement.</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

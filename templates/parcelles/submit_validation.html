@@ -1,0 +1,68 @@
+{% extends "layouts/base.html" %}
+{% load static humanize %}
+
+{% block title %}Soumettre pour validation — {{ parcelle.lot_number }} — {{ SITE_NAME }}{% endblock %}
+
+{% block content %}
+<div style="max-width:700px;margin:0 auto;padding:0 clamp(16px,4vw,48px) 60px">
+
+    <nav style="font-size:.85rem;margin-bottom:20px">
+        <a href="{% url 'parcelles:detail' parcelle.pk %}" style="color:var(--green-700);text-decoration:none;font-weight:500">{{ parcelle.lot_number }}</a>
+        <span style="color:var(--gray-300);margin:0 8px">/</span>
+        <span style="color:var(--gray-400)">Soumettre pour validation</span>
+    </nav>
+
+    <div class="ef-card" style="overflow:hidden">
+        <div style="background:linear-gradient(135deg,#0B3D2E,#145a3e);padding:24px 28px;color:#fff">
+            <h3 style="font-family:var(--font-display);font-weight:800;margin:0 0 6px">
+                <i class="bi bi-shield-check" style="color:var(--orange)"></i> Soumettre pour validation
+            </h3>
+            <p style="margin:0;color:rgba(255,255,255,.6);font-size:.88rem">
+                Lot {{ parcelle.lot_number }} — {{ parcelle.title }}
+            </p>
+        </div>
+
+        <div style="padding:24px 28px">
+            <div style="background:var(--sand);border-radius:var(--radius-md);padding:16px 20px;margin-bottom:20px">
+                <h6 style="color:var(--green-900);font-family:var(--font-display);font-weight:700;margin:0 0 10px">
+                    <i class="bi bi-info-circle" style="color:var(--orange)"></i> Que va-t-il se passer ?
+                </h6>
+                <ol style="margin:0;padding-left:20px;font-size:.88rem;color:var(--dark);line-height:1.8">
+                    <li><strong>Analyse automatique</strong> — Vérification géométrique, chevauchements, documents, propriété</li>
+                    <li><strong>Notification aux géomètres</strong> — Les géomètres agréés seront notifiés</li>
+                    <li><strong>Inspection terrain</strong> — Un géomètre se déplacera sur site si nécessaire</li>
+                    <li><strong>Validation finale</strong> — Score de fiabilité + badge "Validé par géomètre"</li>
+                </ol>
+            </div>
+
+            <!-- Score de complétude actuel -->
+            <div style="display:flex;align-items:center;gap:12px;padding:14px 18px;border-radius:var(--radius-md);border:1.5px solid {% if parcelle.completeness_score >= 60 %}var(--success){% elif parcelle.completeness_score >= 40 %}var(--warning){% else %}var(--danger){% endif %};margin-bottom:20px">
+                <div style="width:48px;height:48px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:{% if parcelle.completeness_score >= 60 %}rgba(5,150,105,.1){% elif parcelle.completeness_score >= 40 %}rgba(217,119,6,.1){% else %}rgba(220,38,38,.1){% endif %}">
+                    <span style="font-size:1.1rem;font-weight:900;font-family:var(--font-display);color:{% if parcelle.completeness_score >= 60 %}var(--success){% elif parcelle.completeness_score >= 40 %}var(--warning){% else %}var(--danger){% endif %}">{{ parcelle.completeness_score }}</span>
+                </div>
+                <div>
+                    <div style="font-size:.88rem;font-weight:700;color:var(--dark)">Score de complétude : {{ parcelle.completeness_label }}</div>
+                    <div style="font-size:.78rem;color:var(--gray-400)">Plus votre parcelle est renseignée, meilleur sera le score de validation</div>
+                </div>
+            </div>
+
+            {% if parcelle.completeness_score < 30 %}
+            <div style="background:rgba(220,38,38,.06);border:1px solid rgba(220,38,38,.15);border-radius:var(--radius-md);padding:12px 16px;margin-bottom:20px;font-size:.85rem;color:var(--danger)">
+                <i class="bi bi-exclamation-triangle me-1"></i>
+                <strong>Score trop faible.</strong> Nous recommandons de compléter davantage votre parcelle (titre foncier, adresse, photos) avant de la soumettre.
+            </div>
+            {% endif %}
+
+            <form method="post">
+                {% csrf_token %}
+                <div style="display:flex;gap:10px">
+                    <button type="submit" class="ef-btn ef-btn-primary flex-fill" style="padding:14px">
+                        <i class="bi bi-send"></i> Soumettre pour validation
+                    </button>
+                    <a href="{% url 'parcelles:detail' parcelle.pk %}" class="ef-btn ef-btn-outline-primary" style="padding:14px">Annuler</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

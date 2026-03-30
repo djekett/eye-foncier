@@ -1,0 +1,109 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}Verification du contrat — EYE-FONCIER{% endblock %}
+
+{% block content %}
+<div class="container py-4" style="max-width:800px">
+    <div class="mb-4">
+        <a href="{% url 'transactions:detail' pk=transaction.pk %}" style="color:var(--green-700);font-size:.85rem;text-decoration:none">
+            <i class="bi bi-arrow-left"></i> Retour a la transaction
+        </a>
+    </div>
+
+    <div class="card border-0 shadow-sm" style="border-radius:var(--radius-lg)">
+        <div class="card-body p-4">
+            <div class="text-center mb-4">
+                <div style="width:64px;height:64px;background:{% if fully_signed %}#f0fdf4{% else %}#fef3c7{% endif %};border-radius:50%;display:inline-flex;align-items:center;justify-content:center;margin-bottom:12px">
+                    <i class="bi bi-{% if fully_signed %}check-circle{% else %}clock-history{% endif %}" style="font-size:1.6rem;color:{% if fully_signed %}var(--green-700){% else %}#d97706{% endif %}"></i>
+                </div>
+                <h4 class="fw-bold" style="font-family:var(--font-display);color:var(--green-900)">
+                    {% if fully_signed %}Contrat entierement signe{% else %}Signatures en cours{% endif %}
+                </h4>
+                <p style="color:var(--gray-400);font-size:.9rem">Ref: {{ transaction.reference }} — Lot {{ transaction.parcelle.lot_number }}</p>
+            </div>
+
+            {% if fully_signed %}
+            <div class="alert mb-4" style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:var(--radius-md);color:#166534">
+                <i class="bi bi-shield-check"></i>
+                <strong>Le compromis de vente a ete signe par les deux parties.</strong>
+                Ce document a valeur juridique.
+            </div>
+            {% endif %}
+
+            <!-- Signature Acheteur -->
+            <div class="mb-4 p-3" style="background:#f8faf9;border-radius:var(--radius-md);border:1px solid #e5e7eb">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <h6 class="fw-bold mb-0" style="font-size:.9rem;color:var(--green-900)">
+                        <i class="bi bi-person"></i> Signature Acheteur
+                    </h6>
+                    {% if buyer_signature %}
+                    <span class="badge" style="background:#dcfce7;color:#16a34a;font-size:.72rem">Signe</span>
+                    {% else %}
+                    <span class="badge" style="background:#fef3c7;color:#d97706;font-size:.72rem">En attente</span>
+                    {% endif %}
+                </div>
+                {% if buyer_signature %}
+                <div class="mb-2">
+                    <img src="{{ buyer_signature.signature_data }}" alt="Signature acheteur" style="max-width:300px;max-height:100px;border:1px solid #e5e7eb;border-radius:4px;background:#fff">
+                </div>
+                <div style="font-size:.78rem;color:var(--gray-400)">
+                    <strong>{{ buyer_signature.signer.get_full_name }}</strong><br>
+                    Signe le {{ buyer_signature.signed_at|date:"d/m/Y a H:i" }}
+                    {% if buyer_signature.ip_address %} — IP: {{ buyer_signature.ip_address }}{% endif %}
+                </div>
+                {% else %}
+                <p class="mb-0" style="font-size:.85rem;color:var(--gray-400)">
+                    L'acheteur n'a pas encore signe.
+                    {% if request.user == transaction.buyer %}
+                    <a href="{% url 'transactions:contract_sign' pk=transaction.pk %}" style="color:var(--green-700);font-weight:600">Signer maintenant</a>
+                    {% endif %}
+                </p>
+                {% endif %}
+            </div>
+
+            <!-- Signature Vendeur -->
+            <div class="mb-4 p-3" style="background:#f8faf9;border-radius:var(--radius-md);border:1px solid #e5e7eb">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <h6 class="fw-bold mb-0" style="font-size:.9rem;color:var(--green-900)">
+                        <i class="bi bi-person-badge"></i> Signature Vendeur
+                    </h6>
+                    {% if seller_signature %}
+                    <span class="badge" style="background:#dcfce7;color:#16a34a;font-size:.72rem">Signe</span>
+                    {% else %}
+                    <span class="badge" style="background:#fef3c7;color:#d97706;font-size:.72rem">En attente</span>
+                    {% endif %}
+                </div>
+                {% if seller_signature %}
+                <div class="mb-2">
+                    <img src="{{ seller_signature.signature_data }}" alt="Signature vendeur" style="max-width:300px;max-height:100px;border:1px solid #e5e7eb;border-radius:4px;background:#fff">
+                </div>
+                <div style="font-size:.78rem;color:var(--gray-400)">
+                    <strong>{{ seller_signature.signer.get_full_name }}</strong><br>
+                    Signe le {{ seller_signature.signed_at|date:"d/m/Y a H:i" }}
+                    {% if seller_signature.ip_address %} — IP: {{ seller_signature.ip_address }}{% endif %}
+                </div>
+                {% else %}
+                <p class="mb-0" style="font-size:.85rem;color:var(--gray-400)">
+                    Le vendeur n'a pas encore signe.
+                    {% if request.user == transaction.seller %}
+                    <a href="{% url 'transactions:contract_sign' pk=transaction.pk %}" style="color:var(--green-700);font-weight:600">Signer maintenant</a>
+                    {% endif %}
+                </p>
+                {% endif %}
+            </div>
+
+            <!-- Actions -->
+            <div class="d-flex gap-2">
+                {% if fully_signed %}
+                <a href="{% url 'transactions:compromis_pdf' pk=transaction.pk %}" class="btn flex-fill" style="background:var(--green-900);color:#fff;border-radius:var(--radius-sm)">
+                    <i class="bi bi-file-earmark-pdf"></i> Telecharger le compromis signe
+                </a>
+                {% endif %}
+                <a href="{% url 'transactions:detail' pk=transaction.pk %}" class="btn" style="border:1px solid var(--gray-200);color:var(--gray-600);border-radius:var(--radius-sm)">
+                    Retour
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,159 @@
+{% extends "layouts/base.html" %}
+{% load static humanize %}
+
+{% block title %}Tableau de bord Géomètre — {{ SITE_NAME }}{% endblock %}
+
+{% block content %}
+<div style="max-width:1280px;margin:0 auto;padding:0 clamp(16px,4vw,48px) 60px">
+
+    <!-- Header -->
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem;margin-bottom:1.5rem">
+        <div>
+            <h2 style="color:var(--green-900);font-family:var(--font-display);margin:0 0 4px">
+                <i class="bi bi-clipboard-check" style="color:var(--orange)"></i> Espace Géomètre
+            </h2>
+            <p style="color:var(--gray-400);margin:0;font-size:.88rem">Validez les parcelles soumises et effectuez les inspections terrain</p>
+        </div>
+    </div>
+
+    <!-- Stats -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:1rem;margin-bottom:1.5rem">
+        <div class="ef-card" style="padding:16px 20px;text-align:center;border-left:4px solid var(--warning)">
+            <div style="font-size:1.8rem;font-weight:900;font-family:var(--font-display);color:var(--warning)">{{ stats.pending_count }}</div>
+            <div style="font-size:.72rem;color:var(--gray-400);font-weight:600">En attente</div>
+        </div>
+        <div class="ef-card" style="padding:16px 20px;text-align:center;border-left:4px solid var(--orange)">
+            <div style="font-size:1.8rem;font-weight:900;font-family:var(--font-display);color:var(--orange)">{{ stats.needs_inspection_count }}</div>
+            <div style="font-size:.72rem;color:var(--gray-400);font-weight:600">Inspections terrain</div>
+        </div>
+        <div class="ef-card" style="padding:16px 20px;text-align:center;border-left:4px solid var(--success)">
+            <div style="font-size:1.8rem;font-weight:900;font-family:var(--font-display);color:var(--success)">{{ stats.my_validated }}</div>
+            <div style="font-size:.72rem;color:var(--gray-400);font-weight:600">Mes validations</div>
+        </div>
+        <div class="ef-card" style="padding:16px 20px;text-align:center;border-left:4px solid var(--danger)">
+            <div style="font-size:1.8rem;font-weight:900;font-family:var(--font-display);color:var(--danger)">{{ stats.my_rejected }}</div>
+            <div style="font-size:.72rem;color:var(--gray-400);font-weight:600">Mes rejets</div>
+        </div>
+        <div class="ef-card" style="padding:16px 20px;text-align:center;border-left:4px solid var(--blue)">
+            <div style="font-size:1.8rem;font-weight:900;font-family:var(--font-display);color:var(--blue)">{{ stats.my_total }}</div>
+            <div style="font-size:.72rem;color:var(--gray-400);font-weight:600">Total traitées</div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- Colonne gauche : File d'attente -->
+        <div class="col-lg-7">
+            <!-- Parcelles en attente de validation -->
+            <div class="ef-card" style="overflow:hidden;margin-bottom:1.25rem">
+                <div style="padding:14px 20px;border-bottom:1px solid var(--gray-100);display:flex;align-items:center;gap:8px;background:linear-gradient(135deg,#fef3c7,#fff)">
+                    <i class="bi bi-hourglass-split" style="color:var(--warning)"></i>
+                    <h6 style="font-family:var(--font-display);font-weight:700;color:var(--green-900);margin:0;font-size:.92rem">
+                        Parcelles en attente de validation ({{ stats.pending_count }})
+                    </h6>
+                </div>
+
+                {% if pending %}
+                <div style="max-height:400px;overflow-y:auto">
+                    {% for a in pending %}
+                    <div style="display:flex;align-items:center;gap:12px;padding:14px 20px;border-bottom:1px solid var(--gray-50);transition:background .15s" onmouseover="this.style.background='var(--sand)'" onmouseout="this.style.background=''">
+                        <!-- Score badge -->
+                        <div style="width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;background:{% if a.overall_score >= 60 %}rgba(5,150,105,.1){% elif a.overall_score >= 40 %}rgba(245,158,11,.1){% else %}rgba(220,38,38,.1){% endif %}">
+                            <span style="font-size:.95rem;font-weight:900;font-family:var(--font-display);color:{% if a.overall_score >= 60 %}#059669{% elif a.overall_score >= 40 %}#d97706{% else %}#dc2626{% endif %}">{{ a.overall_score }}</span>
+                        </div>
+
+                        <div style="flex:1;min-width:0">
+                            <div style="font-weight:700;font-size:.88rem;color:var(--dark)">
+                                Lot {{ a.parcelle.lot_number }} — {{ a.parcelle.title|truncatechars:40 }}
+                            </div>
+                            <div style="font-size:.75rem;color:var(--gray-400)">
+                                <i class="bi bi-person"></i> {{ a.parcelle.owner.get_full_name }}
+                                {% if a.parcelle.zone %}&middot; <i class="bi bi-geo-alt"></i> {{ a.parcelle.zone }}{% endif %}
+                                &middot; {{ a.updated_at|timesince }} ago
+                            </div>
+                        </div>
+
+                        <div style="display:flex;gap:6px;flex-shrink:0">
+                            {% if not a.terrain_inspected %}
+                            <a href="{% url 'parcelles:terrain_inspection' a.parcelle.pk %}" class="ef-btn ef-btn-sm ef-btn-outline-primary" style="font-size:.72rem;padding:4px 10px" title="Inspection terrain">
+                                <i class="bi bi-geo-alt"></i>
+                            </a>
+                            {% endif %}
+                            <a href="{% url 'parcelles:analysis' a.parcelle.pk %}" class="ef-btn ef-btn-sm ef-btn-primary" style="font-size:.72rem;padding:4px 10px" title="Voir l'analyse">
+                                <i class="bi bi-shield-check"></i> Examiner
+                            </a>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div style="text-align:center;padding:40px 20px">
+                    <i class="bi bi-check-circle" style="font-size:2.5rem;color:var(--success)"></i>
+                    <p style="color:var(--gray-400);margin:12px 0 0;font-size:.88rem">Aucune parcelle en attente</p>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Inspections terrain nécessaires -->
+            {% if needs_inspection %}
+            <div class="ef-card" style="overflow:hidden">
+                <div style="padding:14px 20px;border-bottom:1px solid var(--gray-100);display:flex;align-items:center;gap:8px;background:linear-gradient(135deg,rgba(232,121,59,.08),#fff)">
+                    <i class="bi bi-binoculars" style="color:var(--orange)"></i>
+                    <h6 style="font-family:var(--font-display);font-weight:700;color:var(--green-900);margin:0;font-size:.92rem">
+                        Inspections terrain requises ({{ stats.needs_inspection_count }})
+                    </h6>
+                </div>
+                <div style="max-height:300px;overflow-y:auto">
+                    {% for a in needs_inspection %}
+                    <div style="display:flex;align-items:center;gap:12px;padding:12px 20px;border-bottom:1px solid var(--gray-50)">
+                        <i class="bi bi-geo-alt-fill" style="color:var(--orange);font-size:1.2rem"></i>
+                        <div style="flex:1">
+                            <div style="font-weight:700;font-size:.85rem">Lot {{ a.parcelle.lot_number }}</div>
+                            <div style="font-size:.72rem;color:var(--gray-400)">{{ a.parcelle.owner.get_full_name }} &middot; {{ a.parcelle.address|default:"Adresse non renseignée" }}</div>
+                        </div>
+                        <a href="{% url 'parcelles:terrain_inspection' a.parcelle.pk %}" class="ef-btn ef-btn-sm ef-btn-primary" style="font-size:.72rem">
+                            <i class="bi bi-geo-alt"></i> Inspecter
+                        </a>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Colonne droite : Mes validations récentes -->
+        <div class="col-lg-5">
+            <div class="ef-card" style="overflow:hidden">
+                <div style="padding:14px 20px;border-bottom:1px solid var(--gray-100);display:flex;align-items:center;gap:8px">
+                    <i class="bi bi-clock-history" style="color:var(--green-700)"></i>
+                    <h6 style="font-family:var(--font-display);font-weight:700;color:var(--green-900);margin:0;font-size:.92rem">Mes validations récentes</h6>
+                </div>
+
+                {% if my_validations %}
+                <div style="max-height:500px;overflow-y:auto">
+                    {% for a in my_validations %}
+                    <a href="{% url 'parcelles:analysis' a.parcelle.pk %}" style="display:flex;align-items:center;gap:10px;padding:10px 20px;border-bottom:1px solid var(--gray-50);text-decoration:none;color:inherit;transition:background .15s" onmouseover="this.style.background='var(--sand)'" onmouseout="this.style.background=''">
+                        <span style="width:8px;height:8px;border-radius:50%;flex-shrink:0;background:{% if a.status == 'validated' %}#059669{% elif a.status == 'rejected' %}#dc2626{% else %}#f59e0b{% endif %}"></span>
+                        <div style="flex:1;min-width:0">
+                            <div style="font-weight:600;font-size:.82rem;color:var(--dark);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
+                                Lot {{ a.parcelle.lot_number }} — {{ a.parcelle.title|truncatechars:30 }}
+                            </div>
+                            <div style="font-size:.7rem;color:var(--gray-400)">
+                                {{ a.get_status_display }} &middot; {{ a.overall_score }}/100
+                                {% if a.validated_at %}&middot; {{ a.validated_at|date:"d/m/Y" }}{% endif %}
+                            </div>
+                        </div>
+                        <span style="font-size:.78rem;font-weight:800;font-family:var(--font-display);color:{% if a.overall_score >= 60 %}#059669{% elif a.overall_score >= 40 %}#d97706{% else %}#dc2626{% endif %}">{{ a.reliability_grade }}</span>
+                    </a>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div style="text-align:center;padding:30px 20px">
+                    <i class="bi bi-clipboard" style="font-size:2rem;color:var(--gray-300)"></i>
+                    <p style="color:var(--gray-400);margin:10px 0 0;font-size:.85rem">Aucune validation encore</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

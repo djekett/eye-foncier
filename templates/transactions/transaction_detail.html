@@ -1,0 +1,348 @@
+{% extends "layouts/base.html" %}
+{% block title %}Transaction {{ transaction.reference }} — {{ SITE_NAME }}{% endblock %}
+
+{% block content %}
+<div class="ef-page-header ef-reveal">
+    <nav class="ef-breadcrumb">
+        <a href="{% url 'transactions:list' %}">Transactions</a>
+        <span class="sep">/</span>
+        <span class="current">{{ transaction.reference }}</span>
+    </nav>
+</div>
+
+<div class="ef-page-content">
+    <!-- Pipeline -->
+    <div class="ef-card ef-reveal" style="margin-bottom:1.5rem">
+        <div class="ef-card-body" style="padding:1.5rem">
+            <div class="ef-pipeline">
+                {% with tx=transaction %}
+                <div class="ef-pipeline-step {% if tx.status != 'pending' %}done{% elif tx.status == 'pending' %}active{% endif %}">
+                    <div class="ef-pipeline-dot"><i class="bi bi-bookmark-check"></i></div>
+                    <div class="ef-pipeline-label">Réservé</div>
+                </div>
+                <div class="ef-pipeline-step {% if tx.escrow_funded %}done{% elif tx.status == 'reserved' %}active{% endif %}">
+                    <div class="ef-pipeline-dot"><i class="bi bi-safe"></i></div>
+                    <div class="ef-pipeline-label">Séquestre</div>
+                </div>
+                <div class="ef-pipeline-step {% if tx.buyer_docs_confirmed %}done{% elif tx.escrow_funded and not tx.buyer_docs_confirmed %}active{% endif %}">
+                    <div class="ef-pipeline-dot"><i class="bi bi-file-earmark-check"></i></div>
+                    <div class="ef-pipeline-label">Documents</div>
+                </div>
+                <div class="ef-pipeline-step {% if tx.compromis_generated %}done{% elif tx.buyer_docs_confirmed and not tx.compromis_generated %}active{% endif %}">
+                    <div class="ef-pipeline-dot"><i class="bi bi-pen"></i></div>
+                    <div class="ef-pipeline-label">Compromis</div>
+                </div>
+                <div class="ef-pipeline-step {% if tx.status == 'completed' %}done{% elif tx.compromis_generated and tx.status != 'completed' %}active{% endif %}">
+                    <div class="ef-pipeline-dot"><i class="bi bi-trophy"></i></div>
+                    <div class="ef-pipeline-label">Finalisé</div>
+                </div>
+                {% endwith %}
+            </div>
+            <div class="ef-progress-track">
+                <div class="ef-progress-fill" style="width:{{ transaction.progress_percent }}%"></div>
+            </div>
+            <p class="ef-progress-label">{{ transaction.progress_percent }}%</p>
+        </div>
+    </div>
+
+    <div class="ef-tx-layout">
+        <!-- Main column -->
+        <div class="ef-reveal">
+            <div class="ef-card">
+                <div class="ef-card-header" style="display:flex;justify-content:space-between;align-items:center">
+                    <h3 style="font-family:var(--font-display);color:var(--green-900);margin:0">{{ transaction.reference }}</h3>
+                    <span class="ef-badge {% if transaction.status == 'completed' %}ef-badge-success{% elif transaction.status == 'cancelled' or transaction.status == 'disputed' %}ef-badge-danger{% elif transaction.status == 'escrow_funded' or transaction.status == 'docs_validated' %}ef-badge-info{% else %}ef-badge-warning{% endif %}" style="font-size:.9rem">
+                        {{ transaction.get_status_display }}
+                    </span>
+                </div>
+                <div class="ef-card-body">
+                    <!-- Parcelle Banner -->
+                    <div class="ef-parcelle-banner">
+                        <div>
+                            <p class="ef-parcelle-banner-title">{{ transaction.parcelle.title }}</p>
+                            <span class="ef-parcelle-banner-sub">Lot {{ transaction.parcelle.lot_number }} &middot; {{ transaction.parcelle.surface_m2|floatformat:0 }} m²</span>
+                        </div>
+                        <div style="display:flex;gap:.5rem">
+                            <a href="{% url 'websig:map' %}?focus={{ transaction.parcelle.pk }}" class="ef-btn ef-btn-primary ef-btn-sm">
+                                <i class="bi bi-geo-alt-fill"></i>
+                            </a>
+                            <a href="{% url 'parcelles:detail' transaction.parcelle.pk %}" class="ef-btn ef-btn-outline-green ef-btn-sm">
+                                <i class="bi bi-eye"></i>
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- Parties -->
+                    <div class="ef-party-grid">
+                        <div class="ef-party-card">
+                            <span class="ef-party-role"><i class="bi bi-bag-check"></i> Acheteur</span>
+                            <p class="ef-party-name">{{ transaction.buyer.get_full_name }}</p>
+                            <span class="ef-party-email">{{ transaction.buyer.email }}</span>
+                        </div>
+                        <div class="ef-party-card">
+                            <span class="ef-party-role"><i class="bi bi-shop"></i> Vendeur</span>
+                            <p class="ef-party-name">{{ transaction.seller.get_full_name }}</p>
+                            <span class="ef-party-email">{{ transaction.seller.email }}</span>
+                        </div>
+                    </div>
+
+                    <!-- Séquestre -->
+                    <div class="ef-card {% if transaction.escrow_funded %}ef-card-accent-left{% endif %}" style="margin-bottom:1.5rem">
+                        <div class="ef-card-header">
+                            <h4 class="ef-section-title" style="margin-bottom:0">
+                                <i class="bi bi-safe"></i> Séquestre
+                            </h4>
+                        </div>
+                        <div class="ef-card-body">
+                            <div class="ef-info-row">
+                                <span class="ef-info-label">Statut</span>
+                                <span class="ef-info-value" style="font-weight:600">{{ transaction.escrow_status_label }}</span>
+                            </div>
+                            {% if transaction.escrow_amount %}
+                            <div class="ef-info-row">
+                                <span class="ef-info-label">Montant bloqué</span>
+                                <span class="ef-info-value" style="font-family:var(--font-mono);font-weight:700;color:var(--green-900)">{{ transaction.escrow_amount|floatformat:0 }} FCFA</span>
+                            </div>
+                            {% endif %}
+                            {% if transaction.escrow_funded_at %}
+                            <div class="ef-info-row">
+                                <span class="ef-info-label">Alimenté</span>
+                                <span class="ef-info-value">{{ transaction.escrow_funded_at|date:"d/m/Y" }}</span>
+                            </div>
+                            {% endif %}
+                            {% if transaction.escrow_released_at %}
+                            <div class="ef-info-row">
+                                <span class="ef-info-label">Libéré</span>
+                                <span class="ef-info-value" style="color:var(--green-900)">{{ transaction.escrow_released_at|date:"d/m/Y" }}</span>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    {% if transaction.compromis_generated %}
+                    <div class="ef-card ef-card-accent-left" style="margin-bottom:1.5rem">
+                        <div class="ef-card-header ef-card-header-tinted">
+                            <h4 class="ef-section-title" style="margin-bottom:0">
+                                <i class="bi bi-file-earmark-text"></i> Compromis
+                            </h4>
+                        </div>
+                        <div class="ef-card-body">
+                            <p style="margin-bottom:.5rem;font-size:.875rem">Généré le {{ transaction.compromis_generated_at|date:"d/m/Y H:i" }}</p>
+                            <div class="ef-signature-row">
+                                <span class="{% if transaction.compromis_signed_buyer %}ef-signature-ok{% else %}ef-signature-pending{% endif %}">
+                                    Acheteur :
+                                    {% if transaction.compromis_signed_buyer %}
+                                    <i class="bi bi-check-circle-fill"></i>
+                                    {% else %}
+                                    <i class="bi bi-clock"></i>
+                                    {% endif %}
+                                </span>
+                                <span class="{% if transaction.compromis_signed_seller %}ef-signature-ok{% else %}ef-signature-pending{% endif %}">
+                                    Vendeur :
+                                    {% if transaction.compromis_signed_seller %}
+                                    <i class="bi bi-check-circle-fill"></i>
+                                    {% else %}
+                                    <i class="bi bi-clock"></i>
+                                    {% endif %}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <!-- Timeline / Historique -->
+                    <h4 class="ef-section-title"><i class="bi bi-clock-history"></i> Historique</h4>
+                    <div class="ef-timeline">
+                        <div class="ef-timeline-item">
+                            <span class="ef-timeline-date">Créée</span>
+                            <p class="ef-timeline-text">{{ transaction.created_at|date:"d/m/Y H:i" }}</p>
+                        </div>
+                        {% for event in events %}
+                        <div class="ef-timeline-item {% if event.event_type == 'cancelled' %}cancelled{% elif event.event_type == 'disputed' %}disputed{% elif event.event_type == 'completed' %}completed{% endif %}">
+                            <span class="ef-timeline-date">
+                                {% if event.event_type == 'reserved' %}<i class="bi bi-bookmark-check"></i>
+                                {% elif event.event_type == 'escrow_funded' %}<i class="bi bi-safe"></i>
+                                {% elif event.event_type == 'docs_validated' %}<i class="bi bi-file-check"></i>
+                                {% elif event.event_type == 'compromis_generated' %}<i class="bi bi-pen"></i>
+                                {% elif event.event_type == 'completed' %}<i class="bi bi-trophy"></i>
+                                {% elif event.event_type == 'cancelled' %}<i class="bi bi-x-circle"></i>
+                                {% elif event.event_type == 'disputed' %}<i class="bi bi-exclamation-triangle"></i>
+                                {% elif event.event_type == 'dispute_resolved' %}<i class="bi bi-check-circle"></i>
+                                {% elif event.event_type == 'refund_initiated' %}<i class="bi bi-arrow-counterclockwise"></i>
+                                {% elif event.event_type == 'paid' %}<i class="bi bi-credit-card"></i>
+                                {% else %}<i class="bi bi-circle"></i>
+                                {% endif %}
+                                {{ event.get_event_type_display }}
+                            </span>
+                            <p class="ef-timeline-text" {% if event.event_type == 'completed' %}style="color:var(--green-900)"{% endif %}>
+                                {{ event.created_at|date:"d/m/Y H:i" }}
+                                {% if event.actor %}<br><small class="text-muted">par {{ event.actor.get_full_name }}</small>{% endif %}
+                                {% if event.description %}<br><small class="text-muted">{{ event.description }}</small>{% endif %}
+                            </p>
+                        </div>
+                        {% empty %}
+                        {% if transaction.reserved_at %}
+                        <div class="ef-timeline-item">
+                            <span class="ef-timeline-date"><i class="bi bi-bookmark-check"></i> Réservée</span>
+                            <p class="ef-timeline-text">{{ transaction.reserved_at|date:"d/m/Y H:i" }}</p>
+                        </div>
+                        {% endif %}
+                        {% if transaction.completed_at %}
+                        <div class="ef-timeline-item">
+                            <span class="ef-timeline-date"><i class="bi bi-trophy"></i> Finalisée</span>
+                            <p class="ef-timeline-text" style="color:var(--green-900)">{{ transaction.completed_at|date:"d/m/Y H:i" }}</p>
+                        </div>
+                        {% endif %}
+                        {% if transaction.cancelled_at %}
+                        <div class="ef-timeline-item cancelled">
+                            <span class="ef-timeline-date"><i class="bi bi-x-circle"></i> Annulée</span>
+                            <p class="ef-timeline-text">{{ transaction.cancelled_at|date:"d/m/Y H:i" }}</p>
+                        </div>
+                        {% endif %}
+                        {% endfor %}
+                    </div>
+
+                    {% if transaction.notes %}
+                    <h4 class="ef-section-title" style="margin-top:1.5rem"><i class="bi bi-chat-left-text"></i> Notes</h4>
+                    <p style="color:var(--gray-400);font-size:.875rem">{{ transaction.notes }}</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="ef-tx-sidebar ef-reveal-right">
+            <!-- Amount card -->
+            <div class="ef-card">
+                <div class="ef-card-body ef-amount-card">
+                    <p class="ef-amount-label">Montant</p>
+                    <h3 class="ef-amount-value">{{ transaction.amount|floatformat:0 }} FCFA</h3>
+                </div>
+            </div>
+
+            <!-- Approbations en attente -->
+            {% if pending_approvals %}
+            <div class="ef-card" style="border:2px solid #f59e0b;border-radius:var(--radius-lg)">
+                <div class="ef-card-header" style="background:#fffbeb;border-bottom:1px solid #fde68a">
+                    <h4 class="ef-section-title" style="margin-bottom:0;color:#b45309">
+                        <i class="bi bi-hourglass-split"></i> Approbations en attente
+                    </h4>
+                </div>
+                <div class="ef-card-body">
+                    {% for approval in pending_approvals %}
+                    <div style="{% if not forloop.last %}margin-bottom:1rem;padding-bottom:1rem;border-bottom:1px solid #f3f4f6{% endif %}">
+                        <p style="font-weight:600;font-size:.9rem;margin-bottom:.25rem">
+                            {{ approval.get_operation_type_display }}
+                        </p>
+                        <p style="font-size:.8rem;color:var(--gray-500);margin-bottom:.5rem">
+                            Demandé par <strong>{{ approval.requested_by.get_full_name }}</strong>
+                        </p>
+                        {% if request.user != approval.requested_by %}
+                        <div class="d-flex gap-2">
+                            <a href="{% url 'transactions:approve_operation' approval.pk %}"
+                               class="ef-btn ef-btn-sm" style="background:var(--green-900);color:#fff;border:none;flex:1;text-align:center">
+                                <i class="bi bi-check-circle"></i> Approuver
+                            </a>
+                            <a href="{% url 'transactions:reject_operation' approval.pk %}"
+                               class="ef-btn ef-btn-sm" style="background:#dc2626;color:#fff;border:none;flex:1;text-align:center">
+                                <i class="bi bi-x-circle"></i> Refuser
+                            </a>
+                        </div>
+                        {% else %}
+                        <span class="badge" style="background:#fef3c7;color:#92400e;font-size:.75rem">
+                            <i class="bi bi-clock"></i> En attente de validation
+                        </span>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            {% if is_buyer %}
+            <div class="ef-card">
+                <div class="ef-card-header">
+                    <h4 class="ef-section-title" style="margin-bottom:0"><i class="bi bi-bag-check"></i> Actions Acheteur</h4>
+                </div>
+                <div class="ef-card-body">
+                    {% if not transaction.escrow_funded and transaction.status == 'reserved' %}
+                    <a href="{% url 'transactions:escrow_fund' transaction.pk %}" class="ef-btn ef-btn-primary ef-btn-block" style="margin-bottom:.5rem">
+                        <i class="bi bi-safe"></i> Alimenter le Séquestre
+                    </a>
+                    {% endif %}
+                    {% if transaction.escrow_funded and not transaction.buyer_docs_confirmed %}
+                    <a href="{% url 'transactions:escrow_confirm_docs' transaction.pk %}" class="ef-btn ef-btn-outline-green ef-btn-block" style="margin-bottom:.5rem">
+                        <i class="bi bi-file-earmark-check"></i> Confirmer réception docs
+                    </a>
+                    {% endif %}
+                    {% if transaction.buyer_docs_confirmed %}
+                    <div class="ef-confirm-box">
+                        <i class="bi bi-check-circle"></i> Documents confirmés.
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+
+            {% if is_seller %}
+            <div class="ef-card">
+                <div class="ef-card-header">
+                    <h4 class="ef-section-title" style="margin-bottom:0"><i class="bi bi-shop"></i> Actions Vendeur</h4>
+                </div>
+                <div class="ef-card-body">
+                    {% if not transaction.compromis_generated %}
+                    <a href="{% url 'transactions:compromis' transaction.pk %}" class="ef-btn ef-btn-primary ef-btn-block" style="margin-bottom:.5rem">
+                        <i class="bi bi-file-earmark-plus"></i> Initier la vente
+                    </a>
+                    {% else %}
+                    <div class="ef-confirm-box">
+                        <i class="bi bi-check-circle"></i> Compromis envoyé.
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+
+            {% if can_dispute %}
+            <div class="ef-card">
+                <div class="ef-card-body">
+                    <a href="{% url 'transactions:dispute' transaction.pk %}" class="ef-btn ef-btn-block" style="background:#ef4444;color:#fff;border:none;margin-bottom:.5rem">
+                        <i class="bi bi-exclamation-triangle"></i> Ouvrir un litige
+                    </a>
+                </div>
+            </div>
+            {% endif %}
+
+            {% if can_cancel %}
+            <div class="ef-card">
+                <div class="ef-card-body">
+                    <a href="{% url 'transactions:cancel' transaction.pk %}" class="ef-btn ef-btn-outline-green ef-btn-block" style="color:#dc2626;border-color:#dc2626">
+                        <i class="bi bi-x-circle"></i> Annuler la transaction
+                    </a>
+                </div>
+            </div>
+            {% endif %}
+
+            {% if is_admin %}
+            <div class="ef-card ef-card-accent-orange">
+                <div class="ef-card-header ef-card-header-orange">
+                    <h4 class="ef-section-title" style="margin-bottom:0">
+                        <i class="bi bi-shield-lock"></i> Admin
+                    </h4>
+                </div>
+                <div class="ef-card-body">
+                    {% if transaction.escrow_funded and transaction.buyer_docs_confirmed and not transaction.escrow_released %}
+                    <a href="{% url 'transactions:escrow_release' transaction.pk %}" class="ef-btn ef-btn-primary ef-btn-block" style="margin-bottom:.5rem;background:var(--orange);border-color:var(--orange)">
+                        <i class="bi bi-unlock"></i> Libérer Séquestre
+                    </a>
+                    {% endif %}
+                    <a href="{% url 'transactions:update' transaction.pk %}" class="ef-btn ef-btn-outline-green ef-btn-block">
+                        <i class="bi bi-pencil"></i> Modifier
+                    </a>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

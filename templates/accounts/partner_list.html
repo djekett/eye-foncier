@@ -1,0 +1,72 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}Nos Partenaires — EYE-FONCIER{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="mb-4">
+        <h2 class="fw-bold" style="font-family:var(--font-display);color:var(--green-900)">
+            <i class="bi bi-building"></i> Nos Partenaires
+        </h2>
+        <p style="color:var(--gray-400)">Banques, assurances, notaires et agences partenaires d'EYE-FONCIER</p>
+    </div>
+
+    <!-- Filtres par type -->
+    <div class="d-flex gap-2 mb-4 flex-wrap">
+        <a href="{% url 'accounts:partner_list' %}" class="btn btn-sm {% if not selected_type %}fw-bold{% endif %}"
+           style="border:1px solid var(--gray-200);border-radius:var(--radius-sm);color:{% if not selected_type %}var(--green-900){% else %}var(--gray-400){% endif %}">
+            Tous
+        </a>
+        {% for value, label in partner_types %}
+        <a href="?type={{ value }}" class="btn btn-sm {% if selected_type == value %}fw-bold{% endif %}"
+           style="border:1px solid var(--gray-200);border-radius:var(--radius-sm);color:{% if selected_type == value %}var(--green-900){% else %}var(--gray-400){% endif %}">
+            {{ label }}
+        </a>
+        {% endfor %}
+    </div>
+
+    {% if partners %}
+    <div class="row g-4">
+        {% for partner in partners %}
+        <div class="col-md-6 col-lg-4">
+            <div class="card border-0 shadow-sm h-100" style="border-radius:var(--radius-lg)">
+                <div class="card-body p-4">
+                    <div class="d-flex align-items-center mb-3">
+                        {% if partner.logo %}
+                        <img src="{{ partner.logo.url }}" alt="{{ partner.name }}" style="width:48px;height:48px;object-fit:contain;border-radius:8px;margin-right:12px">
+                        {% else %}
+                        <div style="width:48px;height:48px;background:#f0fdf4;border-radius:8px;display:flex;align-items:center;justify-content:center;margin-right:12px">
+                            <i class="bi bi-{% if partner.partner_type == 'bank' %}bank{% elif partner.partner_type == 'insurance' %}shield-check{% elif partner.partner_type == 'notary' %}file-earmark-ruled{% else %}house{% endif %}" style="font-size:1.2rem;color:var(--green-700)"></i>
+                        </div>
+                        {% endif %}
+                        <div>
+                            <h6 class="fw-bold mb-0" style="color:var(--green-900)">{{ partner.name }}</h6>
+                            <span class="badge" style="background:#f0fdf4;color:var(--green-700);font-size:.7rem">{{ partner.get_partner_type_display }}</span>
+                        </div>
+                    </div>
+                    {% if partner.description %}
+                    <p style="font-size:.85rem;color:var(--gray-400);margin-bottom:12px">{{ partner.description|truncatewords:25 }}</p>
+                    {% endif %}
+                    {% if partner.services %}
+                    <div class="mb-3">
+                        {% for service in partner.services|slice:":3" %}
+                        <span class="badge me-1 mb-1" style="background:#fef3c7;color:#92400e;font-size:.68rem">{{ service }}</span>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                    <a href="{% url 'accounts:partner_detail' pk=partner.pk %}" class="btn btn-sm w-100" style="background:var(--green-900);color:#fff;border-radius:var(--radius-sm)">
+                        <i class="bi bi-arrow-right"></i> Voir les details
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="text-center py-5">
+        <i class="bi bi-building" style="font-size:3rem;color:var(--gray-200)"></i>
+        <p class="mt-3" style="color:var(--gray-400)">Aucun partenaire pour cette categorie.</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

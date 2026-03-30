@@ -1,0 +1,97 @@
+{% extends "layouts/base.html" %}
+{% load humanize %}
+
+{% block title %}Simulation — {{ SITE_NAME }}{% endblock %}
+
+{% block content %}
+<div class="container" style="padding-bottom:60px;max-width:900px">
+
+    <div class="d-flex align-items-center gap-2 mb-4">
+        <a href="{% url 'transactions:simulator' %}" class="btn btn-sm btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i>
+        </a>
+        <h4 class="mb-0" style="font-weight:800;color:var(--green-900)">
+            <i class="bi bi-table me-2"></i>Détail de la simulation
+        </h4>
+    </div>
+
+    <!-- Résumé -->
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-md-3">
+            <div class="card text-center p-3" style="border:none;border-radius:var(--radius-md);background:#f0fdf4">
+                <div style="font-size:.75rem;color:var(--gray-500)">Prix du bien</div>
+                <div style="font-weight:800;color:var(--green-900)">{{ simulation.property_price|intcomma }} FCFA</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="card text-center p-3" style="border:none;border-radius:var(--radius-md);background:#eff6ff">
+                <div style="font-size:.75rem;color:var(--gray-500)">Apport</div>
+                <div style="font-weight:800;color:#2563eb">{{ simulation.down_payment|intcomma }} FCFA</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="card text-center p-3" style="border:none;border-radius:var(--radius-md);background:#fefce8">
+                <div style="font-size:.75rem;color:var(--gray-500)">Mensualité</div>
+                <div style="font-weight:800;color:#ca8a04">{{ simulation.monthly_payment|intcomma }} FCFA</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="card text-center p-3" style="border:none;border-radius:var(--radius-md);background:#fef2f2">
+                <div style="font-size:.75rem;color:var(--gray-500)">Intérêts totaux</div>
+                <div style="font-weight:800;color:#dc2626">{{ simulation.total_interest|intcomma }} FCFA</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="d-flex justify-content-between align-items-center mb-2">
+        <span class="text-muted" style="font-size:.85rem">
+            Durée : {{ simulation.duration_months }} mois | Taux : {{ simulation.interest_rate }}%
+        </span>
+        {% if simulation.is_feasible %}
+        <span class="badge bg-success">Réalisable</span>
+        {% else %}
+        <span class="badge bg-warning text-dark">Attention</span>
+        {% endif %}
+    </div>
+
+    {% if simulation.feasibility_notes %}
+    <div class="alert alert-warning" style="font-size:.85rem;border-radius:var(--radius-md)">
+        {{ simulation.feasibility_notes }}
+    </div>
+    {% endif %}
+
+    <!-- Tableau d'amortissement -->
+    <div class="card" style="border:none;border-radius:var(--radius-lg);box-shadow:var(--shadow-sm)">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-sm table-hover mb-0" style="font-size:.82rem">
+                    <thead style="background:#f8fafc;position:sticky;top:0">
+                        <tr>
+                            <th style="padding:10px 12px">Mois</th>
+                            <th class="text-end" style="padding:10px 12px">Mensualité</th>
+                            <th class="text-end" style="padding:10px 12px">Capital</th>
+                            <th class="text-end" style="padding:10px 12px">Intérêts</th>
+                            <th class="text-end" style="padding:10px 12px">Reste dû</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in simulation.amortization_table %}
+                        <tr>
+                            <td style="padding:8px 12px">{{ row.month }}</td>
+                            <td class="text-end" style="padding:8px 12px">{{ row.payment|intcomma }}</td>
+                            <td class="text-end" style="padding:8px 12px;color:#2563eb">{{ row.principal|intcomma }}</td>
+                            <td class="text-end" style="padding:8px 12px;color:#ea580c">{{ row.interest|intcomma }}</td>
+                            <td class="text-end" style="padding:8px 12px;font-weight:600">{{ row.remaining|intcomma }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="text-center mt-3">
+        <small class="text-muted">Simulation réalisée le {{ simulation.created_at|date:"d/m/Y à H:i" }}</small>
+    </div>
+</div>
+{% endblock %}

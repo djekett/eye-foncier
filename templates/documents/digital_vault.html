@@ -1,0 +1,138 @@
+{% extends "layouts/base.html" %}
+{% load humanize %}
+
+{% block title %}Coffre-Fort Numerique — EYE-FONCIER{% endblock %}
+
+{% block content %}
+<div class="container py-4" style="max-width:1100px">
+    <div class="d-flex align-items-center justify-content-between mb-4">
+        <div>
+            <h4 class="fw-bold mb-1" style="font-family:var(--font-display);color:var(--green-900)">
+                <i class="bi bi-safe" style="color:var(--orange)"></i> Coffre-Fort Numerique
+            </h4>
+            <p class="mb-0" style="color:var(--gray-400);font-size:.9rem">Tous vos documents securises en un seul endroit.</p>
+        </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm" style="border-radius:var(--radius-md)">
+                <div class="card-body d-flex align-items-center gap-3 py-3">
+                    <div style="width:44px;height:44px;background:#e0f2fe;border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:center">
+                        <i class="bi bi-files" style="color:#2563eb;font-size:1.2rem"></i>
+                    </div>
+                    <div>
+                        <div style="font-size:1.4rem;font-weight:700;color:var(--green-900);font-family:var(--font-mono)">{{ total_docs }}</div>
+                        <div style="font-size:.78rem;color:var(--gray-400)">Documents totaux</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm" style="border-radius:var(--radius-md)">
+                <div class="card-body d-flex align-items-center gap-3 py-3">
+                    <div style="width:44px;height:44px;background:#dcfce7;border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:center">
+                        <i class="bi bi-patch-check-fill" style="color:#16a34a;font-size:1.2rem"></i>
+                    </div>
+                    <div>
+                        <div style="font-size:1.4rem;font-weight:700;color:var(--green-900);font-family:var(--font-mono)">{{ verified_count }}</div>
+                        <div style="font-size:.78rem;color:var(--gray-400)">Documents verifies</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm" style="border-radius:var(--radius-md)">
+                <div class="card-body d-flex align-items-center gap-3 py-3">
+                    <div style="width:44px;height:44px;background:#fef3c7;border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:center">
+                        <i class="bi bi-geo-alt" style="color:#d97706;font-size:1.2rem"></i>
+                    </div>
+                    <div>
+                        <div style="font-size:1.4rem;font-weight:700;color:var(--green-900);font-family:var(--font-mono)">{{ parcelles_with_docs }}</div>
+                        <div style="font-size:.78rem;color:var(--gray-400)">Parcelles documentees</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filtres -->
+    <div class="card border-0 shadow-sm mb-4" style="border-radius:var(--radius-md)">
+        <div class="card-body py-3">
+            <form method="get" class="row g-2 align-items-end">
+                <div class="col-md-4">
+                    <label class="form-label" style="font-size:.8rem;font-weight:600;color:var(--gray-600)">Type de document</label>
+                    <select name="type" class="form-select form-select-sm">
+                        <option value="">Tous les types</option>
+                        <option value="titre_foncier" {% if current_type == "titre_foncier" %}selected{% endif %}>Titre Foncier</option>
+                        <option value="acd" {% if current_type == "acd" %}selected{% endif %}>ACD</option>
+                        <option value="certificat" {% if current_type == "certificat" %}selected{% endif %}>Certificat</option>
+                        <option value="plan" {% if current_type == "plan" %}selected{% endif %}>Plan</option>
+                        <option value="permis" {% if current_type == "permis" %}selected{% endif %}>Permis</option>
+                        <option value="attestation" {% if current_type == "attestation" %}selected{% endif %}>Attestation</option>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label" style="font-size:.8rem;font-weight:600;color:var(--gray-600)">Confidentialite</label>
+                    <select name="conf" class="form-select form-select-sm">
+                        <option value="">Toutes</option>
+                        <option value="public" {% if current_conf == "public" %}selected{% endif %}>Public</option>
+                        <option value="buyer_only" {% if current_conf == "buyer_only" %}selected{% endif %}>Acheteurs verifies</option>
+                        <option value="private" {% if current_conf == "private" %}selected{% endif %}>Prive</option>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <button type="submit" class="btn w-100" style="background:var(--green-900);color:#fff;font-size:.85rem;border-radius:var(--radius-sm)">
+                        <i class="bi bi-funnel"></i> Filtrer
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Documents -->
+    {% if documents %}
+    <div class="row g-3">
+        {% for doc in documents %}
+        <div class="col-md-6 col-lg-4">
+            <div class="card border-0 shadow-sm h-100" style="border-radius:var(--radius-md);transition:transform .2s;cursor:pointer" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='none'">
+                <div class="card-body">
+                    <div class="d-flex align-items-start justify-content-between mb-2">
+                        <div style="width:40px;height:40px;background:{% if doc.doc_type == 'titre_foncier' %}#fef3c7{% elif doc.doc_type == 'plan' %}#e0f2fe{% elif doc.doc_type == 'certificat' %}#dcfce7{% else %}#f3f4f6{% endif %};border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:center;font-size:1.1rem">
+                            {% if doc.doc_type == "titre_foncier" %}&#128220;{% elif doc.doc_type == "plan" %}&#128506;{% elif doc.doc_type == "certificat" %}&#127963;{% elif doc.doc_type == "permis" %}&#127959;{% else %}&#128196;{% endif %}
+                        </div>
+                        <div class="d-flex gap-1">
+                            {% if doc.is_verified %}
+                            <span class="badge" style="background:#dcfce7;color:#16a34a;font-size:.65rem">Verifie</span>
+                            {% endif %}
+                            <span class="badge" style="background:{% if doc.confidentiality == 'public' %}#e0f2fe{% elif doc.confidentiality == 'buyer_only' %}#fef3c7{% else %}#fee2e2{% endif %};color:{% if doc.confidentiality == 'public' %}#2563eb{% elif doc.confidentiality == 'buyer_only' %}#d97706{% else %}#dc2626{% endif %};font-size:.65rem">
+                                {{ doc.get_confidentiality_display }}
+                            </span>
+                        </div>
+                    </div>
+                    <h6 class="fw-bold mb-1" style="font-size:.88rem;color:var(--green-900)">{{ doc.title }}</h6>
+                    <p class="mb-2" style="font-size:.78rem;color:var(--gray-400)">
+                        {{ doc.get_doc_type_display }} — Lot {{ doc.parcelle.lot_number }}
+                    </p>
+                    {% if doc.file_hash %}
+                    <p class="mb-2" style="font-size:.68rem;font-family:var(--font-mono);color:var(--gray-300);word-break:break-all">
+                        SHA-256: {{ doc.file_hash|truncatechars:24 }}
+                    </p>
+                    {% endif %}
+                    <a href="{% url 'documents:view_watermarked' pk=doc.pk %}" class="btn btn-sm w-100" style="background:var(--green-50);color:var(--green-900);border:1px solid var(--green-100);font-size:.78rem;border-radius:var(--radius-sm)">
+                        <i class="bi bi-eye"></i> Consulter
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="text-center py-5">
+        <i class="bi bi-safe" style="font-size:3rem;color:var(--gray-200)"></i>
+        <p class="mt-2" style="color:var(--gray-400)">Aucun document dans votre coffre-fort.</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

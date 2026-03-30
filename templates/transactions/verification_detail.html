@@ -1,0 +1,310 @@
+{% extends "layouts/base.html" %}
+{% load humanize %}
+
+{% block title %}Vérification {{ verification.reference }} | Eye-Foncier{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <nav aria-label="fil d'ariane">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'transactions:verification_list' %}">Vérifications</a></li>
+            <li class="breadcrumb-item active">{{ verification.reference }}</li>
+        </ol>
+    </nav>
+
+    <div class="row">
+        <!-- Détails de la vérification -->
+        <div class="col-lg-8 mb-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-success text-white d-flex justify-content-between">
+                    <h5 class="mb-0">
+                        <i class="bi bi-clipboard-check"></i> {{ verification.reference }}
+                    </h5>
+                    <span class="badge bg-white text-success">{{ verification.get_status_display }}</span>
+                </div>
+                <div class="card-body">
+                    <!-- Informations parcelle -->
+                    <h6 class="fw-bold text-muted mb-3">
+                        <i class="bi bi-geo-alt"></i> Parcelle
+                    </h6>
+                    <div class="row mb-4">
+                        <div class="col-sm-6">
+                            <div class="d-flex justify-content-between mb-1">
+                                <span>Lot :</span>
+                                <strong>
+                                    <a href="{% url 'parcelles:detail' pk=verification.parcelle.pk %}">
+                                        {{ verification.parcelle.lot_number }}
+                                    </a>
+                                </strong>
+                            </div>
+                            <div class="d-flex justify-content-between mb-1">
+                                <span>Titre :</span>
+                                <span>{{ verification.parcelle.title }}</span>
+                            </div>
+                        </div>
+                        <div class="col-sm-6">
+                            <div class="d-flex justify-content-between mb-1">
+                                <span>Prix :</span>
+                                <strong>{{ verification.parcelle.price|intcomma }} FCFA</strong>
+                            </div>
+                            <div class="d-flex justify-content-between mb-1">
+                                <span>Surface :</span>
+                                <span>{{ verification.parcelle.surface_m2 }} m²</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Acteurs -->
+                    <h6 class="fw-bold text-muted mb-3">
+                        <i class="bi bi-people"></i> Acteurs
+                    </h6>
+                    <div class="row mb-4">
+                        <div class="col-sm-4">
+                            <div class="card bg-light border-0 p-3 text-center">
+                                <small class="text-muted">Acheteur</small>
+                                <div class="fw-bold">{{ verification.buyer.get_full_name }}</div>
+                                <small>{{ verification.buyer.phone }}</small>
+                            </div>
+                        </div>
+                        <div class="col-sm-4">
+                            <div class="card bg-light border-0 p-3 text-center">
+                                <small class="text-muted">Vendeur</small>
+                                <div class="fw-bold">{{ verification.seller.get_full_name }}</div>
+                                <small>{{ verification.seller.phone }}</small>
+                            </div>
+                        </div>
+                        <div class="col-sm-4">
+                            <div class="card bg-light border-0 p-3 text-center">
+                                <small class="text-muted">Vérificateur</small>
+                                {% if verification.verifier %}
+                                <div class="fw-bold">{{ verification.verifier.get_full_name }}</div>
+                                {% else %}
+                                <div class="text-warning fw-bold">Non assigné</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Chronologie détaillée -->
+                    <h6 class="fw-bold text-muted mb-3">
+                        <i class="bi bi-clock-history"></i> Chronologie
+                    </h6>
+                    <div class="timeline-vertical">
+                        {% if verification.seller_contacted_at %}
+                        <div class="d-flex align-items-start mb-3">
+                            <i class="bi bi-check-circle-fill text-success me-2 mt-1"></i>
+                            <div>
+                                <strong>Vendeur contacté</strong>
+                                <div class="text-muted small">{{ verification.seller_contacted_at|date:"d/m/Y à H:i" }}</div>
+                                {% if verification.seller_contact_notes %}
+                                <div class="small">{{ verification.seller_contact_notes }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        {% if verification.docs_received_at %}
+                        <div class="d-flex align-items-start mb-3">
+                            <i class="bi bi-check-circle-fill text-success me-2 mt-1"></i>
+                            <div>
+                                <strong>Documents reçus aux locaux</strong>
+                                <div class="text-muted small">{{ verification.docs_received_at|date:"d/m/Y à H:i" }}</div>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        {% if verification.docs_verified_at %}
+                        <div class="d-flex align-items-start mb-3">
+                            <i class="bi bi-check-circle-fill text-success me-2 mt-1"></i>
+                            <div>
+                                <strong>Documents vérifiés et analysés</strong>
+                                <div class="text-muted small">{{ verification.docs_verified_at|date:"d/m/Y à H:i" }}</div>
+                                {% if verification.docs_are_authentic is not None %}
+                                <span class="badge {% if verification.docs_are_authentic %}bg-success{% else %}bg-danger{% endif %}">
+                                    {% if verification.docs_are_authentic %}Authentiques{% else %}Non conformes{% endif %}
+                                </span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        {% if verification.client_contacted_at %}
+                        <div class="d-flex align-items-start mb-3">
+                            <i class="bi bi-check-circle-fill text-success me-2 mt-1"></i>
+                            <div>
+                                <strong>Client contacté</strong>
+                                <div class="text-muted small">{{ verification.client_contacted_at|date:"d/m/Y à H:i" }}</div>
+                                {% if verification.client_contact_notes %}
+                                <div class="small">{{ verification.client_contact_notes }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        {% if verification.rdv_date %}
+                        <div class="d-flex align-items-start mb-3">
+                            <i class="bi bi-calendar-check-fill text-primary me-2 mt-1"></i>
+                            <div>
+                                <strong>RDV dans les locaux Eye-Foncier</strong>
+                                <div class="text-primary fw-bold">{{ verification.rdv_date|date:"d/m/Y à H:i" }}</div>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Notes du vérificateur -->
+                    {% if verification.verification_notes %}
+                    <h6 class="fw-bold text-muted mb-2 mt-4">
+                        <i class="bi bi-journal-text"></i> Notes
+                    </h6>
+                    <div class="bg-light p-3 rounded" style="white-space: pre-line;">{{ verification.verification_notes }}</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Actions du vérificateur -->
+        <div class="col-lg-4">
+            {% if can_manage %}
+            <!-- Assignation (admin) -->
+            {% if not verification.verifier and request.user.is_admin_role %}
+            <div class="card border-0 shadow-sm mb-3">
+                <div class="card-header bg-warning text-dark">
+                    <h6 class="mb-0"><i class="bi bi-person-plus"></i> Assigner un vérificateur</h6>
+                </div>
+                <div class="card-body">
+                    <form method="post" action="{% url 'transactions:verification_assign' pk=verification.pk %}">
+                        {% csrf_token %}
+                        <select name="verifier_id" class="form-select mb-3" required>
+                            <option value="">Choisir un géomètre...</option>
+                            {% for g in geometres %}
+                            <option value="{{ g.pk }}">
+                                {{ g.get_full_name|default:g.username }}
+                                {% if g.is_verified %} ✓{% endif %}
+                                — {{ g.email }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                        {% if not geometres %}
+                        <div class="alert alert-info small py-2 mb-3">
+                            <i class="bi bi-info-circle me-1"></i>
+                            Aucun géomètre enregistré. Ajoutez d'abord un utilisateur avec le rôle « Géomètre ».
+                        </div>
+                        {% endif %}
+                        <button type="submit" class="btn btn-warning w-100">Assigner</button>
+                    </form>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Avancer le workflow -->
+            {% if verification.status != 'completed' and verification.status != 'cancelled' %}
+            <div class="card border-0 shadow-sm mb-3">
+                <div class="card-header bg-success text-white">
+                    <h6 class="mb-0"><i class="bi bi-arrow-right-circle"></i> Avancer le workflow</h6>
+                </div>
+                <div class="card-body">
+                    <form method="post" action="{% url 'transactions:verification_advance' pk=verification.pk %}">
+                        {% csrf_token %}
+
+                        {% if verification.status == 'assigned' %}
+                        <input type="hidden" name="new_status" value="seller_contacted">
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold">Notes (contact vendeur)</label>
+                            <textarea name="notes" class="form-control" rows="2"
+                                      placeholder="Résumé du contact avec le vendeur..."></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-success w-100">
+                            <i class="bi bi-telephone"></i> Marquer « vendeur contacté »
+                        </button>
+
+                        {% elif verification.status == 'seller_contacted' %}
+                        <input type="hidden" name="new_status" value="docs_received">
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold">Notes</label>
+                            <textarea name="notes" class="form-control" rows="2"
+                                      placeholder="Documents reçus..."></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-success w-100">
+                            <i class="bi bi-folder-check"></i> Marquer « docs reçus »
+                        </button>
+
+                        {% elif verification.status == 'docs_received' %}
+                        <input type="hidden" name="new_status" value="docs_verified">
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold">Notes d'analyse</label>
+                            <textarea name="notes" class="form-control" rows="3"
+                                      placeholder="Résultat de la vérification..."></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-success w-100">
+                            <i class="bi bi-shield-check"></i> Marquer « docs vérifiés »
+                        </button>
+
+                        {% elif verification.status == 'docs_verified' %}
+                        <input type="hidden" name="new_status" value="docs_watermarked">
+                        <button type="submit" class="btn btn-success w-100">
+                            <i class="bi bi-image"></i> Marquer « docs filigranés »
+                        </button>
+
+                        {% elif verification.status == 'docs_watermarked' %}
+                        <input type="hidden" name="new_status" value="client_contacted">
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold">Notes (contact client)</label>
+                            <textarea name="notes" class="form-control" rows="2"
+                                      placeholder="Résumé du contact avec le client..."></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-success w-100">
+                            <i class="bi bi-telephone-outbound"></i> Marquer « client contacté »
+                        </button>
+
+                        {% elif verification.status == 'client_contacted' %}
+                        <input type="hidden" name="new_status" value="rdv_scheduled">
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold">Date du RDV</label>
+                            <input type="datetime-local" name="rdv_date" class="form-control" required>
+                        </div>
+                        <button type="submit" class="btn btn-success w-100">
+                            <i class="bi bi-calendar-plus"></i> Programmer le RDV
+                        </button>
+
+                        {% elif verification.status == 'rdv_scheduled' %}
+                        <input type="hidden" name="new_status" value="completed">
+                        <button type="submit" class="btn btn-success w-100">
+                            <i class="bi bi-check-all"></i> Finaliser la vérification
+                        </button>
+                        {% endif %}
+                    </form>
+
+                    {% if verification.status != 'created' %}
+                    <hr>
+                    <form method="post" action="{% url 'transactions:verification_advance' pk=verification.pk %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="new_status" value="cancelled">
+                        <button type="submit" class="btn btn-outline-danger btn-sm w-100"
+                                onclick="return confirm('Annuler cette vérification ?')">
+                            <i class="bi bi-x-circle"></i> Annuler
+                        </button>
+                    </form>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+            {% endif %}
+
+            <!-- Progression -->
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-light">
+                    <h6 class="mb-0"><i class="bi bi-bar-chart"></i> Progression</h6>
+                </div>
+                <div class="card-body text-center">
+                    <div class="display-4 fw-bold text-success">{{ verification.progress_percent }}%</div>
+                    <p class="text-muted">du workflow complété</p>
+                    <div class="progress" style="height: 10px;">
+                        <div class="progress-bar bg-success" style="width: {{ verification.progress_percent }}%"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

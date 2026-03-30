@@ -1,0 +1,776 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}{% if parcelle %}Modifier{% else %}Nouvelle{% endif %} Parcelle — {{ SITE_NAME }}{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://unpkg.com/@mapbox/mapbox-gl-draw@1.4.3/dist/mapbox-gl-draw.css">
+<style>
+/* Fix: mapbox-gl-draw utilise des classes .mapboxgl-ctrl mais MapLibre utilise .maplibregl-ctrl */
+.mapboxgl-ctrl-group { background: #fff; border-radius: 4px; box-shadow: 0 0 0 2px rgba(0,0,0,.1); }
+.mapboxgl-ctrl-group button { width: 29px; height: 29px; display: block; padding: 0; outline: none; border: 0; box-sizing: border-box; background-color: transparent; cursor: pointer; }
+.mapboxgl-ctrl-group button + button { border-top: 1px solid #ddd; }
+.mapboxgl-ctrl-group button:focus { box-shadow: 0 0 2px 2px rgba(232,121,59,.4); }
+.mapboxgl-ctrl { clear: both; pointer-events: auto; }
+.mapboxgl-ctrl-top-left .mapboxgl-ctrl { margin: 10px 0 0 10px; }
+.mapboxgl-ctrl-top-right .mapboxgl-ctrl { margin: 10px 10px 0 0; }
+</style>
+<style>
+.form-page { padding: 100px clamp(16px,4vw,48px) 60px; max-width: 1400px; margin: 0 auto; }
+#form-map { height: 450px; border-radius: var(--radius-md); border: 2px solid var(--gray-200); }
+.geom-tab-content { min-height: 520px; }
+.vertex-row {
+    background: var(--sand); border-radius: var(--radius-sm); padding: 10px 12px;
+    border: 1px solid var(--gray-200); margin-bottom: 8px;
+}
+.vertex-row .vertex-num {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 26px; height: 26px; border-radius: 50%; font-weight: 700;
+    font-size: .75rem; color: var(--white); background: var(--orange);
+}
+.shapefile-drop {
+    border: 2px dashed var(--orange); border-radius: var(--radius-md); padding: 2rem;
+    text-align: center; background: var(--orange-light); cursor: pointer;
+    transition: all var(--transition);
+}
+.shapefile-drop:hover { background: rgba(232,121,59,.12); border-color: var(--orange-hover); }
+.shapefile-drop.dragover { background: rgba(232,121,59,.18); border-color: var(--orange-hover); }
+.shp-attributes-table { font-size: .8rem; }
+.shp-attributes-table th { background: var(--green-50); color: var(--green-900); }
+.preview-badge { position: absolute; top: 8px; right: 8px; z-index: 500; }
+.vertex-list { max-height: 350px; overflow-y: auto; }
+.coord-system-info { font-size: .8rem; padding: 8px 12px; border-radius: var(--radius-sm); }
+.coord-system-wgs84 { background: var(--blue-light); border: 1px solid #bfdbfe; color: #1e40af; }
+.coord-system-utm30n { background: var(--gold-light); border: 1px solid var(--gold); color: #92400e; }
+
+/* Cards v5 */
+.form-card {
+    background: var(--white); border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm); border: 1px solid var(--gray-200);
+    overflow: hidden;
+}
+.form-card-header {
+    padding: 16px 20px; border-bottom: 1px solid var(--gray-100);
+    display: flex; align-items: center; gap: 10px;
+}
+.form-card-header h5 {
+    font-family: var(--font-display); font-size: 1rem; font-weight: 700;
+    color: var(--green-900); margin: 0;
+}
+.form-card-header .icon-wrap {
+    width: 36px; height: 36px; border-radius: var(--radius-sm);
+    display: flex; align-items: center; justify-content: center;
+}
+.form-card-body { padding: 20px; }
+
+/* Nav pills v5 */
+.nav-pills-v5 { display: flex; gap: 4px; flex-wrap: wrap; }
+.nav-pills-v5 .nav-link {
+    border-radius: var(--radius-sm); font-size: .82rem; font-weight: 600;
+    padding: 8px 14px; color: var(--gray-600); background: var(--sand);
+    border: 1px solid var(--gray-200); transition: all var(--transition);
+    font-family: var(--font-display);
+}
+.nav-pills-v5 .nav-link.active {
+    background: var(--green-900); color: var(--white); border-color: var(--green-900);
+}
+.nav-pills-v5 .nav-link:hover:not(.active) {
+    border-color: var(--orange); color: var(--orange);
+}
+
+/* Breadcrumb v5 */
+.breadcrumb-v5 { font-size: .85rem; margin-bottom: 20px; }
+.breadcrumb-v5 a { color: var(--green-700); text-decoration: none; font-weight: 500; }
+.breadcrumb-v5 a:hover { color: var(--orange); }
+.breadcrumb-v5 .active { color: var(--gray-400); }
+
+/* Buttons v5 */
+.btn-submit {
+    background: var(--orange); color: var(--white); border: none;
+    border-radius: var(--radius-sm); padding: 12px 32px; font-size: 1rem;
+    font-weight: 700; font-family: var(--font-display);
+    transition: all var(--transition); display: inline-flex; align-items: center; gap: 8px;
+}
+.btn-submit:hover { background: var(--orange-hover); transform: translateY(-1px); box-shadow: var(--shadow-md); }
+.btn-cancel {
+    border: 1.5px solid var(--gray-200); color: var(--gray-600);
+    border-radius: var(--radius-sm); padding: 12px 24px; font-size: 1rem;
+    font-weight: 600; background: transparent; transition: all var(--transition);
+    text-decoration: none; display: inline-flex; align-items: center; gap: 6px;
+}
+.btn-cancel:hover { border-color: var(--gray-400); color: var(--dark); }
+
+/* Form controls */
+.form-label { font-size: .85rem; font-weight: 600; color: var(--gray-600); font-family: var(--font-display); }
+.form-control, .form-select {
+    border: 1.5px solid var(--gray-200); border-radius: var(--radius-sm);
+    font-size: .88rem; padding: 8px 12px; background: var(--sand);
+    transition: all var(--transition); font-family: var(--font-body);
+}
+.form-control:focus, .form-select:focus {
+    border-color: var(--orange); background: var(--white);
+    box-shadow: 0 0 0 3px rgba(232,121,59,.12);
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="form-page">
+    <nav class="breadcrumb-v5">
+        {% if lotissement %}
+        <a href="{% url 'parcelles:lotissement_list' %}">Lotissements</a>
+        <span style="color:var(--gray-200);margin:0 8px">/</span>
+        <a href="{% url 'parcelles:lotissement_detail' lotissement.pk %}">{{ lotissement.name }}</a>
+        <span style="color:var(--gray-200);margin:0 8px">/</span>
+        <span class="active">Ajouter un lot</span>
+        {% else %}
+        <a href="{% url 'parcelles:list' %}">Parcelles</a>
+        <span style="color:var(--gray-200);margin:0 8px">/</span>
+        <span class="active">{% if parcelle %}Modifier {{ parcelle.lot_number }}{% else %}Nouvelle parcelle{% endif %}</span>
+        {% endif %}
+    </nav>
+
+    {% if lotissement %}
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:1rem;padding:12px 16px;background:linear-gradient(135deg,#0B3D2E,#145a3e);border-radius:var(--radius-lg);color:#fff">
+        <i class="bi bi-building" style="font-size:1.2rem;color:var(--orange)"></i>
+        <div>
+            <span style="font-weight:700;font-family:var(--font-display)">{{ lotissement.name }}</span>
+            <small style="color:rgba(255,255,255,.6);margin-left:8px">{{ lotissement.code }} &middot; {{ lotissement.total_lots }} lots</small>
+        </div>
+    </div>
+    {% endif %}
+
+    <form method="post" enctype="multipart/form-data" id="parcelleForm">
+        {% csrf_token %}
+
+        {% if form.errors %}
+        <div style="padding:12px 16px;border-radius:var(--radius-sm);background:rgba(220,38,38,.06);border:1px solid rgba(220,38,38,.15);color:var(--danger);font-size:.85rem;margin-bottom:20px">
+            <i class="bi bi-exclamation-triangle me-1"></i>Veuillez corriger les erreurs ci-dessous.
+            {% for field, errors in form.errors.items %}
+                {% for error in errors %}<br>{{ error }}{% endfor %}
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <div class="row g-4">
+            <!-- ═══ Colonne gauche : Informations ═══ -->
+            <div class="col-lg-5">
+                <div class="form-card">
+                    <div class="form-card-header">
+                        <div class="icon-wrap" style="background:var(--green-50)">
+                            <i class="bi bi-info-circle" style="color:var(--green-700)"></i>
+                        </div>
+                        <h5>Informations</h5>
+                    </div>
+                    <div class="form-card-body">
+                        <div class="row g-3">
+                            <div class="col-8">
+                                <label class="form-label">Titre</label>
+                                {{ form.title }}
+                            </div>
+                            <div class="col-4">
+                                <label class="form-label">N° de Lot</label>
+                                {{ form.lot_number }}
+                            </div>
+                        </div>
+
+                        <div class="mt-3">
+                            <label class="form-label">Description</label>
+                            {{ form.description }}
+                        </div>
+
+                        <div class="row g-3 mt-1">
+                            <div class="col-4">
+                                <label class="form-label">Type</label>
+                                {{ form.land_type }}
+                            </div>
+                            <div class="col-4">
+                                <label class="form-label">Surface (m²)</label>
+                                {{ form.surface_m2 }}
+                            </div>
+                            <div class="col-4">
+                                <label class="form-label">Prix (FCFA)</label>
+                                {{ form.price }}
+                            </div>
+                        </div>
+
+                        <div class="row g-3 mt-1">
+                            <div class="col-4">
+                                <label class="form-label">Zone</label>
+                                {{ form.zone }}
+                            </div>
+                            <div class="col-4">
+                                <label class="form-label">Îlot</label>
+                                {{ form.ilot }}
+                            </div>
+                            <div class="col-4">
+                                <label class="form-label">Adresse</label>
+                                {{ form.address }}
+                            </div>
+                        </div>
+
+                        <div class="mt-3">
+                            <label class="form-label">Nom du titulaire foncier</label>
+                            {{ form.title_holder_name }}
+                            <small style="color:var(--gray-400);font-size:.78rem;display:block;margin-top:4px">Si identique à votre nom, un badge de confiance sera attribué.</small>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ═══ Informations complémentaires (enrichissement) ═══ -->
+                <div class="form-card mt-3">
+                    <div class="form-card-header" style="cursor:pointer" onclick="var b=document.getElementById('extraFieldsBody');b.style.display=b.style.display==='none'?'block':'none';this.querySelector('.bi-chevron-down')?.classList.toggle('bi-chevron-up')">
+                        <div class="icon-wrap" style="background:rgba(232,121,59,.1)">
+                            <i class="bi bi-star" style="color:var(--orange)"></i>
+                        </div>
+                        <h5 style="margin:0;flex:1">Détails complémentaires <small style="color:var(--gray-400);font-weight:400;font-size:.78rem">— Améliore le score de confiance</small></h5>
+                        <i class="bi bi-chevron-down" style="color:var(--gray-400)"></i>
+                    </div>
+                    <div class="form-card-body" id="extraFieldsBody" style="display:{% if form.ilot_number.value or form.cadastre_ref.value %}block{% else %}none{% endif %}">
+                        <div class="row g-3">
+                            <div class="col-4">
+                                <label class="form-label">N° d'îlot</label>
+                                {{ form.ilot_number }}
+                            </div>
+                            <div class="col-8">
+                                <label class="form-label">Réf. cadastrale</label>
+                                {{ form.cadastre_ref }}
+                            </div>
+                        </div>
+                        <div class="row g-3 mt-1">
+                            <div class="col-6">
+                                <label class="form-label">Accès routier</label>
+                                {{ form.access_road }}
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label">Topographie</label>
+                                {{ form.topography }}
+                            </div>
+                        </div>
+                        <div class="row g-3 mt-1">
+                            <div class="col-4">
+                                <label class="form-label">Eau</label>
+                                {{ form.water_access }}
+                            </div>
+                            <div class="col-4">
+                                <label class="form-label">Électricité</label>
+                                {{ form.electricity }}
+                            </div>
+                            <div class="col-4">
+                                <label class="form-label">Type de sol</label>
+                                {{ form.soil_type }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ═══ Score de complétude (indicateur live) ═══ -->
+                {% if parcelle %}
+                <div class="form-card mt-3" style="border-left:4px solid {% if parcelle.completeness_score >= 70 %}var(--success){% elif parcelle.completeness_score >= 40 %}var(--warning){% else %}var(--danger){% endif %}">
+                    <div class="form-card-body" style="padding:12px 16px;display:flex;align-items:center;gap:12px">
+                        <div style="width:50px;height:50px;border-radius:50%;background:{% if parcelle.completeness_score >= 70 %}rgba(5,150,105,.1){% elif parcelle.completeness_score >= 40 %}rgba(217,119,6,.1){% else %}rgba(220,38,38,.1){% endif %};display:flex;align-items:center;justify-content:center">
+                            <span style="font-size:1.1rem;font-weight:900;color:{% if parcelle.completeness_score >= 70 %}var(--success){% elif parcelle.completeness_score >= 40 %}var(--warning){% else %}var(--danger){% endif %};font-family:var(--font-display)">{{ parcelle.completeness_score }}</span>
+                        </div>
+                        <div style="flex:1">
+                            <div style="font-size:.85rem;font-weight:700;color:var(--dark)">Score de confiance : {{ parcelle.completeness_label }}</div>
+                            <div style="background:var(--gray-100);border-radius:6px;height:8px;margin-top:4px;overflow:hidden">
+                                <div style="width:{{ parcelle.completeness_score }}%;height:100%;border-radius:6px;background:{% if parcelle.completeness_score >= 70 %}var(--success){% elif parcelle.completeness_score >= 40 %}var(--warning){% else %}var(--danger){% endif %};transition:width .5s"></div>
+                            </div>
+                            <small style="color:var(--gray-400);font-size:.72rem;margin-top:2px;display:block">Remplissez plus de champs pour améliorer la fiabilité</small>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+
+                <div class="d-flex gap-2 mt-3">
+                    <button type="submit" class="btn-submit flex-fill">
+                        <i class="bi bi-check-lg"></i> {% if parcelle %}Enregistrer{% else %}Créer la parcelle{% endif %}
+                    </button>
+                    <a href="{% url 'parcelles:list' %}" class="btn-cancel">Annuler</a>
+                </div>
+            </div>
+
+            <!-- ═══ Colonne droite : Géométrie ═══ -->
+            <div class="col-lg-7">
+                <div class="form-card">
+                    <div class="form-card-header">
+                        <div class="icon-wrap" style="background:var(--orange-light)">
+                            <i class="bi bi-bounding-box" style="color:var(--orange)"></i>
+                        </div>
+                        <h5>Géométrie de la parcelle</h5>
+                    </div>
+                    <div class="form-card-body">
+                        <ul class="nav nav-pills-v5 mb-3" role="tablist">
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link active" id="tab-draw" data-bs-toggle="pill" data-bs-target="#pane-draw" type="button" role="tab">
+                                    <i class="bi bi-pencil-square me-1"></i> Dessiner
+                                </button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link" id="tab-coords" data-bs-toggle="pill" data-bs-target="#pane-coords" type="button" role="tab">
+                                    <i class="bi bi-geo me-1"></i> Coordonnées
+                                </button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link" id="tab-shapefile" data-bs-toggle="pill" data-bs-target="#pane-shapefile" type="button" role="tab">
+                                    <i class="bi bi-file-earmark-zip me-1"></i> Shapefile
+                                </button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link" id="tab-dxf" data-bs-toggle="pill" data-bs-target="#pane-dxf" type="button" role="tab">
+                                    <i class="bi bi-vector-pen me-1"></i> DXF
+                                </button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link" id="tab-txtfile" data-bs-toggle="pill" data-bs-target="#pane-txtfile" type="button" role="tab">
+                                    <i class="bi bi-file-text me-1"></i> TXT
+                                </button>
+                            </li>
+                        </ul>
+
+                        <div class="tab-content geom-tab-content">
+                            <!-- ═══ Onglet 1 : Dessin sur carte ═══ -->
+                            <div class="tab-pane fade show active" id="pane-draw" role="tabpanel">
+                                <div class="position-relative">
+                                    <div id="form-map"></div>
+                                    <span class="preview-badge" id="drawStatus" style="display:none;background:var(--success);color:var(--white);padding:4px 12px;border-radius:var(--radius-sm);font-size:.78rem;font-weight:600">
+                                        <i class="bi bi-check-circle me-1"></i> Polygone tracé
+                                    </span>
+                                </div>
+                                <small style="color:var(--gray-400);font-size:.78rem;display:block;margin-top:8px">
+                                    <i class="bi bi-info-circle me-1"></i>
+                                    Utilisez les outils de dessin pour tracer le contour de la parcelle.
+                                </small>
+                            </div>
+
+                            <!-- ═══ Onglet 2 : Coordonnées ═══ -->
+                            <div class="tab-pane fade" id="pane-coords" role="tabpanel">
+                                <div class="mb-3">
+                                    <label class="form-label">
+                                        <i class="bi bi-globe me-1"></i> Système de coordonnées
+                                    </label>
+                                    {{ form.coordinate_system }}
+                                </div>
+
+                                <div id="coordSystemInfo" class="coord-system-info coord-system-wgs84 mb-3">
+                                    <i class="bi bi-info-circle me-1"></i>
+                                    <strong>WGS84 (GPS)</strong> — Saisissez <strong>Longitude</strong> puis <strong>Latitude</strong>.
+                                    Minimum <strong>3 sommets</strong>.
+                                </div>
+
+                                <div id="vertexList" class="vertex-list"></div>
+
+                                <div class="d-flex gap-2 mt-2">
+                                    <button type="button" id="btnAddVertex" style="flex:1;border:1.5px solid var(--green-700);color:var(--green-700);background:transparent;border-radius:var(--radius-sm);padding:8px;font-size:.82rem;font-weight:600;cursor:pointer;transition:all var(--transition)">
+                                        <i class="bi bi-plus-circle me-1"></i> Ajouter un sommet
+                                    </button>
+                                    <button type="button" id="btnPreviewCoords" style="flex:1;background:var(--orange);color:var(--white);border:none;border-radius:var(--radius-sm);padding:8px;font-size:.82rem;font-weight:600;cursor:pointer;transition:all var(--transition)">
+                                        <i class="bi bi-eye me-1"></i> Prévisualiser
+                                    </button>
+                                </div>
+
+                                <div id="coordPreviewMap" style="height:220px; border-radius:var(--radius-sm); margin-top:12px; display:none;"></div>
+                            </div>
+
+                            <!-- ═══ Onglet 3 : Import Shapefile ═══ -->
+                            <div class="tab-pane fade" id="pane-shapefile" role="tabpanel">
+                                <div class="shapefile-drop" id="shpDropZone">
+                                    <i class="bi bi-cloud-upload" style="font-size:3rem;color:var(--orange)"></i>
+                                    <h6 class="fw-bold mt-2" style="font-family:var(--font-display);color:var(--green-900)">Importer un Shapefile</h6>
+                                    <p style="color:var(--gray-400);font-size:.85rem" class="mb-2">
+                                        Glissez-déposez une archive <strong>.zip</strong> contenant les fichiers
+                                        <code>.shp</code>, <code>.shx</code>, <code>.dbf</code>
+                                    </p>
+                                    {{ form.shapefile_zip }}
+                                    <p style="color:var(--gray-400);font-size:.78rem" class="mt-2 mb-0">
+                                        <i class="bi bi-info-circle me-1"></i>
+                                        Le premier polygone sera utilisé. La reprojection est automatique (UTM → WGS84).
+                                    </p>
+                                </div>
+
+                                <div id="shpAttributesContainer" style="display:none;" class="mt-3">
+                                    <h6 class="fw-bold" style="font-family:var(--font-display);color:var(--green-900)"><i class="bi bi-table me-1"></i> Table d'attributs</h6>
+                                    <div class="table-responsive" style="max-height:200px; overflow-y:auto;">
+                                        <table class="table table-sm table-bordered shp-attributes-table" id="shpAttributesTable">
+                                            <thead><tr><th>Attribut</th><th>Valeur</th></tr></thead>
+                                            <tbody></tbody>
+                                        </table>
+                                    </div>
+                                </div>
+
+                                <div id="shpPreviewMap" style="height:220px; border-radius:var(--radius-sm); margin-top:12px; display:none;"></div>
+                            </div>
+
+                            <!-- ═══ Onglet 4 : Import DXF ═══ -->
+                            <div class="tab-pane fade" id="pane-dxf" role="tabpanel">
+                                <div style="text-align:center;padding:2rem;border:2px dashed var(--gray-200);border-radius:var(--radius-md);background:var(--sand)">
+                                    <i class="bi bi-vector-pen" style="font-size:3rem;color:var(--orange)"></i>
+                                    <h6 class="fw-bold mt-2" style="font-family:var(--font-display);color:var(--green-900)">Importer un fichier DXF (AutoCAD)</h6>
+                                    <p style="color:var(--gray-400);font-size:.85rem" class="mb-2">
+                                        Le premier polygone fermé (LWPOLYLINE, POLYLINE) sera extrait.
+                                    </p>
+                                    {{ form.dxf_file }}
+                                    <div style="padding:10px 14px;border-radius:var(--radius-sm);background:var(--blue-light);border:1px solid rgba(46,125,191,.15);font-size:.82rem;color:var(--blue);margin-top:12px;text-align:left">
+                                        <i class="bi bi-info-circle me-1"></i>
+                                        <strong>Auto-détection :</strong> Si les coordonnées du DXF sont en UTM Zone 30N
+                                        (valeurs > 180), la reprojection vers WGS84 sera automatique.
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- ═══ Onglet 5 : Import TXT ═══ -->
+                            <div class="tab-pane fade" id="pane-txtfile" role="tabpanel">
+                                <div style="text-align:center;padding:2rem;border:2px dashed var(--gray-200);border-radius:var(--radius-md);background:var(--sand)">
+                                    <i class="bi bi-file-earmark-text" style="font-size:3rem;color:var(--orange)"></i>
+                                    <h6 class="fw-bold mt-2" style="font-family:var(--font-display);color:var(--green-900)">Importer des coordonnées (TXT, CSV, XYZ)</h6>
+                                    <p style="color:var(--gray-400);font-size:.85rem" class="mb-2">
+                                        Un fichier texte avec une coordonnée <strong>X Y</strong> par ligne.
+                                    </p>
+                                    {{ form.coords_file }}
+                                    <div style="padding:10px 14px;border-radius:var(--radius-sm);background:var(--blue-light);border:1px solid rgba(46,125,191,.15);font-size:.82rem;color:var(--blue);margin-top:12px;text-align:left">
+                                        <i class="bi bi-info-circle me-1"></i>
+                                        <strong>Système :</strong> Sélectionnez WGS84 ou UTM Zone 30N
+                                        dans l'onglet <strong>Coordonnées</strong>. L'auto-détection est aussi active.
+                                    </div>
+                                    <div style="text-align:left;margin-top:12px;padding:12px;background:var(--sand);border-radius:var(--radius-sm);font-size:.8rem;color:var(--gray-600)">
+                                        <strong>Formats acceptés :</strong>
+                                        <ul style="margin:6px 0 0;padding-left:16px">
+                                            <li><code>X Y</code> — espace ou tab</li>
+                                            <li><code>X,Y</code> — virgule</li>
+                                            <li><code>X;Y</code> — point-virgule</li>
+                                            <li><code>N° X Y</code> — numéro de point (ignoré)</li>
+                                            <li>Lignes <code>#</code> = commentaires</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Hidden fields -->
+        {{ form.geometry_json }}
+        <input type="hidden" name="coordinates_text" id="id_coordinates_text" value="">
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<!-- Shim: mapbox-gl-draw attend 'mapboxgl' global, on le pointe vers maplibregl -->
+<script>
+if (typeof mapboxgl === 'undefined' && typeof maplibregl !== 'undefined') {
+    window.mapboxgl = maplibregl;
+}
+</script>
+<script src="https://unpkg.com/@mapbox/mapbox-gl-draw@1.4.3/dist/mapbox-gl-draw.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function(){
+
+    const geomField = document.getElementById('id_geometry_json');
+    const coordsField = document.getElementById('id_coordinates_text');
+    const coordSystemSelect = document.getElementById('id_coordinate_system');
+    const coordSystemInfo = document.getElementById('coordSystemInfo');
+
+    const COORD_LABELS = {
+        wgs84: {
+            col1: 'Longitude (X)', col2: 'Latitude (Y)',
+            info: '<i class="bi bi-info-circle me-1"></i><strong>WGS84 (GPS)</strong> — Saisissez <strong>Longitude</strong> puis <strong>Latitude</strong>. Minimum <strong>3 sommets</strong>.',
+            infoClass: 'coord-system-wgs84',
+            placeholder1: 'ex: -3.9986', placeholder2: 'ex: 5.3484',
+        },
+        utm30n: {
+            col1: 'X (Easting)', col2: 'Y (Northing)',
+            info: '<i class="bi bi-info-circle me-1"></i><strong>UTM Zone 30N (Topographique)</strong> — Saisissez <strong>X (Easting)</strong> puis <strong>Y (Northing)</strong>. Conversion automatique vers WGS84.',
+            infoClass: 'coord-system-utm30n',
+            placeholder1: 'ex: 377340.5', placeholder2: 'ex: 591205.3',
+        },
+    };
+
+    function getCurrentSystem() { return coordSystemSelect ? coordSystemSelect.value : 'wgs84'; }
+
+    function updateCoordLabels() {
+        const sys = getCurrentSystem();
+        const labels = COORD_LABELS[sys] || COORD_LABELS.wgs84;
+        if (coordSystemInfo) { coordSystemInfo.innerHTML = labels.info; coordSystemInfo.className = 'coord-system-info ' + labels.infoClass + ' mb-3'; }
+        document.querySelectorAll('.coord-col1').forEach(el => { el.placeholder = labels.placeholder1; });
+        document.querySelectorAll('.coord-col2').forEach(el => { el.placeholder = labels.placeholder2; });
+        document.querySelectorAll('.coord-label-1').forEach(el => { el.textContent = labels.col1; });
+        document.querySelectorAll('.coord-label-2').forEach(el => { el.textContent = labels.col2; });
+    }
+
+    if (coordSystemSelect) { coordSystemSelect.addEventListener('change', updateCoordLabels); }
+
+    // ═══ ONGLET 1 : Dessin sur carte (MapLibre + mapbox-gl-draw) ═══
+    const map = new maplibregl.Map({
+        container: 'form-map',
+        style: EyeFoncier.mapStyles.satellite,
+        center: [-4.008, 5.36],
+        zoom: 13
+    });
+    map.addControl(new maplibregl.NavigationControl(), 'top-right');
+
+    const draw = new MapboxDraw({
+        displayControlsDefault: false,
+        controls: { polygon: true, trash: true },
+        defaultMode: 'simple_select',
+        styles: [
+            { id: 'gl-draw-polygon-fill', type: 'fill', filter: ['all', ['==', '$type', 'Polygon'], ['!=', 'mode', 'static']],
+              paint: { 'fill-color': '#E8793B', 'fill-opacity': 0.25 } },
+            { id: 'gl-draw-polygon-stroke-active', type: 'line', filter: ['all', ['==', '$type', 'Polygon'], ['!=', 'mode', 'static']],
+              paint: { 'line-color': '#E8793B', 'line-width': 3 } },
+            { id: 'gl-draw-polygon-fill-static', type: 'fill', filter: ['all', ['==', '$type', 'Polygon'], ['==', 'mode', 'static']],
+              paint: { 'fill-color': '#E8793B', 'fill-opacity': 0.25 } },
+            { id: 'gl-draw-polygon-stroke-static', type: 'line', filter: ['all', ['==', '$type', 'Polygon'], ['==', 'mode', 'static']],
+              paint: { 'line-color': '#E8793B', 'line-width': 3 } },
+            { id: 'gl-draw-polygon-midpoint', type: 'circle', filter: ['all', ['==', '$type', 'Point'], ['==', 'meta', 'midpoint']],
+              paint: { 'circle-radius': 4, 'circle-color': '#E8793B' } },
+            { id: 'gl-draw-polygon-and-line-vertex-active', type: 'circle', filter: ['all', ['==', 'meta', 'vertex'], ['==', '$type', 'Point'], ['!=', 'mode', 'static']],
+              paint: { 'circle-radius': 6, 'circle-color': '#fff', 'circle-stroke-color': '#E8793B', 'circle-stroke-width': 2 } },
+            { id: 'gl-draw-line', type: 'line', filter: ['all', ['==', '$type', 'LineString'], ['!=', 'mode', 'static']],
+              paint: { 'line-color': '#E8793B', 'line-width': 3, 'line-dasharray': [2, 2] } },
+            { id: 'gl-draw-point', type: 'circle', filter: ['all', ['==', '$type', 'Point'], ['==', 'meta', 'feature']],
+              paint: { 'circle-radius': 5, 'circle-color': '#E8793B' } }
+        ]
+    });
+    map.addControl(draw);
+
+    const drawStatus = document.getElementById('drawStatus');
+    function updateDrawStatus(has) { drawStatus.style.display = has ? 'inline-block' : 'none'; }
+
+    function syncGeomFromDraw() {
+        const data = draw.getAll();
+        if (data.features.length > 0) {
+            geomField.value = JSON.stringify(data.features[data.features.length - 1].geometry);
+            updateDrawStatus(true);
+        } else {
+            geomField.value = '';
+            updateDrawStatus(false);
+        }
+    }
+
+    // Load existing geometry into draw
+    map.on('load', function() {
+        if (geomField && geomField.value && geomField.value.trim()) {
+            try {
+                const existing = JSON.parse(geomField.value);
+                const featureIds = draw.add({ type: 'Feature', geometry: existing, properties: {} });
+                // Fit bounds
+                const bounds = new maplibregl.LngLatBounds();
+                function extBounds(coords) { if (typeof coords[0] === 'number') { bounds.extend(coords); return; } coords.forEach(c => extBounds(c)); }
+                extBounds(existing.coordinates);
+                if (!bounds.isEmpty()) map.fitBounds(bounds, { padding: 30 });
+                updateDrawStatus(true);
+            } catch(e) { console.warn('Géométrie existante invalide', e); }
+        }
+    });
+
+    map.on('draw.create', function(e) {
+        // Keep only the last drawn polygon
+        const data = draw.getAll();
+        if (data.features.length > 1) {
+            draw.delete(data.features.slice(0, -1).map(f => f.id));
+        }
+        syncGeomFromDraw();
+    });
+    map.on('draw.update', syncGeomFromDraw);
+    map.on('draw.delete', syncGeomFromDraw);
+
+    document.getElementById('tab-draw').addEventListener('shown.bs.tab', function() { setTimeout(() => map.resize(), 200); });
+
+    // ═══ ONGLET 2 : Coordonnées ═══
+    const vertexList = document.getElementById('vertexList');
+    let vertexCount = 0;
+    let coordPreviewMap = null, coordPreviewMarkers = [];
+
+    function addVertexRow(val1, val2) {
+        vertexCount++;
+        const idx = vertexCount;
+        const sys = getCurrentSystem();
+        const labels = COORD_LABELS[sys] || COORD_LABELS.wgs84;
+        const div = document.createElement('div');
+        div.className = 'vertex-row d-flex align-items-center gap-2';
+        div.dataset.idx = idx;
+        div.innerHTML = `<span class="vertex-num">${idx}</span><div class="flex-fill"><div class="row g-2"><div class="col-6"><small class="coord-label-1" style="color:var(--gray-400);font-size:.72rem">${labels.col1}</small><input type="number" step="any" class="form-control form-control-sm coord-col1" placeholder="${labels.placeholder1}" value="${val1 !== undefined ? val1 : ''}"></div><div class="col-6"><small class="coord-label-2" style="color:var(--gray-400);font-size:.72rem">${labels.col2}</small><input type="number" step="any" class="form-control form-control-sm coord-col2" placeholder="${labels.placeholder2}" value="${val2 !== undefined ? val2 : ''}"></div></div></div><button type="button" class="btn-remove-vertex" title="Supprimer" style="width:32px;height:32px;border-radius:50%;border:1.5px solid var(--danger);color:var(--danger);background:transparent;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:.8rem;transition:all var(--transition)"><i class="bi bi-trash"></i></button>`;
+        vertexList.appendChild(div);
+        div.querySelector('.btn-remove-vertex').addEventListener('click', function() { div.remove(); renumberVertices(); });
+    }
+
+    function renumberVertices() { const rows = vertexList.querySelectorAll('.vertex-row'); rows.forEach((row, i) => { row.querySelector('.vertex-num').textContent = i + 1; }); vertexCount = rows.length; }
+
+    function getVerticesFromUI() {
+        const coords = [];
+        vertexList.querySelectorAll('.vertex-row').forEach(row => {
+            const c1 = parseFloat(row.querySelector('.coord-col1').value);
+            const c2 = parseFloat(row.querySelector('.coord-col2').value);
+            if (!isNaN(c1) && !isNaN(c2)) coords.push([c1, c2]);
+        });
+        return coords;
+    }
+
+    for (let i = 0; i < 4; i++) addVertexRow();
+
+    document.getElementById('btnAddVertex').addEventListener('click', () => addVertexRow());
+
+    document.getElementById('btnPreviewCoords').addEventListener('click', function() {
+        const coords = getVerticesFromUI();
+        const sys = getCurrentSystem();
+        if (coords.length < 3) { alert('Il faut au moins 3 sommets pour former un polygone.'); return; }
+        coordsField.value = JSON.stringify(coords);
+
+        let wgs84Coords;
+        if (sys === 'utm30n') { wgs84Coords = coords.map(c => utmToWgs84Approx(c[0], c[1])); }
+        else { wgs84Coords = coords; }
+
+        const closed = [...wgs84Coords, wgs84Coords[0]];
+        const geojson = { type: "Polygon", coordinates: [closed] };
+        if (sys === 'wgs84') { geomField.value = JSON.stringify(geojson); }
+
+        const mapEl = document.getElementById('coordPreviewMap');
+        mapEl.style.display = 'block';
+        if (!coordPreviewMap) {
+            coordPreviewMap = new maplibregl.Map({
+                container: 'coordPreviewMap',
+                style: EyeFoncier.mapStyles.streets,
+                center: [-4.008, 5.36],
+                zoom: 13
+            });
+        }
+
+        // Remove old layers
+        ['coord-preview-fill','coord-preview-line'].forEach(lid => { if(coordPreviewMap.getLayer(lid)) coordPreviewMap.removeLayer(lid); });
+        if(coordPreviewMap.getSource('coord-preview')) coordPreviewMap.removeSource('coord-preview');
+        coordPreviewMarkers.forEach(m => m.remove()); coordPreviewMarkers = [];
+
+        function addCoordLayers() {
+            coordPreviewMap.addSource('coord-preview', { type: 'geojson', data: { type: 'Feature', geometry: geojson, properties: {} } });
+            coordPreviewMap.addLayer({ id: 'coord-preview-fill', type: 'fill', source: 'coord-preview', paint: { 'fill-color': '#E8793B', 'fill-opacity': 0.25 } });
+            coordPreviewMap.addLayer({ id: 'coord-preview-line', type: 'line', source: 'coord-preview', paint: { 'line-color': '#E8793B', 'line-width': 3 } });
+
+            const bounds = new maplibregl.LngLatBounds();
+            closed.forEach(c => bounds.extend(c));
+            if (!bounds.isEmpty()) coordPreviewMap.fitBounds(bounds, { padding: 20 });
+
+            const colors = ['#DC2626','#2E7DBF','#D97706','#059669','#8b5cf6','#ec4899','#14b8a6','#E8793B'];
+            wgs84Coords.forEach((c, i) => {
+                const el = document.createElement('div');
+                el.style.cssText = 'width:14px;height:14px;border-radius:50%;border:2px solid #fff;background:' + colors[i % colors.length] + ';display:flex;align-items:center;justify-content:center;font-size:8px;color:#fff;font-weight:700';
+                el.textContent = i + 1;
+                const m = new maplibregl.Marker({ element: el }).setLngLat(c).addTo(coordPreviewMap);
+                coordPreviewMarkers.push(m);
+            });
+        }
+
+        if (coordPreviewMap.loaded()) { addCoordLayers(); }
+        else { coordPreviewMap.on('load', addCoordLayers); }
+
+        // Also update the draw map
+        draw.deleteAll();
+        draw.add({ type: 'Feature', geometry: geojson, properties: {} });
+        const drawBounds = new maplibregl.LngLatBounds();
+        closed.forEach(c => drawBounds.extend(c));
+        if (!drawBounds.isEmpty()) map.fitBounds(drawBounds, { padding: 30 });
+        updateDrawStatus(true);
+    });
+
+    function utmToWgs84Approx(easting, northing) {
+        const k0 = 0.9996, a = 6378137.0, e = 0.0818192, e2 = e * e;
+        const e1 = (1 - Math.sqrt(1 - e2)) / (1 + Math.sqrt(1 - e2));
+        const x = easting - 500000, y = northing;
+        const M = y / k0, mu = M / (a * (1 - e2/4 - 3*e2*e2/64));
+        const phi1 = mu + (3*e1/2 - 27*e1*e1*e1/32) * Math.sin(2*mu) + (21*e1*e1/16 - 55*e1*e1*e1*e1/32) * Math.sin(4*mu);
+        const sinPhi = Math.sin(phi1), cosPhi = Math.cos(phi1), tanPhi = sinPhi / cosPhi;
+        const N = a / Math.sqrt(1 - e2 * sinPhi * sinPhi);
+        const T = tanPhi * tanPhi, C = e2 * cosPhi * cosPhi / (1 - e2);
+        const D = x / (N * k0);
+        const lat = phi1 - (N * tanPhi / (a * (1 - e2/4))) * (D*D/2 - (5 + 3*T) * D*D*D*D/24);
+        const lon = (-3 * Math.PI / 180) + (D - (1 + 2*T + C) * D*D*D/6) / cosPhi;
+        return [lon * 180 / Math.PI, lat * 180 / Math.PI];
+    }
+
+    // ═══ ONGLET 3 : Import Shapefile ═══
+    const dropZone = document.getElementById('shpDropZone');
+    const fileInput = document.getElementById('id_shapefile_zip');
+    let shpPreviewMap = null;
+
+    ['dragenter', 'dragover'].forEach(evt => { dropZone.addEventListener(evt, e => { e.preventDefault(); dropZone.classList.add('dragover'); }); });
+    ['dragleave', 'drop'].forEach(evt => { dropZone.addEventListener(evt, e => { e.preventDefault(); dropZone.classList.remove('dragover'); }); });
+    dropZone.addEventListener('drop', e => { if (e.dataTransfer.files.length) { fileInput.files = e.dataTransfer.files; handleShapefileSelect(); } });
+    fileInput.addEventListener('change', handleShapefileSelect);
+
+    function handleShapefileSelect() {
+        const file = fileInput.files[0];
+        if (!file) return;
+        const name = file.name.toLowerCase();
+        if (!name.endsWith('.zip') && !name.endsWith('.shp')) { alert('Veuillez sélectionner un fichier .zip ou .shp'); return; }
+
+        dropZone.innerHTML = '<div class="spinner-border" style="color:var(--orange)" role="status"></div><h6 class="fw-bold mt-2" style="color:var(--green-900)">Analyse en cours...</h6><p class="mb-0" style="color:var(--gray-400);font-size:.85rem"><code>' + file.name + '</code></p>';
+
+        const formData = new FormData();
+        formData.append('file', file);
+        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+        fetch('/api/v1/parcelles/shapefile-preview/', { method: 'POST', headers: { 'X-CSRFToken': csrfToken }, body: formData })
+        .then(r => { if (!r.ok) return r.json().then(d => { throw new Error(d.error || 'Erreur serveur'); }); return r.json(); })
+        .then(data => {
+            if (data.error) throw new Error(data.error);
+            dropZone.innerHTML = '<i class="bi bi-check-circle-fill" style="font-size:3rem;color:var(--success)"></i><h6 class="fw-bold mt-2" style="color:var(--green-900)">Shapefile importé avec succès</h6><p class="mb-1"><code>' + file.name + '</code> — <strong>' + data.count + '</strong> entité(s)</p><p style="color:var(--gray-400);font-size:.82rem" class="mb-0">CRS : ' + data.crs_info + '</p>';
+
+            if (data.features && data.features.length > 0) {
+                const props = data.features[0].properties || {};
+                const keys = Object.keys(props);
+                if (keys.length > 0) {
+                    const tbody = document.getElementById('shpAttributesTable').querySelector('tbody');
+                    tbody.innerHTML = '';
+                    keys.forEach(key => { const val = props[key]; const tr = document.createElement('tr'); tr.innerHTML = '<td><strong>' + key + '</strong></td><td>' + (val !== null && val !== undefined ? val : '<em style="color:var(--gray-400)">—</em>') + '</td>'; tbody.appendChild(tr); });
+                    document.getElementById('shpAttributesContainer').style.display = 'block';
+                }
+            }
+
+            const mapEl = document.getElementById('shpPreviewMap');
+            mapEl.style.display = 'block';
+            if (!shpPreviewMap) {
+                shpPreviewMap = new maplibregl.Map({ container: 'shpPreviewMap', style: EyeFoncier.mapStyles.streets, center: [-4.008, 5.36], zoom: 13 });
+            }
+
+            function addShpLayers() {
+                ['shp-fill','shp-line'].forEach(lid => { if(shpPreviewMap.getLayer(lid)) shpPreviewMap.removeLayer(lid); });
+                if(shpPreviewMap.getSource('shp')) shpPreviewMap.removeSource('shp');
+                shpPreviewMap.addSource('shp', { type: 'geojson', data: data });
+                shpPreviewMap.addLayer({ id: 'shp-fill', type: 'fill', source: 'shp', paint: { 'fill-color': '#E8793B', 'fill-opacity': 0.25 } });
+                shpPreviewMap.addLayer({ id: 'shp-line', type: 'line', source: 'shp', paint: { 'line-color': '#E8793B', 'line-width': 3 } });
+                const bounds = EyeFoncier.map.getBoundsFromFeatures(data.features);
+                if (!bounds.isEmpty()) shpPreviewMap.fitBounds(bounds, { padding: 20 });
+            }
+            if (shpPreviewMap.loaded()) { addShpLayers(); } else { shpPreviewMap.on('load', addShpLayers); }
+
+            if (data.features.length > 0) {
+                const geom = data.features[0].geometry;
+                geomField.value = JSON.stringify(geom);
+                draw.deleteAll();
+                try {
+                    draw.add({ type: 'Feature', geometry: geom, properties: {} });
+                    const bounds = new maplibregl.LngLatBounds();
+                    function extB(c) { if (typeof c[0] === 'number') { bounds.extend(c); return; } c.forEach(x => extB(x)); }
+                    extB(geom.coordinates);
+                    if (!bounds.isEmpty()) map.fitBounds(bounds, { padding: 30 });
+                    updateDrawStatus(true);
+                } catch(e) {}
+            }
+        })
+        .catch(err => {
+            dropZone.innerHTML = '<i class="bi bi-exclamation-triangle-fill" style="font-size:3rem;color:var(--warning)"></i><h6 class="fw-bold mt-2" style="color:var(--green-900)">Erreur d\'analyse</h6><p class="mb-1" style="font-size:.85rem;color:var(--danger)">' + err.message + '</p><p class="mb-0" style="color:var(--gray-400);font-size:.82rem">Le fichier sera tout de même traité lors de la soumission.</p>';
+        });
+    }
+
+    document.getElementById('parcelleForm').addEventListener('submit', function() {
+        if (!geomField.value && !coordsField.value) {
+            const coords = getVerticesFromUI();
+            if (coords.length >= 3) { coordsField.value = JSON.stringify(coords); }
+        }
+    });
+
+    updateCoordLabels();
+});
+</script>
+{% endblock %}

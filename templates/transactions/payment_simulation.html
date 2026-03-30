@@ -1,0 +1,77 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}Paiement — {{ SITE_NAME }}{% endblock %}
+
+{% block content %}
+<div class="ef-page-content" style="max-width:600px; margin:0 auto; padding-top:2rem">
+    <!-- Header -->
+    <div style="text-align:center; margin-bottom:2rem">
+        <div style="width:72px; height:72px; border-radius:50%; background:#0B3D2E; display:inline-flex; align-items:center; justify-content:center; margin-bottom:1rem">
+            <i class="bi bi-credit-card-2-front" style="font-size:1.8rem; color:#fff"></i>
+        </div>
+        <h2 style="font-family:var(--font-display); color:#0B3D2E">Paiement sécurisé</h2>
+        {% if pending.amount %}
+        <div style="font-family:var(--font-mono); font-size:2.5rem; font-weight:700; color:#0B3D2E; margin-top:.5rem">
+            {{ pending.amount|floatformat:0 }} <span style="font-size:1rem">FCFA</span>
+        </div>
+        {% endif %}
+        <p style="color:#6b7280; font-size:.85rem; margin-top:.25rem">Réf: {{ tx_id }}</p>
+    </div>
+
+    {% if pending.mode == "simulation" %}
+    <div style="background:rgba(232,121,59,0.1); border-radius:.5rem; padding:.75rem; margin-bottom:1.5rem; font-size:.85rem; color:#92400e">
+        <i class="bi bi-exclamation-triangle" style="color:#E8793B"></i>
+        <strong>Mode démonstration</strong> — Le paiement réel via CinetPay sera activé en production.
+    </div>
+    {% endif %}
+
+    <!-- Payment methods card -->
+    <div class="ef-card" style="margin-bottom:1.5rem">
+        <div class="ef-card-body" style="padding:1.5rem">
+            <h4 style="font-family:var(--font-display); color:#0B3D2E; font-size:1rem; margin-bottom:1rem">
+                <i class="bi bi-wallet2" style="color:#E8793B"></i> Choisissez votre mode de paiement
+            </h4>
+            <form method="post" id="paymentForm">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="confirm" id="payAction">
+
+                <div style="display:flex; flex-direction:column; gap:.5rem; margin-bottom:1.5rem">
+                    {% for m in payment_methods %}
+                    <label class="ef-card" style="cursor:pointer; padding:1rem; display:flex; align-items:center; gap:1rem; transition:all .2s; border:2px solid transparent"
+                           onmouseover="this.style.borderColor='#0B3D2E'"
+                           onmouseout="if(!this.querySelector('input').checked){this.style.borderColor='transparent'}"
+                           onclick="this.querySelector('input').checked=true; this.style.borderColor='#0B3D2E'; document.querySelectorAll('.ef-card[onclick]').forEach(el=>{if(el!==this)el.style.borderColor='transparent'})">
+                        <input type="radio" name="method" value="{{ m.id }}"
+                               {% if forloop.first %}checked{% endif %}
+                               style="accent-color:#0B3D2E">
+                        <div style="width:40px; height:40px; border-radius:50%; background:{{ m.color }}15; display:flex; align-items:center; justify-content:center; flex-shrink:0">
+                            <i class="bi {{ m.icon }}" style="color:{{ m.color }}"></i>
+                        </div>
+                        <span style="font-weight:600">{{ m.name }}</span>
+                    </label>
+                    {% endfor %}
+                </div>
+
+                <div style="display:flex; gap:.75rem">
+                    <button type="button" class="ef-btn ef-btn-outline-green" style="flex:1"
+                            onclick="document.getElementById('payAction').value='cancel';this.closest('form').submit()">
+                        <i class="bi bi-x-lg"></i> Annuler
+                    </button>
+                    <button type="submit" class="ef-btn ef-btn-primary" style="flex:1; font-weight:700">
+                        <i class="bi bi-lock"></i> Payer {{ pending.amount|floatformat:0 }} FCFA
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Security footer -->
+    <div style="text-align:center; font-size:.8rem; color:#6b7280">
+        <div style="display:flex; justify-content:center; gap:1.5rem; margin-bottom:.5rem">
+            <span><i class="bi bi-shield-check" style="color:#0B3D2E"></i> Paiement sécurisé</span>
+            <span><i class="bi bi-lock" style="color:#0B3D2E"></i> SSL 256-bit</span>
+        </div>
+        <p style="margin:0">Propulsé par <strong>CinetPay</strong> — Passerelle de paiement certifiée</p>
+    </div>
+</div>
+{% endblock %}

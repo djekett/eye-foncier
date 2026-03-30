@@ -1,0 +1,49 @@
+{% extends "notifications/email_base.html" %}
+{% block email_content %}
+<tr>
+    <td style="padding:32px">
+        <div style="text-align:center;margin:0 0 20px">
+            <span style="display:inline-block;background:#dcfce7;border-radius:50%;width:56px;height:56px;line-height:56px;font-size:28px;text-align:center">
+                &#10004;
+            </span>
+        </div>
+
+        <h2 style="color:#0B3D2E;margin:0 0 16px;font-size:18px;font-weight:700;text-align:center">
+            {{ title }}
+        </h2>
+
+        <p style="color:#374151;font-size:15px;line-height:1.6;margin:0 0 20px;text-align:center">
+            {{ message }}
+        </p>
+
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f0fdf4;border-radius:8px;margin:0 0 24px;border:1px solid #bbf7d0">
+            <tr>
+                <td style="padding:16px">
+                    {% if data.parcelle_lot %}
+                    <p style="color:#374151;font-size:13px;margin:0 0 6px">
+                        <strong style="color:#0B3D2E">Parcelle :</strong> Lot {{ data.parcelle_lot }}
+                    </p>
+                    {% endif %}
+                    {% if data.validated_by %}
+                    <p style="color:#374151;font-size:13px;margin:0">
+                        <strong style="color:#0B3D2E">Validé par :</strong> {{ data.validated_by }}
+                    </p>
+                    {% endif %}
+                </td>
+            </tr>
+        </table>
+
+        {% if data.action_url %}
+        <table role="presentation" cellspacing="0" cellpadding="0" style="margin:0 auto">
+            <tr>
+                <td style="background:#16a34a;border-radius:8px;padding:12px 28px">
+                    <a href="{{ data.action_url }}" style="color:#ffffff;text-decoration:none;font-weight:700;font-size:14px">
+                        Voir les détails
+                    </a>
+                </td>
+            </tr>
+        </table>
+        {% endif %}
+    </td>
+</tr>
+{% endblock %}

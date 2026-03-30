@@ -1,0 +1,412 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}Analyse — Lot {{ parcelle.lot_number }} — {{ SITE_NAME }}{% endblock %}
+
+{% block content %}
+<div class="ef-page-header ef-reveal">
+    <div class="container">
+        <nav class="ef-breadcrumb mb-3">
+            <a href="{% url 'analysis:dashboard' %}">Analyses</a>
+            <span class="sep">/</span>
+            <a href="{% url 'parcelles:detail' parcelle.pk %}">{{ parcelle.lot_number }}</a>
+            <span class="sep">/</span>
+            <span class="current">Analyse détaillée</span>
+        </nav>
+
+        <div class="d-flex justify-content-between align-items-start">
+            <div>
+                <h2 style="font-family:var(--font-display);color:var(--green-900);font-weight:800;margin-bottom:.25rem">
+                    <i class="bi bi-graph-up-arrow me-2" style="color:var(--orange)"></i>
+                    Analyse — {{ parcelle.title }}
+                </h2>
+                <p style="color:var(--gray-400);margin-bottom:0">Lot {{ parcelle.lot_number }} {% if parcelle.zone %}— {{ parcelle.zone }}{% endif %}</p>
+            </div>
+            <div class="d-flex gap-2">
+                <a href="{% url 'analysis:run_analysis' parcelle.pk %}" class="ef-btn ef-btn-primary"
+                   onclick="this.innerHTML='<span class=\'spinner-border spinner-border-sm me-1\'></span>Analyse...'; this.disabled=true;">
+                    <i class="bi bi-cpu me-1"></i>{% if is_analyzed %}Relancer{% else %}Lancer{% endif %} l'analyse
+                </a>
+                {% if is_analyzed %}
+                <a href="{% url 'analysis:generate_report' parcelle.pk %}" class="ef-btn ef-btn-outline-green">
+                    <i class="bi bi-file-earmark-pdf me-1"></i>Générer Rapport PDF
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="ef-page-content container">
+    {% if not is_analyzed %}
+    <!-- Pas encore analysée -->
+    <div class="ef-empty-state">
+        <i class="bi bi-geo-alt" style="font-size:4rem;color:var(--green-700)"></i>
+        <h5 style="font-family:var(--font-display);color:var(--green-900);font-weight:700">Parcelle non analysée</h5>
+        <p style="color:var(--gray-400)">Lancez l'analyse pour obtenir le profil topographique, les contraintes et le score global.</p>
+        <a href="{% url 'analysis:run_analysis' parcelle.pk %}" class="ef-btn ef-btn-primary ef-btn-lg">
+            <i class="bi bi-cpu me-1"></i>Lancer l'analyse complète
+        </a>
+    </div>
+    {% else %}
+
+    <div class="row g-4">
+        <!-- Score global + Radar -->
+        <div class="col-lg-5 ef-reveal">
+            <div class="ef-card h-100">
+                <div class="ef-card-header">
+                    <h6><i class="bi bi-speedometer2 me-2"></i>Profil de la parcelle</h6>
+                </div>
+                <div class="ef-card-body">
+                    {% if risk %}
+                    <!-- Score circulaire -->
+                    <div class="text-center mb-3">
+                        <div class="ef-score-circle {% if risk.overall_score >= 70 %}ef-score-high{% elif risk.overall_score >= 45 %}ef-score-medium{% else %}ef-score-low{% endif %}" style="width:120px;height:120px;margin:0 auto">
+                            <div style="text-align:center">
+                                <div style="font-size:2.5rem;line-height:1">{{ risk.overall_score|floatformat:0 }}</div>
+                                <div style="font-size:.84rem">/ 100</div>
+                            </div>
+                        </div>
+                        {% if risk.recommendation %}
+                        <div class="mt-2">
+                            <span class="ef-badge" style="font-size:.88rem;padding:.5rem 1rem;background:{% if risk.recommendation == 'ideal' %}var(--success){% elif risk.recommendation == 'good' %}var(--success){% elif risk.recommendation == 'caution' %}var(--warning){% elif risk.recommendation == 'risky' %}var(--danger){% else %}var(--danger){% endif %};color:var(--white)">
+                                {{ risk.get_recommendation_display }}
+                            </span>
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Radar Chart -->
+                    <canvas id="radarChart" height="250"></canvas>
+
+                    <!-- Risques individuels -->
+                    <div class="mt-3">
+                        <h6 style="font-weight:700;font-size:.78rem;color:var(--gray-400);text-transform:uppercase;letter-spacing:.05em">RISQUES DÉTECTÉS</h6>
+                        {% for label, level in risk.get_risks.items %}
+                        <div class="ef-info-row">
+                            <span class="ef-info-label">{{ label }}</span>
+                            <span class="ef-badge" style="background:{% if level == 'low' %}var(--success){% elif level == 'medium' %}var(--warning){% elif level == 'high' %}var(--danger){% else %}#dc2626{% endif %};color:#fff">
+                                {{ level }}
+                            </span>
+                        </div>
+                        {% endfor %}
+                        <div class="ef-info-row">
+                            <span class="ef-info-label">Inondation</span>
+                            <span class="ef-badge" style="background:{% if risk.flood_risk == 'low' %}var(--success){% elif risk.flood_risk == 'medium' %}var(--warning){% else %}var(--danger){% endif %};color:#fff">{{ risk.get_flood_risk_display }}</span>
+                        </div>
+                        <div class="ef-info-row">
+                            <span class="ef-info-label">Érosion</span>
+                            <span class="ef-badge" style="background:{% if risk.erosion_risk == 'low' %}var(--success){% elif risk.erosion_risk == 'medium' %}var(--warning){% else %}var(--danger){% endif %};color:#fff">{{ risk.get_erosion_risk_display }}</span>
+                        </div>
+                        <div class="ef-info-row">
+                            <span class="ef-info-label">Pente</span>
+                            <span class="ef-badge" style="background:{% if risk.slope_risk == 'low' %}var(--success){% elif risk.slope_risk == 'medium' %}var(--warning){% else %}var(--danger){% endif %};color:#fff">{{ risk.get_slope_risk_display }}</span>
+                        </div>
+                        <div class="ef-info-row">
+                            <span class="ef-info-label">Juridique</span>
+                            <span class="ef-badge" style="background:{% if risk.legal_risk == 'low' %}var(--success){% elif risk.legal_risk == 'medium' %}var(--warning){% else %}var(--danger){% endif %};color:#fff">{{ risk.get_legal_risk_display }}</span>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Détails analyse -->
+        <div class="col-lg-7 ef-reveal-right">
+            <!-- Topographie -->
+            {% if terrain %}
+            <div class="ef-card" style="margin-bottom:1.5rem">
+                <div class="ef-card-header">
+                    <h6><i class="bi bi-mountain me-2" style="color:var(--green-700)"></i>Topographie</h6>
+                </div>
+                <div class="ef-card-body">
+                    <div class="row g-3 mb-3">
+                        <div class="col-4">
+                            <div class="ef-stat-card text-center">
+                                <div class="ef-stat-value" style="color:var(--green-900)">{{ terrain.elevation_mean|floatformat:1 }}m</div>
+                                <div class="ef-stat-label">Altitude moy.</div>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="ef-stat-card text-center">
+                                <div class="ef-stat-value" style="color:{% if terrain.slope_mean < 5 %}var(--success){% elif terrain.slope_mean < 15 %}var(--warning){% else %}var(--danger){% endif %}">{{ terrain.slope_mean|floatformat:1 }}%</div>
+                                <div class="ef-stat-label">Pente moy.</div>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="ef-stat-card text-center">
+                                <div class="ef-stat-value" style="color:var(--green-900);font-family:var(--font-mono)">{{ terrain.technical_score|floatformat:0 }}</div>
+                                <div class="ef-stat-label">Score tech.</div>
+                            </div>
+                        </div>
+                    </div>
+                    <hr style="border-color:var(--gray-100)">
+                    <div class="row" style="font-size:.88rem">
+                        <div class="col-6 mb-2"><div class="ef-info-row"><span class="ef-info-label">Dénivelé</span><span class="ef-info-value ef-col-mono">{{ terrain.elevation_range|floatformat:1 }} m</span></div></div>
+                        <div class="col-6 mb-2"><div class="ef-info-row"><span class="ef-info-label">Pente max</span><span class="ef-info-value ef-col-mono">{{ terrain.slope_max|floatformat:1 }}%</span></div></div>
+                        <div class="col-6 mb-2"><div class="ef-info-row"><span class="ef-info-label">Exposition</span><span class="ef-info-value">{{ terrain.get_aspect_dominant_display|default:"—" }}</span></div></div>
+                        <div class="col-6 mb-2"><div class="ef-info-row"><span class="ef-info-label">Solaire</span><span class="ef-info-value ef-col-mono">{{ terrain.solar_potential|floatformat:0 }}/100</span></div></div>
+                        <div class="col-6 mb-2"><div class="ef-info-row"><span class="ef-info-label">Drainage</span><span class="ef-info-value">{{ terrain.get_drainage_quality_display|default:"—" }}</span></div></div>
+                        <div class="col-6 mb-2"><div class="ef-info-row"><span class="ef-info-label">Risque eau</span><span class="ef-info-value ef-col-mono">{{ terrain.water_accumulation_risk|floatformat:0 }}/100</span></div></div>
+                        <div class="col-6 mb-2"><div class="ef-info-row"><span class="ef-info-label">Constructible</span><span class="ef-info-value">
+                            {% if terrain.slope_is_constructible %}
+                                <span style="color:var(--success)">✓ Oui</span>
+                            {% else %}
+                                <span style="color:var(--danger)">✗ Pente > 15%</span>
+                            {% endif %}
+                        </span></div></div>
+                        <div class="col-6 mb-2"><div class="ef-info-row"><span class="ef-info-label">Source</span><span class="ef-info-value ef-col-muted">{{ terrain.dem_source|truncatechars:30 }}</span></div></div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Proximité -->
+            {% if proximities %}
+            <div class="ef-card" style="margin-bottom:1.5rem">
+                <div class="ef-card-header">
+                    <h6><i class="bi bi-signpost-2 me-2" style="color:var(--blue)"></i>Proximité des infrastructures</h6>
+                </div>
+                <div class="ef-card-body" style="padding:0">
+                    <table class="ef-table">
+                        <thead>
+                            <tr><th>Infrastructure</th><th>Distance</th><th>Score</th><th>Nom</th></tr>
+                        </thead>
+                        <tbody>
+                            {% for p in proximities %}
+                            <tr>
+                                <td>
+                                    <span class="me-1" style="color:{% if p.score >= 70 %}var(--success){% elif p.score >= 40 %}var(--warning){% else %}var(--danger){% endif %}">●</span>
+                                    {{ p.get_poi_type_display }}
+                                </td>
+                                <td class="ef-col-mono" style="font-weight:700">{{ p.distance_m|floatformat:0 }} m</td>
+                                <td>
+                                    <div class="d-flex align-items-center gap-1">
+                                        <div class="ef-mini-progress">
+                                            <div class="ef-mini-progress-fill {% if p.score >= 70 %}{% elif p.score >= 40 %}warning{% else %}danger{% endif %}" style="width:{{ p.score|floatformat:0 }}%"></div>
+                                        </div>
+                                        <span class="ef-col-mono" style="font-size:.84rem">{{ p.score|floatformat:0 }}</span>
+                                    </div>
+                                </td>
+                                <td class="ef-col-muted">{{ p.poi_name|default:"—" }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Contraintes -->
+            <div class="ef-card" style="margin-bottom:1.5rem">
+                <div class="ef-card-header">
+                    <h6><i class="bi bi-exclamation-triangle me-2" style="color:var(--warning)"></i>Contraintes spatiales</h6>
+                </div>
+                <div class="ef-card-body">
+                    {% if constraints %}
+                        {% for c in constraints %}
+                        <div class="d-flex align-items-start mb-2" style="padding:.5rem;border-radius:8px;background:var(--sand)">
+                            <span class="me-2 mt-1" style="color:{% if c.severity == 'critical' %}var(--danger){% elif c.severity == 'warning' %}var(--warning){% else %}var(--blue){% endif %};font-size:1.2rem">
+                                {% if c.severity == 'critical' %}⚠{% elif c.severity == 'warning' %}⚡{% else %}ℹ{% endif %}
+                            </span>
+                            <div>
+                                <strong>{{ c.get_constraint_type_display }}</strong>
+                                <span class="ef-badge ms-1" style="background:{% if c.severity == 'critical' %}var(--danger){% elif c.severity == 'warning' %}var(--warning){% else %}var(--blue){% endif %};color:#fff">{{ c.get_severity_display }}</span>
+                                {% if c.affected_area_pct %}<span class="ef-col-muted ms-1" style="font-size:.84rem">({{ c.affected_area_pct|floatformat:1 }}% affecté)</span>{% endif %}
+                                <div style="font-size:.84rem;color:var(--gray-400)">{{ c.description }}</div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="text-center py-3">
+                            <i class="bi bi-check-circle" style="font-size:2rem;color:var(--success)"></i>
+                            <p style="color:var(--gray-400);margin-top:.5rem;margin-bottom:0">Aucune contrainte spatiale détectée</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- ═══ ANALYSE FONCIÈRE (module parcelles.ParcelleAnalysis) ═══ -->
+            {% if foncier %}
+            <div class="ef-card" style="margin-bottom:1.5rem;border-left:4px solid var(--orange)">
+                <div class="ef-card-header" style="background:linear-gradient(135deg,#fef3c7,#fff7ed)">
+                    <h6><i class="bi bi-shield-check me-2" style="color:var(--orange)"></i>Analyse Foncière — Fiabilité</h6>
+                    <div class="d-flex align-items-center gap-2">
+                        <span style="font-size:1.5rem;font-weight:900;color:var(--green-900);font-family:var(--font-display)">{{ foncier.overall_score }}/100</span>
+                        <span class="ef-badge" style="background:{% if foncier.reliability_grade == 'A' %}var(--success){% elif foncier.reliability_grade == 'B' %}#2563eb{% elif foncier.reliability_grade == 'C' %}var(--warning){% else %}var(--danger){% endif %};color:#fff;font-size:.9rem;padding:.4rem .8rem">
+                            {{ foncier.reliability_grade }} — {{ foncier.reliability_label }}
+                        </span>
+                    </div>
+                </div>
+                <div class="ef-card-body">
+                    <!-- Barres de score foncier -->
+                    {% with scores="score_geometry,score_documents,score_overlap,score_terrain,score_ownership" labels="Géométrie,Documents,Chevauchement,Terrain,Propriété" %}
+                    <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px">
+                        <div style="display:flex;align-items:center;gap:10px">
+                            <span style="min-width:110px;font-size:.84rem;font-weight:600"><i class="bi bi-pentagon me-1"></i>Géométrie</span>
+                            <div style="flex:1;background:var(--gray-100);border-radius:6px;height:8px;overflow:hidden">
+                                <div style="width:{{ foncier.score_geometry }}%;height:100%;border-radius:6px;background:{% if foncier.score_geometry >= 70 %}var(--success){% elif foncier.score_geometry >= 40 %}var(--warning){% else %}var(--danger){% endif %}"></div>
+                            </div>
+                            <span style="min-width:30px;text-align:right;font-weight:700;font-size:.84rem">{{ foncier.score_geometry }}</span>
+                        </div>
+                        <div style="display:flex;align-items:center;gap:10px">
+                            <span style="min-width:110px;font-size:.84rem;font-weight:600"><i class="bi bi-file-earmark-check me-1"></i>Documents</span>
+                            <div style="flex:1;background:var(--gray-100);border-radius:6px;height:8px;overflow:hidden">
+                                <div style="width:{{ foncier.score_documents }}%;height:100%;border-radius:6px;background:{% if foncier.score_documents >= 70 %}var(--success){% elif foncier.score_documents >= 40 %}var(--warning){% else %}var(--danger){% endif %}"></div>
+                            </div>
+                            <span style="min-width:30px;text-align:right;font-weight:700;font-size:.84rem">{{ foncier.score_documents }}</span>
+                        </div>
+                        <div style="display:flex;align-items:center;gap:10px">
+                            <span style="min-width:110px;font-size:.84rem;font-weight:600"><i class="bi bi-layers me-1"></i>Chevauchement</span>
+                            <div style="flex:1;background:var(--gray-100);border-radius:6px;height:8px;overflow:hidden">
+                                <div style="width:{{ foncier.score_overlap }}%;height:100%;border-radius:6px;background:{% if foncier.score_overlap >= 70 %}var(--success){% elif foncier.score_overlap >= 40 %}var(--warning){% else %}var(--danger){% endif %}"></div>
+                            </div>
+                            <span style="min-width:30px;text-align:right;font-weight:700;font-size:.84rem">{{ foncier.score_overlap }}</span>
+                        </div>
+                        <div style="display:flex;align-items:center;gap:10px">
+                            <span style="min-width:110px;font-size:.84rem;font-weight:600"><i class="bi bi-binoculars me-1"></i>Terrain</span>
+                            <div style="flex:1;background:var(--gray-100);border-radius:6px;height:8px;overflow:hidden">
+                                <div style="width:{{ foncier.score_terrain }}%;height:100%;border-radius:6px;background:{% if foncier.score_terrain >= 70 %}var(--success){% elif foncier.score_terrain >= 40 %}var(--warning){% else %}var(--danger){% endif %}"></div>
+                            </div>
+                            <span style="min-width:30px;text-align:right;font-weight:700;font-size:.84rem">{{ foncier.score_terrain }}</span>
+                        </div>
+                        <div style="display:flex;align-items:center;gap:10px">
+                            <span style="min-width:110px;font-size:.84rem;font-weight:600"><i class="bi bi-person-check me-1"></i>Propriété</span>
+                            <div style="flex:1;background:var(--gray-100);border-radius:6px;height:8px;overflow:hidden">
+                                <div style="width:{{ foncier.score_ownership }}%;height:100%;border-radius:6px;background:{% if foncier.score_ownership >= 70 %}var(--success){% elif foncier.score_ownership >= 40 %}var(--warning){% else %}var(--danger){% endif %}"></div>
+                            </div>
+                            <span style="min-width:30px;text-align:right;font-weight:700;font-size:.84rem">{{ foncier.score_ownership }}</span>
+                        </div>
+                    </div>
+                    {% endwith %}
+
+                    <!-- Indicateurs clés -->
+                    <div style="display:flex;flex-wrap:wrap;gap:8px;font-size:.82rem">
+                        <span style="padding:3px 10px;border-radius:12px;background:{% if foncier.has_titre_foncier %}#dcfce7;color:#166534{% else %}#fee2e2;color:#991b1b{% endif %}">
+                            <i class="bi bi-{% if foncier.has_titre_foncier %}check{% else %}x{% endif %}-circle"></i> Titre foncier
+                        </span>
+                        <span style="padding:3px 10px;border-radius:12px;background:{% if foncier.has_attestation %}#dcfce7;color:#166534{% else %}#fee2e2;color:#991b1b{% endif %}">
+                            <i class="bi bi-{% if foncier.has_attestation %}check{% else %}x{% endif %}-circle"></i> Attestation
+                        </span>
+                        {% if foncier.has_overlap %}
+                        <span style="padding:3px 10px;border-radius:12px;background:#fee2e2;color:#991b1b">
+                            <i class="bi bi-exclamation-triangle"></i> Chevauchement détecté
+                        </span>
+                        {% else %}
+                        <span style="padding:3px 10px;border-radius:12px;background:#dcfce7;color:#166534">
+                            <i class="bi bi-check-circle"></i> Aucun chevauchement
+                        </span>
+                        {% endif %}
+                        <span style="padding:3px 10px;border-radius:12px;background:{% if foncier.terrain_inspected %}#dcfce7;color:#166534{% else %}#fef3c7;color:#92400e{% endif %}">
+                            <i class="bi bi-{% if foncier.terrain_inspected %}check{% else %}clock{% endif %}-circle"></i>
+                            {% if foncier.terrain_inspected %}Inspecté{% else %}Inspection en attente{% endif %}
+                        </span>
+                    </div>
+
+                    <!-- Lien vers l'analyse foncière détaillée -->
+                    <div style="margin-top:12px;text-align:right">
+                        <a href="{% url 'parcelles:analysis' parcelle.pk %}" class="ef-btn ef-btn-sm ef-btn-outline-green">
+                            <i class="bi bi-arrow-right me-1"></i>Voir l'analyse foncière détaillée
+                        </a>
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <!-- Pas encore d'analyse foncière -->
+            <div class="ef-card" style="margin-bottom:1.5rem;border-left:4px solid var(--gray-300)">
+                <div class="ef-card-body" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem">
+                    <div>
+                        <h6 style="margin:0;font-weight:700;color:var(--gray-400)"><i class="bi bi-shield me-1"></i>Analyse foncière non effectuée</h6>
+                        <p style="margin:4px 0 0;font-size:.84rem;color:var(--gray-300)">Géométrie, documents, chevauchement, propriété</p>
+                    </div>
+                    <a href="{% url 'parcelles:analysis' parcelle.pk %}" class="ef-btn ef-btn-sm ef-btn-outline-green">
+                        <i class="bi bi-shield-check me-1"></i>Lancer l'analyse foncière
+                    </a>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Conclusion IA -->
+            {% if risk and risk.ai_conclusion %}
+            <div class="ef-card" style="border-left:4px solid var(--green-700)">
+                <div class="ef-card-header">
+                    <h6><i class="bi bi-robot me-2" style="color:var(--green-900)"></i>Conclusion IA</h6>
+                </div>
+                <div class="ef-card-body" style="background:var(--green-50)">
+                    <p style="margin-bottom:0">{{ risk.ai_conclusion }}</p>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Rapports existants -->
+    {% if reports %}
+    <div class="ef-card" style="margin-top:1.5rem">
+        <div class="ef-card-header">
+            <h6><i class="bi bi-file-earmark-pdf me-2"></i>Rapports générés</h6>
+        </div>
+        <div class="ef-card-body" style="padding:0">
+            <table class="ef-table">
+                <thead>
+                    <tr><th>Date</th><th>Réf.</th><th>Score</th><th></th></tr>
+                </thead>
+                <tbody>
+                    {% for r in reports %}
+                    <tr>
+                        <td class="ef-col-muted">{{ r.generated_at|date:"d/m/Y H:i" }}</td>
+                        <td class="ef-col-mono">{{ r.qr_verification_code }}</td>
+                        <td class="ef-col-mono">{{ r.snapshot_data.overall_score|floatformat:0|default:"—" }}/100</td>
+                        <td>
+                            <a href="{% url 'analysis:report_download' r.pk %}" class="ef-btn ef-btn-sm ef-btn-primary">
+                                <i class="bi bi-download me-1"></i>PDF
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+
+    {% endif %}
+</div>
+
+{% if is_analyzed %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+const radarCtx = document.getElementById('radarChart');
+if (radarCtx) {
+    const radarData = {{ radar_data_json|safe }};
+    new Chart(radarCtx, {
+        type: 'radar',
+        data: {
+            labels: Object.keys(radarData),
+            datasets: [{
+                label: 'Score',
+                data: Object.values(radarData),
+                backgroundColor: 'rgba(11, 61, 46, 0.15)',
+                borderColor: '#0B3D2E',
+                borderWidth: 2,
+                pointBackgroundColor: '#E8793B',
+                pointRadius: 5,
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                r: {
+                    min: 0, max: 5,
+                    ticks: { stepSize: 1, font: { size: 10 } },
+                    pointLabels: { font: { size: 12, weight: 'bold' } },
+                    grid: { color: '#dee2e6' },
+                }
+            },
+            plugins: { legend: { display: false } },
+        }
+    });
+}
+</script>
+{% endif %}
+{% endblock %}

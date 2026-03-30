@@ -1,0 +1,83 @@
+{% extends "layouts/base.html" %}
+{% load humanize %}
+
+{% block title %}Créer votre Boutique | Eye-Foncier{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-success text-white text-center">
+                    <h4 class="mb-0">
+                        <i class="bi bi-shop"></i> Créer votre Boutique Eye-Foncier
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info border-0 mb-4">
+                        <h6 class="alert-heading fw-bold">
+                            <i class="bi bi-info-circle"></i> Pourquoi une boutique ?
+                        </h6>
+                        <p>Votre boutique est votre vitrine sur Eye-Foncier. Elle vous permet de :</p>
+                        <ul class="mb-0">
+                            <li>Publier et gérer vos parcelles en vente</li>
+                            <li>Recevoir les demandes des acheteurs qualifiés</li>
+                            <li>Suivre vos transactions en temps réel</li>
+                            <li>Bénéficier de la vérification Eye-Foncier</li>
+                        </ul>
+                    </div>
+
+                    <div class="card bg-light border-0 mb-4">
+                        <div class="card-body text-center">
+                            <h5 class="text-success">Cotation boutique</h5>
+                            <h2 class="fw-bold text-success">{{ cotation_price|intcomma }} FCFA</h2>
+                            <small class="text-muted">Paiement unique pour l'activation de votre boutique</small>
+                        </div>
+                    </div>
+
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="mb-4">
+                            <label for="boutique_name" class="form-label fw-bold">
+                                Nom de votre boutique
+                            </label>
+                            <input type="text" class="form-control form-control-lg"
+                                   id="boutique_name" name="boutique_name"
+                                   placeholder="Ex: Immobilier Abidjan Sud"
+                                   required maxlength="200">
+                            <div class="form-text">
+                                Ce nom sera visible par tous les acheteurs sur la plateforme.
+                            </div>
+                        </div>
+
+                        <h6 class="fw-bold mb-3">
+                            <i class="bi bi-credit-card"></i> Mode de paiement
+                        </h6>
+                        <div class="row g-3 mb-4">
+                            {% for method in payment_methods %}
+                            <div class="col-6">
+                                <div class="form-check card p-3 border">
+                                    <input class="form-check-input" type="radio"
+                                           name="payment_method" id="pm_{{ method.id }}"
+                                           value="{{ method.id }}"
+                                           {% if forloop.first %}checked{% endif %}>
+                                    <label class="form-check-label w-100" for="pm_{{ method.id }}">
+                                        <i class="bi {{ method.icon }}" style="color: {{ method.color }}"></i>
+                                        <span class="ms-1">{{ method.name }}</span>
+                                    </label>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+
+                        <button type="submit" class="btn btn-success btn-lg w-100">
+                            <i class="bi bi-shop"></i>
+                            Payer {{ cotation_price|intcomma }} FCFA et créer ma boutique
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

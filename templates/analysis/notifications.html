@@ -1,0 +1,59 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}Notifications — {{ SITE_NAME }}{% endblock %}
+
+{% block content %}
+<div class="ef-page-header ef-reveal">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
+        <div>
+            <h2 class="ef-page-title"><i class="bi bi-bell"></i> Notifications</h2>
+            <p class="ef-page-subtitle">Vos alertes et opportunites</p>
+        </div>
+        <a href="{% url 'analysis:dashboard' %}" class="ef-btn ef-btn-outline-green ef-btn-sm">
+            <i class="bi bi-arrow-left"></i> Dashboard
+        </a>
+    </div>
+</div>
+
+<div class="ef-page-content">
+    {% if notifications %}
+    <div class="ef-stagger" style="display:flex;flex-direction:column;gap:12px">
+        {% for n in notifications %}
+        <div class="ef-notif-card {% if not n.is_read %}unread{% endif %}">
+            <div class="ef-notif-icon {% if n.match_score.is_golden_opportunity %}gold{% else %}green{% endif %}">
+                {% if n.match_score.is_golden_opportunity %}
+                    <i class="bi bi-star-fill"></i>
+                {% else %}
+                    <i class="bi bi-bell-fill"></i>
+                {% endif %}
+            </div>
+            <div class="ef-notif-body">
+                <div class="ef-notif-title">
+                    {% if n.match_score.is_golden_opportunity %}
+                    <span class="ef-badge ef-badge-gold" style="margin-right:4px"><i class="bi bi-star-fill"></i> Opportunite en Or</span>
+                    {% endif %}
+                    {{ n.title }}
+                </div>
+                <div class="ef-notif-text">{{ n.message }}</div>
+                <div class="ef-notif-text" style="margin-top:4px">
+                    <i class="bi bi-clock"></i> {{ n.sent_at|timesince }} — via {{ n.get_channel_display }}
+                </div>
+            </div>
+            <a href="{% url 'analysis:parcelle_analysis' n.match_score.parcelle.pk %}" class="ef-btn ef-btn-outline-green ef-btn-sm" style="align-self:center;white-space:nowrap">
+                Voir <i class="bi bi-arrow-right"></i>
+            </a>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="ef-empty-state ef-reveal-scale">
+        <i class="bi bi-bell-slash" style="font-size:3rem;color:var(--gray-200)"></i>
+        <h5 style="font-family:var(--font-display);color:var(--green-900);margin-top:1rem">Aucune notification</h5>
+        <p style="color:var(--gray-400)">Vous n'avez aucune notification pour le moment. Configurez votre profil acheteur pour recevoir des alertes.</p>
+        <a href="{% url 'analysis:buyer_profile' %}" class="ef-btn ef-btn-primary">
+            <i class="bi bi-person-gear"></i> Configurer mon profil
+        </a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

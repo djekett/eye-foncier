@@ -1,0 +1,110 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}Connexion — {{ SITE_NAME }}{% endblock %}
+
+{% block content %}
+<div class="ef-auth-layout">
+    <!-- Visual Side -->
+    <div class="ef-auth-visual ef-reveal-left">
+        <div class="ef-auth-visual-content">
+            <div style="width:60px;height:60px;border-radius:var(--radius-md);background:rgba(232,121,59,.2);display:flex;align-items:center;justify-content:center;margin:0 auto 20px">
+                <i class="bi bi-house-door-fill" style="font-size:1.6rem;color:var(--orange)"></i>
+            </div>
+            <h2>Votre bien foncier vous attend</h2>
+            <div class="ef-kente-line"></div>
+            <p>Accedez a votre espace securise pour gerer vos parcelles, suivre vos transactions et devenir proprietaire en toute confiance.</p>
+            <div class="ef-auth-features">
+                <div class="ef-auth-feature">
+                    <i class="bi bi-shield-check"></i>
+                    <span>Transactions 100% securisees</span>
+                </div>
+                <div class="ef-auth-feature">
+                    <i class="bi bi-patch-check-fill"></i>
+                    <span>Documents verifies et certifies</span>
+                </div>
+                <div class="ef-auth-feature">
+                    <i class="bi bi-graph-up-arrow"></i>
+                    <span>Scoring financier intelligent</span>
+                </div>
+                <div class="ef-auth-feature">
+                    <i class="bi bi-geo-alt-fill"></i>
+                    <span>+150 parcelles verifiees</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Form Side -->
+    <div class="ef-auth-form-side ef-reveal-right">
+        <div class="ef-auth-card-v5">
+            <div class="text-center">
+                <a href="{% url 'websig:home' %}" class="text-decoration-none">
+                    <span style="font-family:var(--font-display);font-size:1.5rem;font-weight:800">
+                        <span style="color:var(--orange)">EYE</span><span style="color:var(--green-900)">-FONCIER</span>
+                    </span>
+                </a>
+            </div>
+
+            <div class="text-center" style="margin-top:24px">
+                <div class="auth-icon" style="background:var(--green-100);color:var(--green-700)">
+                    <i class="bi bi-shield-lock-fill"></i>
+                </div>
+                <h4>Connexion</h4>
+                <p class="auth-subtitle">Accedez a votre espace EYE-FONCIER</p>
+            </div>
+
+            <form method="post">
+                {% csrf_token %}
+                {% if form.errors %}
+                <div style="background:rgba(220,38,38,.08);border:1px solid rgba(220,38,38,.2);border-radius:var(--radius-sm);padding:10px 14px;margin-bottom:16px;font-size:.85rem;color:var(--danger);display:flex;align-items:center;gap:8px">
+                    <i class="bi bi-exclamation-triangle-fill"></i>
+                    Email ou mot de passe incorrect.
+                </div>
+                {% endif %}
+
+                <div class="ef-form-group">
+                    <label class="ef-form-label">Adresse email</label>
+                    <div class="ef-input-icon">
+                        <i class="bi bi-envelope"></i>
+                        {{ form.username }}
+                    </div>
+                </div>
+                <div class="ef-form-group">
+                    <label class="ef-form-label">Mot de passe</label>
+                    <div class="ef-input-icon">
+                        <i class="bi bi-lock"></i>
+                        {{ form.password }}
+                    </div>
+                </div>
+
+                <div class="d-flex justify-content-end mb-3">
+                    <a href="#" style="font-size:.82rem;color:var(--orange);text-decoration:none;font-weight:500">Mot de passe oublie ?</a>
+                </div>
+
+                <button type="submit" class="ef-btn ef-btn-primary ef-btn-block" style="padding:12px;font-size:.9rem">
+                    <i class="bi bi-box-arrow-in-right"></i> Se connecter
+                </button>
+            </form>
+
+            <div class="ef-auth-trust-bar">
+                <div class="ef-auth-trust-item">
+                    <i class="bi bi-shield-fill-check"></i> Securise
+                </div>
+                <div class="ef-auth-trust-item">
+                    <i class="bi bi-lock-fill"></i> Chiffre SSL
+                </div>
+                <div class="ef-auth-trust-item">
+                    <i class="bi bi-building"></i> Conforme ARTCI
+                </div>
+            </div>
+
+            <div class="text-center" style="margin-top:20px">
+                <p style="color:var(--gray-400);font-size:.88rem;margin:0">
+                    Pas encore de compte ?
+                    <a href="{% url 'accounts:register' %}" style="color:var(--orange);font-weight:700;text-decoration:none">S'inscrire</a>
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

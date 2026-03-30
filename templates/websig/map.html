@@ -1,0 +1,1327 @@
+{% extends "layouts/base.html" %}
+{% load static %}
+
+{% block title %}{{ SITE_NAME }} — Carte Interactive{% endblock %}
+
+{% block extra_css %}
+<style>
+/* ═══════════════════════════════════════════════════
+   EYE-FONCIER — MAP UI v5 (Design System Sand/Orange)
+   Z-Index : 1005=Panneaux | 1000=Sidebar+Btn | 999=Controls | 1=Map
+   ═══════════════════════════════════════════════════ */
+
+/* ═══ Layout ═══ */
+#mainMap { height: 100%; width: 100%; z-index: 1; }
+
+/* ═══ Sidebar — Desktop (z-index 1000) ═══ */
+.map-sidebar {
+    position: absolute; top: 0; left: 0; z-index: 1000;
+    width: 380px; height: 100%; background: var(--white);
+    box-shadow: 4px 0 24px rgba(11,61,46,.10);
+    overflow: hidden;
+    transition: transform .35s cubic-bezier(.4,0,.2,1);
+    display: flex; flex-direction: column;
+    border-right: 1px solid var(--gray-200);
+}
+.map-sidebar.collapsed { transform: translateX(-100%); }
+.sidebar-header { flex-shrink: 0; }
+.sidebar-results { flex: 1; overflow-y: auto; padding: 8px; min-height: 0; }
+.sidebar-results::-webkit-scrollbar { width: 4px; }
+.sidebar-results::-webkit-scrollbar-thumb { background: var(--gray-200); border-radius: 4px; }
+
+.sidebar-toggle {
+    position: absolute; top: 80px; z-index: 1000;
+    background: var(--white); border: none; padding: 10px 12px;
+    box-shadow: 2px 2px 12px rgba(11,61,46,.10);
+    border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+    cursor: pointer; transition: left .35s cubic-bezier(.4,0,.2,1);
+    display: flex; align-items: center; justify-content: center;
+    color: var(--green-900);
+}
+.sidebar-toggle:hover { background: var(--green-50); color: var(--orange); }
+.sidebar-toggle.open  { left: 380px; }
+.sidebar-toggle.closed { left: 0; }
+
+/* ═══ Sidebar Inner ═══ */
+.sidebar-search-wrap {
+    padding: 16px 16px 12px;
+    background: var(--white);
+    border-bottom: 1px solid var(--gray-100);
+}
+.sidebar-search-input { position: relative; }
+.sidebar-search-input i {
+    position: absolute; left: 14px; top: 50%; transform: translateY(-50%);
+    color: var(--gray-400); font-size: .85rem; pointer-events: none;
+}
+.sidebar-search-input input {
+    padding-left: 40px; border-radius: var(--radius-sm);
+    border: 1.5px solid var(--gray-200); font-size: .85rem; height: 42px;
+    transition: all var(--transition); background: var(--sand);
+    font-family: var(--font-body); width: 100%;
+}
+.sidebar-search-input input:focus {
+    border-color: var(--orange); background: var(--white);
+    box-shadow: 0 0 0 3px rgba(232,121,59,.12); outline: none;
+}
+
+.sidebar-filters {
+    padding: 10px 16px 12px;
+    border-bottom: 1px solid var(--gray-100);
+}
+.sidebar-filters-title {
+    font-size: .72rem; font-weight: 700; text-transform: uppercase;
+    letter-spacing: .06em; color: var(--gray-400); margin-bottom: 6px;
+    font-family: var(--font-display);
+}
+
+/* ═══ Chips v5 ═══ */
+.ef-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.ef-chip {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 5px 14px; border-radius: var(--radius-sm);
+    font-size: .78rem; font-weight: 600; border: 1.5px solid var(--gray-200);
+    background: var(--white); color: var(--gray-600);
+    cursor: pointer; transition: all var(--transition);
+    font-family: var(--font-body);
+}
+.ef-chip:hover { border-color: var(--orange); color: var(--orange); background: var(--orange-light); }
+.ef-chip.active {
+    background: var(--green-900); color: var(--white);
+    border-color: var(--green-900);
+}
+.chip-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+
+.price-range-wrap {
+    display: flex; gap: 6px; align-items: center;
+    padding: 0 16px 12px;
+    border-bottom: 1px solid var(--gray-100);
+}
+.price-range-wrap input {
+    flex: 1; border-radius: var(--radius-sm);
+    border: 1.5px solid var(--gray-200); font-size: .78rem;
+    padding: 8px 12px; text-align: center; transition: all var(--transition);
+    background: var(--sand); min-width: 0; font-family: var(--font-mono);
+}
+.price-range-wrap input:focus {
+    border-color: var(--orange); background: var(--white);
+    box-shadow: 0 0 0 3px rgba(232,121,59,.12); outline: none;
+}
+.price-range-sep { color: var(--gray-400); font-size: .75rem; font-weight: 600; flex-shrink: 0; }
+.price-filter-btn {
+    border: none; padding: 8px 16px; border-radius: var(--radius-sm);
+    background: var(--orange); color: var(--white); cursor: pointer;
+    transition: all var(--transition); font-size: .82rem;
+}
+.price-filter-btn:hover { background: var(--orange-hover); transform: scale(1.05); }
+
+/* ═══ Sidebar Cards ═══ */
+.parcelle-card {
+    cursor: pointer;
+    transition: all .2s cubic-bezier(.4,0,.2,1);
+    border-radius: var(--radius-md);
+    padding: 12px 14px;
+    margin-bottom: 6px;
+    background: var(--white);
+    border: 1px solid var(--gray-100);
+    border-left: 4px solid;
+}
+.parcelle-card:hover {
+    background: var(--green-50); transform: translateX(3px);
+    box-shadow: var(--shadow-sm);
+}
+.parcelle-card.active {
+    background: var(--green-100) !important;
+    box-shadow: inset 0 0 0 1px var(--green-700), var(--shadow-md);
+    animation: pulse-focus .5s ease;
+}
+@keyframes pulse-focus { 0%,100%{transform:scale(1)} 50%{transform:scale(1.01)} }
+.parcelle-card .flex-fill { min-width: 0; }
+
+.card-price-tag {
+    font-family: var(--font-mono); font-weight: 700; font-size: .82rem;
+    color: var(--green-900);
+}
+.card-surface-tag { font-size: .75rem; color: var(--gray-400); }
+.card-type-tag { font-size: .68rem; color: var(--gray-400); }
+.card-btn-view {
+    border: 1.5px solid var(--green-700); color: var(--green-700);
+    background: transparent; border-radius: var(--radius-sm);
+    font-size: .76rem; padding: 4px 14px; cursor: pointer;
+    transition: all var(--transition); font-weight: 600;
+}
+.card-btn-view:hover { background: var(--green-900); color: var(--white); }
+.card-btn-detail {
+    background: var(--orange); color: var(--white); border: none;
+    border-radius: var(--radius-sm); padding: 4px 12px;
+    font-size: .76rem; cursor: pointer; transition: all var(--transition);
+}
+.card-btn-detail:hover { background: var(--orange-hover); }
+
+/* ═══ LEGEND — Supprimée (les chips statut = légende) ═══ */
+
+/* ═══ CONTROLS — Droite, centré vertical (desktop) / bas (mobile) ═══ */
+.map-controls {
+    position: absolute; top: 50%; right: 16px; z-index: 999;
+    transform: translateY(-50%);
+    display: flex; flex-direction: column; gap: 10px; align-items: center;
+}
+.map-ctrl-btn {
+    width: 44px; height: 44px; border-radius: 50%; border: none;
+    backdrop-filter: blur(16px) saturate(180%);
+    -webkit-backdrop-filter: blur(16px) saturate(180%);
+    background: rgba(255,255,255,.92);
+    border: 1px solid var(--gray-200);
+    box-shadow: var(--shadow-md);
+    display: flex; align-items: center; justify-content: center;
+    font-size: .95rem; color: var(--green-900);
+    cursor: pointer; transition: all var(--transition);
+    position: relative;
+}
+.map-ctrl-btn:hover { background: var(--white); color: var(--orange); transform: scale(1.08); box-shadow: var(--shadow-lg); }
+.map-ctrl-btn.active-3d { background: var(--orange) !important; color: white !important; box-shadow: 0 0 0 3px rgba(232,121,59,.3); }
+.map-ctrl-btn.active-nearby { background: var(--orange) !important; color: white !important; box-shadow: 0 0 0 3px rgba(232,121,59,.3); }
+@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+#btnRefreshMap i { transition: transform .3s; }
+#btnRefreshMap:hover { background: rgba(5,150,105,1) !important; transform: scale(1.12); }
+#btnRefreshMap:hover i { transform: rotate(180deg); }
+
+/* ═══ BASEMAP MENU — Popup vers le haut ═══ */
+.basemap-menu {
+    position: absolute;
+    top: 0; right: calc(100% + 10px);
+    backdrop-filter: blur(16px) saturate(180%);
+    -webkit-backdrop-filter: blur(16px) saturate(180%);
+    background: rgba(255,255,255,.94);
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-lg);
+    padding: 10px;
+    display: none; /* hidden by default */
+    width: 230px;
+    z-index: 1001;
+}
+.basemap-menu.open { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+.basemap-menu-item {
+    display: flex; flex-direction: column; align-items: center; gap: 4px;
+    cursor: pointer; transition: all var(--transition);
+    border-radius: var(--radius-sm); padding: 4px;
+}
+.basemap-menu-item:hover { background: var(--sand); }
+.basemap-menu-item.active .basemap-thumb { border-color: var(--orange); box-shadow: 0 0 0 2px rgba(232,121,59,.25); }
+.basemap-thumb {
+    width: 48px; height: 48px; border: 2px solid var(--gray-200);
+    border-radius: var(--radius-sm); background-size: cover;
+    transition: all var(--transition);
+}
+.basemap-menu-label {
+    font-size: .62rem; font-weight: 600; color: var(--gray-600);
+    text-align: center; line-height: 1.1;
+    font-family: var(--font-body);
+}
+
+/* ═══ Refresh Badge — Toast auto-hide ═══ */
+.refresh-badge {
+    position: absolute; top: 10px; left: 50%; transform: translateX(-50%); z-index: 999;
+    backdrop-filter: blur(12px) saturate(180%);
+    -webkit-backdrop-filter: blur(12px) saturate(180%);
+    background: rgba(255,255,255,.92);
+    padding: 5px 12px; border-radius: 20px; font-size: .7rem; font-weight: 600;
+    box-shadow: var(--shadow-sm);
+    border: 1px solid var(--gray-200);
+    transition: opacity .4s ease;
+    font-family: var(--font-mono);
+    opacity: 0; pointer-events: none;
+}
+.refresh-badge.visible { opacity: 1; pointer-events: auto; }
+.refresh-badge.loading { color: var(--warning); }
+.refresh-badge.ok  { color: var(--green-700); }
+.refresh-badge.err { color: var(--danger); background: rgba(255,240,240,.95); border-color: rgba(220,38,38,.2); }
+
+/* ═══ Empty state ═══ */
+.empty-state { text-align: center; padding: 3rem 1.5rem; }
+.empty-state i { font-size: 3rem; color: var(--gray-200); }
+
+/* ═══ Skeleton ═══ */
+.skeleton-card { padding: 14px; border-radius: var(--radius-md); background: var(--sand); margin-bottom: 8px; }
+.skeleton { background: linear-gradient(90deg, var(--gray-100) 25%, var(--sand-dark) 50%, var(--gray-100) 75%);
+    background-size: 200% 100%; animation: skeleton-shimmer 1.5s ease-in-out infinite;
+    border-radius: 6px; height: 12px; margin-bottom: 8px; }
+.skeleton.thick { height: 16px; }
+.skeleton-badge { width: 60px; height: 20px; border-radius: 10px; }
+.w-60 { width: 60%; } .w-80 { width: 80%; } .w-50 { width: 50%; } .w-40 { width: 40%; }
+@keyframes skeleton-shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+
+/* ════════════════════════════════════════════════
+   NEARBY — Bouton dans stack (plus de FAB pill)
+   ════════════════════════════════════════════════ */
+
+/* ════════════════════════════════════════════════
+   NEARBY PANEL — Desktop: dropdown / Mobile: bottom-sheet
+   ════════════════════════════════════════════════ */
+.nearby-panel {
+    z-index: 1005;
+    max-height: 0; overflow: hidden;
+    transition: max-height .4s cubic-bezier(.4,0,.2,1);
+    background: var(--white);
+    box-shadow: var(--shadow-lg);
+}
+@media (min-width: 769px) {
+    .nearby-panel {
+        position: absolute;
+        bottom: 16px; right: 68px;
+        width: 380px;
+        border-radius: var(--radius-lg);
+        border: 1px solid var(--gray-200);
+    }
+}
+@media (max-width: 768px) {
+    .nearby-panel {
+        position: absolute;
+        bottom: 0; left: 0; right: 0;
+        border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+        box-shadow: 0 -4px 30px rgba(11,61,46,.12);
+    }
+}
+.nearby-panel-header {
+    padding: 14px 16px 10px;
+    border-bottom: 1px solid var(--gray-100);
+    background: linear-gradient(180deg, var(--white), var(--sand));
+}
+.nearby-panel-body { max-height: 290px; overflow-y: auto; padding: 0; }
+.nearby-item {
+    display: flex; text-decoration: none; color: var(--dark);
+    padding: 12px 16px; transition: all var(--transition);
+    border-bottom: 1px solid var(--gray-100); gap: 10px; align-items: center;
+}
+.nearby-item:hover { background: var(--green-50); }
+.nearby-item:last-child { border-bottom: none; }
+.nearby-item-icon {
+    width: 38px; height: 38px; border-radius: var(--radius-sm);
+    background: var(--orange-light);
+    display: flex; align-items: center; justify-content: center;
+    color: var(--orange); font-size: .85rem; flex-shrink: 0;
+}
+.nearby-item-info { flex: 1; min-width: 0; }
+.nearby-item-title { font-weight: 600; font-size: .84rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-family: var(--font-display); }
+.nearby-item-sub { font-size: .72rem; color: var(--gray-400); }
+.nearby-item-right { text-align: right; flex-shrink: 0; }
+.nearby-item-price { font-weight: 700; font-size: .82rem; color: var(--green-900); font-family: var(--font-mono); }
+.nearby-item-dist { font-size: .7rem; color: var(--gray-400); }
+
+/* ═══ MOBILE RESPONSIVE ═══ */
+@media (max-width: 768px) {
+    .map-sidebar {
+        width: 100%; height: auto; max-height: 70vh;
+        top: auto; bottom: 0;
+        border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+        box-shadow: 0 -4px 30px rgba(11,61,46,.12);
+        transition: transform .4s cubic-bezier(.4,0,.2,1);
+    }
+    .map-sidebar.collapsed { transform: translateY(calc(100% - 58px)); }
+    .map-sidebar .bottom-sheet-handle-wrap { display: flex; justify-content: center; padding: 8px 0 2px; }
+    .sidebar-toggle { display: none; }
+
+    .map-controls { top: auto; bottom: 80px; right: 8px; gap: 5px; transform: none; }
+    .map-ctrl-btn { width: 38px; height: 38px; font-size: .82rem; }
+    .basemap-menu { width: 220px; }
+    .basemap-thumb { width: 42px; height: 42px; }
+
+    .parcelle-card { font-size: .85rem; padding: 10px 12px; }
+    .price-range-wrap { padding: 0 12px 10px; }
+    .sidebar-search-wrap { padding: 10px 12px; }
+    .sidebar-filters { padding: 8px 12px 10px; }
+
+    .refresh-badge { font-size: .68rem; }
+}
+@media (min-width: 769px) {
+    .bottom-sheet-handle-wrap { display: none; }
+}
+
+/* ═══ Bottom Sheet Handle ═══ */
+.bottom-sheet-handle {
+    width: 40px; height: 4px; border-radius: 4px;
+    background: var(--gray-200);
+}
+.bottom-sheet-summary {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 8px 16px; cursor: pointer;
+    border-bottom: 1px solid var(--gray-100);
+}
+.bottom-sheet-summary-text {
+    font-size: .82rem; font-weight: 600; color: var(--green-900);
+    font-family: var(--font-display);
+}
+.bottom-sheet-summary-badge {
+    width: 28px; height: 28px; border-radius: 50%;
+    background: var(--green-50); color: var(--green-700);
+    display: flex; align-items: center; justify-content: center;
+    font-size: .7rem;
+}
+
+/* ═══ Popup v5 ═══ */
+.ef-popup { font-family: var(--font-body); min-width: 280px; max-width: 360px; }
+.ef-popup-img-wrap { position: relative; height: 160px; overflow: hidden; border-radius: var(--radius-md) var(--radius-md) 0 0; }
+.ef-popup-img { width: 100%; height: 100%; object-fit: cover; }
+.ef-popup-img-overlay { position: absolute; inset: 0; background: linear-gradient(180deg, transparent 40%, rgba(0,0,0,.4) 100%); }
+.ef-popup-no-img {
+    height: 80px; display: flex; align-items: center; justify-content: center;
+    background: linear-gradient(135deg, var(--green-50), var(--orange-light));
+    border-radius: var(--radius-md) var(--radius-md) 0 0;
+}
+.ef-popup-no-img i { font-size: 2rem; color: var(--green-700); opacity: .4; }
+.ef-popup-status-float { position: absolute; bottom: 10px; left: 10px; display: flex; gap: 4px; }
+.ef-popup-badge {
+    font-size: .65rem; padding: 3px 10px; border-radius: var(--radius-sm);
+    font-weight: 600; color: var(--white); display: inline-flex; align-items: center; gap: 3px;
+}
+.ef-popup-header { padding: 12px 14px 8px; }
+.ef-popup-title { font-family: var(--font-display); font-weight: 700; font-size: .95rem; color: var(--dark); }
+.ef-popup-subtitle { font-size: .75rem; color: var(--gray-400); margin-top: 2px; display: flex; align-items: center; gap: 4px; }
+.ef-popup-badges { display: flex; gap: 4px; margin-top: 6px; }
+.ef-popup-body { padding: 0 14px 10px; }
+.ef-popup-price-block { margin-bottom: 8px; display: flex; align-items: baseline; gap: 4px; }
+.ef-popup-price { font-family: var(--font-mono); font-size: 1.2rem; font-weight: 700; color: var(--green-900); }
+.ef-popup-price-unit { font-size: .72rem; color: var(--gray-400); font-weight: 500; }
+.ef-popup-row {
+    display: flex; justify-content: space-between; padding: 4px 0;
+    font-size: .8rem; border-bottom: 1px solid var(--gray-100);
+}
+.ef-popup-row:last-of-type { border-bottom: none; }
+.ef-popup-label { color: var(--gray-400); display: flex; align-items: center; gap: 4px; }
+.ef-popup-value { font-weight: 600; color: var(--dark); }
+.ef-popup-desc { font-size: .78rem; color: var(--gray-600); line-height: 1.5; margin-top: 8px; padding: 8px; background: var(--sand); border-radius: var(--radius-sm); }
+.ef-popup-meta { display: flex; gap: 12px; margin-top: 6px; font-size: .72rem; color: var(--gray-400); }
+.ef-popup-footer { padding: 10px 14px 14px; }
+.ef-popup-cta { text-align: center; padding: 10px; background: var(--sand); border-radius: var(--radius-sm); }
+.ef-popup-cta-title { font-weight: 700; font-size: .82rem; color: var(--green-900); margin-bottom: 4px; }
+.ef-popup-cta-sub { font-size: .74rem; color: var(--gray-400); margin-bottom: 8px; }
+
+/* MapLibre popup override */
+.maplibregl-popup-content { border-radius: var(--radius-md) !important; padding: 0 !important; box-shadow: var(--shadow-lg) !important; border: 1px solid var(--gray-200) !important; max-width: 360px; }
+.maplibregl-popup-close-button { color: var(--gray-400) !important; font-size: 20px !important; padding: 8px !important; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="position-relative" style="height: calc(100vh - 100px); overflow: hidden;">
+
+    <!-- ═══ Sidebar / Bottom Sheet (z:1000) ═══ -->
+    <div id="sidebar" class="map-sidebar">
+        <div class="bottom-sheet-handle-wrap" id="bsHandle"><div class="bottom-sheet-handle"></div></div>
+        <div class="bottom-sheet-summary d-md-none" id="bsSummary">
+            <span class="bottom-sheet-summary-text" id="bsSummaryText">Chargement…</span>
+            <span class="bottom-sheet-summary-badge" id="bsSummaryBadge"><i class="bi bi-chevron-up"></i></span>
+        </div>
+        <div class="sidebar-search-wrap sidebar-header">
+            <div class="sidebar-search-input">
+                <i class="bi bi-search"></i>
+                <input type="text" id="searchInput" class="form-control" placeholder="Lot, adresse, zone…">
+            </div>
+        </div>
+        <div class="sidebar-filters">
+            <div class="sidebar-filters-title">Statut</div>
+            <div class="ef-chips" id="statusChips">
+                <button class="ef-chip active" data-value="">Tous</button>
+                <button class="ef-chip" data-value="disponible"><span class="chip-dot" style="background:var(--success)"></span>Disponible</button>
+                <button class="ef-chip" data-value="reserve"><span class="chip-dot" style="background:var(--warning)"></span>Réservé</button>
+                <button class="ef-chip" data-value="vendu"><span class="chip-dot" style="background:var(--danger)"></span>Vendu</button>
+            </div>
+            <div class="sidebar-filters-title mt-2">Type</div>
+            <div class="ef-chips" id="typeChips">
+                <button class="ef-chip active" data-value="">Tous</button>
+                <button class="ef-chip" data-value="residentiel"><i class="bi bi-house-door" style="font-size:.7rem"></i> Résidentiel</button>
+                <button class="ef-chip" data-value="commercial"><i class="bi bi-shop" style="font-size:.7rem"></i> Commercial</button>
+                <button class="ef-chip" data-value="industriel"><i class="bi bi-building-gear" style="font-size:.7rem"></i> Industriel</button>
+                <button class="ef-chip" data-value="agricole"><i class="bi bi-tree" style="font-size:.7rem"></i> Agricole</button>
+                <button class="ef-chip" data-value="mixte"><i class="bi bi-grid" style="font-size:.7rem"></i> Mixte</button>
+            </div>
+        </div>
+        <!-- Zone / Localite selector -->
+        <div style="padding:0 16px 10px;border-bottom:1px solid var(--gray-100)">
+            <div class="sidebar-filters-title">Localite</div>
+            <select id="zoneSelect" style="width:100%;padding:6px 10px;border-radius:var(--radius-sm);border:1.5px solid var(--gray-200);font-size:.82rem;font-family:var(--font-body);background:var(--sand);color:var(--dark);cursor:pointer;transition:all var(--transition)" onfocus="this.style.borderColor='var(--orange)';this.style.background='var(--white)'" onblur="this.style.borderColor='var(--gray-200)';this.style.background='var(--sand)'">
+                <option value="">Toutes les localites</option>
+                {% for z in zones %}
+                <option value="{{ z.pk }}">{{ z.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="price-range-wrap">
+            <input type="number" id="priceMin" placeholder="Prix min" aria-label="Prix minimum">
+            <span class="price-range-sep">—</span>
+            <input type="number" id="priceMax" placeholder="Prix max" aria-label="Prix maximum">
+            <button id="btnSearch" class="price-filter-btn"><i class="bi bi-funnel-fill"></i></button>
+        </div>
+        <div id="resultsList" class="sidebar-results">
+            <div id="skeletonLoader">
+                <div class="skeleton-card"><div class="d-flex justify-content-between mb-2"><div class="skeleton skeleton-line thick w-60"></div><div class="skeleton skeleton-badge"></div></div><div class="skeleton skeleton-line w-80"></div><div class="d-flex justify-content-between mt-2"><div class="skeleton skeleton-line w-40" style="margin:0"></div><div class="skeleton skeleton-line" style="margin:0;width:30%"></div></div></div>
+                <div class="skeleton-card"><div class="d-flex justify-content-between mb-2"><div class="skeleton skeleton-line thick w-50"></div><div class="skeleton skeleton-badge"></div></div><div class="skeleton skeleton-line w-60"></div><div class="d-flex justify-content-between mt-2"><div class="skeleton skeleton-line w-40" style="margin:0"></div><div class="skeleton skeleton-line" style="margin:0;width:25%"></div></div></div>
+                <div class="skeleton-card"><div class="d-flex justify-content-between mb-2"><div class="skeleton skeleton-line thick w-60"></div><div class="skeleton skeleton-badge"></div></div><div class="skeleton skeleton-line w-80"></div><div class="d-flex justify-content-between mt-2"><div class="skeleton skeleton-line w-40" style="margin:0"></div><div class="skeleton skeleton-line" style="margin:0;width:30%"></div></div></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toggle desktop -->
+    <button id="sidebarToggle" class="sidebar-toggle open" aria-label="Toggle sidebar"><i class="bi bi-chevron-left" id="toggleIcon"></i></button>
+
+    <!-- Refresh badge (z:999) — cliquable pour actualiser -->
+    <div id="refreshBadge" class="refresh-badge ok" style="cursor:pointer" title="Cliquer pour actualiser"><i class="bi bi-arrow-clockwise me-1"></i><span id="refreshText">…</span></div>
+
+    <!-- Map container (z:1) -->
+    <div id="mainMap"></div>
+
+    <!-- ═══ CONTROLS — Stack Vertical Unique (z:999) ═══ -->
+    <div class="map-controls">
+        <!-- Basemap trigger + menu popup -->
+        <div style="position:relative">
+            <button id="btnBasemap" class="map-ctrl-btn" title="Fond de carte"><i class="bi bi-stack"></i></button>
+            <div id="basemapMenu" class="basemap-menu">
+                <div class="basemap-menu-item active" data-layer="satellite">
+                    <div class="basemap-thumb" style="background-image:url('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/2/1/1')"></div>
+                    <span class="basemap-menu-label">Satellite</span>
+                </div>
+                <div class="basemap-menu-item" data-layer="streets">
+                    <div class="basemap-thumb" style="background-image:url('https://a.basemaps.cartocdn.com/rastertiles/voyager/2/1/1@2x.png')"></div>
+                    <span class="basemap-menu-label">Rues</span>
+                </div>
+                <div class="basemap-menu-item" data-layer="topo">
+                    <div class="basemap-thumb" style="background-image:url('https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/2/1/1')"></div>
+                    <span class="basemap-menu-label">Topo</span>
+                </div>
+                <div class="basemap-menu-item" data-layer="dark">
+                    <div class="basemap-thumb" style="background-image:url('https://a.basemaps.cartocdn.com/dark_all/2/1/1@2x.png')"></div>
+                    <span class="basemap-menu-label">Sombre</span>
+                </div>
+                <div class="basemap-menu-item" data-layer="positron">
+                    <div class="basemap-thumb" style="background-image:url('https://a.basemaps.cartocdn.com/light_all/2/1/1@2x.png')"></div>
+                    <span class="basemap-menu-label">Clair</span>
+                </div>
+                <div class="basemap-menu-item" data-layer="watercolor">
+                    <div class="basemap-thumb" style="background-image:url('https://tiles.stadiamaps.com/tiles/stamen_watercolor/2/1/1.jpg')"></div>
+                    <span class="basemap-menu-label">Aquarelle</span>
+                </div>
+            </div>
+        </div>
+        <button id="btn3DToggle" class="map-ctrl-btn" title="Mode 3D"><i class="bi bi-badge-3d"></i></button>
+        <button id="btnNearby" class="map-ctrl-btn" title="Parcelles à proximité" style="position:relative"><i class="bi bi-geo-alt-fill"></i><span id="nearbyCountBadge" style="display:none;position:absolute;top:-4px;right:-4px;background:var(--orange);color:#fff;font-size:.6rem;font-weight:700;width:18px;height:18px;border-radius:50%;line-height:18px;text-align:center;border:2px solid #fff">0</span></button>
+        <button id="btnLocate" class="map-ctrl-btn" title="Ma position"><i class="bi bi-crosshair"></i></button>
+        <button id="btnRefreshMap" class="map-ctrl-btn" title="Rafraîchir les parcelles" style="background:rgba(5,150,105,.9);color:#fff;border:2px solid rgba(255,255,255,.4)"><i class="bi bi-arrow-clockwise"></i></button>
+    </div>
+
+    <!-- ═══ PANNEAU NEARBY — Modal Card / Bottom Sheet ═══ -->
+    <div id="nearbyPanel" class="nearby-panel">
+        <div class="nearby-panel-header">
+            <div class="d-flex justify-content-between align-items-center">
+                <div class="d-flex align-items-center gap-2">
+                    <div style="width:32px;height:32px;border-radius:var(--radius-sm);background:var(--orange-light);display:flex;align-items:center;justify-content:center">
+                        <i class="bi bi-geo-alt-fill" style="font-size:.85rem;color:var(--orange)"></i>
+                    </div>
+                    <div>
+                        <h6 class="fw-bold mb-0" style="font-size:.88rem;font-family:var(--font-display);color:var(--green-900)">À proximité</h6>
+                        <span style="font-size:.7rem;color:var(--gray-400)"><span id="nearbyPanelCount">0</span> résultat(s)</span>
+                    </div>
+                </div>
+                <div class="d-flex gap-2 align-items-center">
+                    <select id="nearbyRadius" class="form-select form-select-sm" style="width:auto;font-size:.74rem;border-radius:var(--radius-sm);padding:3px 26px 3px 8px;border-color:var(--gray-200)">
+                        <option value="2000">2 km</option>
+                        <option value="5000" selected>5 km</option>
+                        <option value="10000">10 km</option>
+                        <option value="20000">20 km</option>
+                    </select>
+                    <button id="btnCloseNearby" style="border:none;border-radius:50%;width:28px;height:28px;padding:0;display:flex;align-items:center;justify-content:center;background:var(--sand);color:var(--gray-600);cursor:pointer;transition:all var(--transition)"><i class="bi bi-x-lg" style="font-size:.7rem"></i></button>
+                </div>
+            </div>
+        </div>
+        <div id="nearbyResultsList" class="nearby-panel-body">
+            <div class="text-center py-4" style="color:var(--gray-400)"><div class="spinner-border spinner-border-sm" style="color:var(--orange)"></div><p class="small mt-2 mb-0">Localisation en cours...</p></div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<style>
+/* Virtual scroll sentinel */
+.scroll-sentinel { height:1px; }
+</style>
+<script>
+(function() {
+    'use strict';
+
+    /* ═══ CONFIG ═══ */
+    var CFG = {
+        lat:   {{ default_lat|stringformat:"f" }},
+        lng:   {{ default_lng|stringformat:"f" }},
+        zoom:  {{ default_zoom }},
+        api:   '/api/v1/parcelles/geojson/',
+        auth:  {{ is_authenticated|yesno:"true,false" }},
+        su:    {{ is_superuser|yesno:"true,false" }},
+        focus: '{{ focus_parcelle_id|escapejs }}',
+        refreshMs: 60000,
+        invalidateDelay: 350,
+        bboxDebounceMs: 400,
+        cardBatchSize: 20
+    };
+
+    /* ═══ MAP INIT — MapLibre GL JS (WebGL) ═══ */
+    var map = new maplibregl.Map({
+        container: 'mainMap',
+        style: EyeFoncier.mapStyles.satellite,
+        center: [CFG.lng, CFG.lat],
+        zoom: CFG.zoom,
+        attributionControl: true
+    });
+    map.addControl(new maplibregl.NavigationControl(), 'top-right');
+
+    /* ═══ BASEMAP MENU — Toggle + Switching ═══ */
+    var basemapMenu = document.getElementById('basemapMenu');
+    document.getElementById('btnBasemap').addEventListener('click', function(e){
+        e.stopPropagation();
+        basemapMenu.classList.toggle('open');
+    });
+    document.addEventListener('click', function(e){
+        if(!e.target.closest('#basemapMenu') && !e.target.closest('#btnBasemap')){
+            basemapMenu.classList.remove('open');
+        }
+    });
+    document.querySelectorAll('.basemap-menu-item').forEach(function(b){
+        b.onclick = function(){
+            document.querySelectorAll('.basemap-menu-item').forEach(function(x){ x.classList.remove('active'); });
+            b.classList.add('active');
+            map.setStyle(EyeFoncier.mapStyles[b.dataset.layer]);
+            map.once('idle', function() { reloadMapLayers(); });
+            basemapMenu.classList.remove('open');
+        };
+    });
+
+    /* ═══ STATE ═══ */
+    var activeFeatureId = null, _layerClicked = false;
+    var _is3D = false;
+    var currentFilters = {}, allFeatures = [];
+    var _lastBbox = '', _isLoading = false;
+    var _currentPopup = null;
+    var _sourcesReady = false;
+    var _nearbyMarkers = [];  // Array of maplibregl.Marker instances
+    var _userMarker = null;
+    var _userLngLat = null;   // Track user position for radius change
+
+    /* ═══ HELPERS ═══ */
+    var STATUS_COLORS = {disponible:'#059669',reserve:'#D97706',vendu:'#DC2626'};
+    function stColor(s){ return STATUS_COLORS[s]||'#6b7280'; }
+    function fmt(n){ return n?new Intl.NumberFormat('fr-FR').format(n):'—'; }
+    function badge(t,bg){ return '<span style="display:inline-flex;align-items:center;font-size:.65rem;font-weight:600;background:'+bg+';color:#fff;border-radius:6px;padding:2px 8px">'+t+'</span>'; }
+    var _refreshTimer = null;
+    function setRefresh(c,t){
+        var el=document.getElementById('refreshBadge');
+        el.className='refresh-badge '+c+' visible';
+        document.getElementById('refreshText').textContent=t;
+        if(_refreshTimer) clearTimeout(_refreshTimer);
+        // Auto-hide: ok=3s, error=6s, loading=no hide
+        var delay = c==='ok' ? 3000 : c==='err' ? 6000 : 0;
+        if(delay){
+            _refreshTimer=setTimeout(function(){ el.classList.remove('visible'); }, delay);
+        }
+    }
+    function timeStr(){ return new Date().toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit',second:'2-digit'}); }
+    function showSkeleton(){ var l=document.getElementById('skeletonLoader'); if(l) l.style.display='block'; }
+    function hideSkeleton(){ var l=document.getElementById('skeletonLoader'); if(l) l.style.display='none'; }
+    function safeResize(){ setTimeout(function(){ map.resize(); }, CFG.invalidateDelay); }
+
+    var STATUS_COLOR_EXPR = ['match', ['get', 'status'], 'disponible', '#059669', 'reserve', '#D97706', 'vendu', '#DC2626', '#6b7280'];
+
+    /* ═══ HIGHLIGHT ═══ */
+    function clearHighlight(){
+        if(activeFeatureId!=null && map.getSource('parcelles-polygons')){
+            try { map.setFeatureState({source:'parcelles-polygons',id:activeFeatureId},{active:false}); } catch(e){}
+        }
+        activeFeatureId=null;
+        if(_currentPopup){_currentPopup.remove();_currentPopup=null;}
+        document.querySelectorAll('.parcelle-card.active').forEach(function(c){c.classList.remove('active');});
+    }
+
+    function focusOnFeature(fid,openPop){
+        if(fid==null) return;
+        clearHighlight();
+        activeFeatureId=fid;
+        // Set active state
+        if(map.getSource('parcelles-polygons')){
+            try { map.setFeatureState({source:'parcelles-polygons',id:fid},{active:true}); } catch(e){}
+        }
+        // Find feature to get bounds/centroid
+        var feature=allFeatures.find(function(f){return String(f.id)===String(fid);});
+        if(feature&&feature.geometry){
+            var bounds=EyeFoncier.map.getBoundsFromFeatures([feature]);
+            if(!bounds.isEmpty()){
+                map.fitBounds(bounds,{padding:80,maxZoom:17,duration:800});
+            }
+            if(openPop){
+                setTimeout(function(){
+                    var center=getCentroid(feature.geometry);
+                    if(center){
+                        _currentPopup=new maplibregl.Popup({maxWidth:'360px'})
+                            .setLngLat(center)
+                            .setHTML(buildPopup(feature))
+                            .addTo(map);
+                    }
+                },900);
+            }
+        }
+        document.querySelectorAll('.parcelle-card').forEach(function(c){
+            if(c.dataset.id===String(fid)){c.classList.add('active');c.scrollIntoView({behavior:'smooth',block:'nearest'});}
+        });
+    }
+
+    function getCentroid(geometry){
+        var cx=0,cy=0,n=0;
+        var coords=geometry.coordinates;
+        if(geometry.type==='Polygon'&&coords[0]){coords[0].forEach(function(c){cx+=c[0];cy+=c[1];n++;});}
+        else if(geometry.type==='MultiPolygon'&&coords[0]&&coords[0][0]){coords[0][0].forEach(function(c){cx+=c[0];cy+=c[1];n++;});}
+        return n>0?[cx/n,cy/n]:null;
+    }
+
+    /* ═══ POPUP ═══ */
+    function buildPopup(feature){
+        var p=feature.properties, c=stColor(p.status), h='<div class="ef-popup">';
+        if(p.main_image){
+            h+='<div class="ef-popup-img-wrap"><img src="'+p.main_image+'" class="ef-popup-img" alt="" loading="lazy"><div class="ef-popup-img-overlay"></div>';
+            h+='<div class="ef-popup-status-float"><span class="ef-popup-badge" style="background:'+c+'">'+(p.status_display||p.status)+'</span>';
+            if(p.trust_badge)h+='<span class="ef-popup-badge" style="background:rgba(46,125,191,.9)"><i class="bi bi-patch-check-fill"></i> Vérifié</span>';
+            if(p.is_validated)h+='<span class="ef-popup-badge" style="background:rgba(5,150,105,.85)"><i class="bi bi-shield-check"></i></span>';
+            h+='</div></div>';
+        } else { h+='<div class="ef-popup-no-img"><i class="bi bi-geo-alt-fill"></i></div>'; }
+        h+='<div class="ef-popup-header"><div class="ef-popup-title">'+(p.title||'Lot '+p.lot_number)+'</div>';
+        if(p.zone_name||p.address) h+='<div class="ef-popup-subtitle"><i class="bi bi-pin-map-fill" style="font-size:.7rem"></i> '+(p.zone_name||'')+(p.address?' — '+p.address:'')+'</div>';
+        if(!p.main_image){ h+='<div class="ef-popup-badges"><span class="ef-popup-badge" style="background:'+c+'">'+(p.status_display||p.status)+'</span>';
+            if(p.trust_badge)h+='<span class="ef-popup-badge" style="background:var(--blue)"><i class="bi bi-patch-check-fill"></i> Vérifié</span>';
+            if(p.is_validated)h+='<span class="ef-popup-badge" style="background:var(--success)"><i class="bi bi-shield-check"></i></span>';
+            h+='</div>';
+        }
+        h+='</div><div class="ef-popup-body">';
+        h+='<div class="ef-popup-price-block"><span class="ef-popup-price">'+fmt(p.price)+'</span><span class="ef-popup-price-unit">FCFA</span></div>';
+        h+='<div class="ef-popup-row"><span class="ef-popup-label"><i class="bi bi-hash"></i> Lot</span><span class="ef-popup-value">'+(p.lot_number||'—')+'</span></div>';
+        h+='<div class="ef-popup-row"><span class="ef-popup-label"><i class="bi bi-arrows-fullscreen"></i> Surface</span><span class="ef-popup-value">'+(p.surface_m2||'—')+' m²</span></div>';
+        h+='<div class="ef-popup-row"><span class="ef-popup-label"><i class="bi bi-tag"></i> Type</span><span class="ef-popup-value">'+(p.land_type_display||p.land_type||'—')+'</span></div>';
+        if(CFG.auth){
+            if(p.price_per_m2)h+='<div class="ef-popup-row"><span class="ef-popup-label"><i class="bi bi-calculator"></i> Prix/m²</span><span class="ef-popup-value">'+fmt(p.price_per_m2)+' FCFA</span></div>';
+            if(p.owner_name)h+='<div class="ef-popup-row"><span class="ef-popup-label"><i class="bi bi-person"></i> Propriétaire</span><span class="ef-popup-value">'+p.owner_name+'</span></div>';
+            if(p.owner_phone)h+='<div class="ef-popup-row"><span class="ef-popup-label"><i class="bi bi-telephone"></i> Tél</span><span class="ef-popup-value"><a href="tel:'+p.owner_phone+'" style="color:var(--green-700);font-weight:700">'+p.owner_phone+'</a></span></div>';
+            if(p.description_display){var d=p.description_display.length>100?p.description_display.substring(0,100)+'…':p.description_display;h+='<div class="ef-popup-desc">'+d+'</div>';}
+            h+='<div class="ef-popup-meta"><span><i class="bi bi-eye me-1"></i>'+(p.views_count||0)+' vue(s)</span></div>';
+        }
+        h+='</div><div class="ef-popup-footer">';
+        if(CFG.auth){h+='<a href="/parcelles/'+feature.id+'/" style="display:block;width:100%;text-align:center;padding:10px;border-radius:8px;font-size:.88rem;font-weight:600;background:var(--orange);color:#fff;text-decoration:none;transition:all .2s"><i class="bi bi-arrow-right-circle me-1"></i> Fiche complète</a>';}
+        else{h+='<div class="ef-popup-cta"><p class="ef-popup-cta-title"><i class="bi bi-lock-fill me-1"></i>Connectez-vous pour voir :</p><p class="ef-popup-cta-sub">Propriétaire, téléphone, documents, GPS…</p><div style="display:flex;gap:8px"><a href="/compte/connexion/?next=/carte/?focus='+feature.id+'" style="flex:1;text-align:center;padding:8px;border-radius:8px;font-size:.82rem;font-weight:600;background:var(--green-900);color:#fff;text-decoration:none"><i class="bi bi-box-arrow-in-right me-1"></i>Connexion</a><a href="/compte/inscription/?next=/carte/?focus='+feature.id+'" style="flex:1;text-align:center;padding:8px;border-radius:8px;font-size:.82rem;font-weight:600;border:1.5px solid var(--green-700);color:var(--green-700);text-decoration:none"><i class="bi bi-person-plus me-1"></i>Inscription</a></div></div>';}
+        h+='</div></div>';
+        return h;
+    }
+
+    /* ═══ DEBOUNCE UTILITY ═══ */
+    function debounce(fn, ms) {
+        var timer; return function() {
+            var ctx=this, args=arguments;
+            clearTimeout(timer); timer=setTimeout(function(){ fn.apply(ctx,args); }, ms);
+        };
+    }
+
+    /* ═══ BBOX — Envoie le viewport au backend ═══ */
+    function getBbox() {
+        var b = map.getBounds();
+        return b.getWest()+','+b.getSouth()+','+b.getEast()+','+b.getNorth();
+    }
+
+    /* ═══ MAP LAYERS — Add/update sources + layers ═══ */
+    function addMapSources(gj){
+        var centroids = EyeFoncier.map.computeCentroids(gj.features||[]);
+
+        if(map.getSource('parcelles-polygons')){
+            map.getSource('parcelles-polygons').setData(gj);
+            map.getSource('parcelles-points').setData(centroids);
+            _sourcesReady = true;
+            return;
+        }
+
+        // Polygon source (no clustering)
+        map.addSource('parcelles-polygons', {
+            type: 'geojson', data: gj, generateId: true
+        });
+        // Fill layer
+        map.addLayer({
+            id: 'parcelles-fill', type: 'fill', source: 'parcelles-polygons',
+            paint: {
+                'fill-color': STATUS_COLOR_EXPR,
+                'fill-opacity': ['case', ['boolean',['feature-state','active'],false], 0.55,
+                                 ['case', ['boolean',['feature-state','hover'],false], 0.4, 0.25]]
+            }
+        });
+        // Line layer
+        map.addLayer({
+            id: 'parcelles-line', type: 'line', source: 'parcelles-polygons',
+            paint: {
+                'line-color': ['case', ['boolean',['feature-state','active'],false], '#ffffff', STATUS_COLOR_EXPR],
+                'line-width': ['case', ['boolean',['feature-state','active'],false], 4,
+                               ['case', ['boolean',['feature-state','hover'],false], 3.5, 2]],
+                'line-opacity': 0.9
+            }
+        });
+
+        // Point source with clustering
+        map.addSource('parcelles-points', {
+            type: 'geojson', data: centroids,
+            cluster: true, clusterMaxZoom: 16, clusterRadius: 50
+        });
+        // Cluster circles
+        map.addLayer({
+            id: 'clusters', type: 'circle', source: 'parcelles-points',
+            filter: ['has', 'point_count'],
+            paint: {
+                'circle-color': ['step', ['get', 'point_count'],
+                    'rgba(5,150,105,0.7)', 10,
+                    'rgba(217,119,6,0.7)', 30,
+                    'rgba(220,38,38,0.7)'],
+                'circle-radius': ['step', ['get', 'point_count'], 20, 10, 30, 30, 40],
+                'circle-stroke-width': 4,
+                'circle-stroke-color': ['step', ['get', 'point_count'],
+                    'rgba(5,150,105,0.25)', 10,
+                    'rgba(217,119,6,0.25)', 30,
+                    'rgba(220,38,38,0.25)']
+            }
+        });
+        // Cluster count labels
+        map.addLayer({
+            id: 'cluster-count', type: 'symbol', source: 'parcelles-points',
+            filter: ['has', 'point_count'],
+            layout: {
+                'text-field': '{point_count_abbreviated}',
+                'text-font': ['Open Sans Bold'],
+                'text-size': 13
+            },
+            paint: { 'text-color': '#ffffff' }
+        });
+        // Unclustered dots
+        map.addLayer({
+            id: 'unclustered-point', type: 'circle', source: 'parcelles-points',
+            filter: ['!', ['has', 'point_count']],
+            paint: {
+                'circle-color': STATUS_COLOR_EXPR,
+                'circle-radius': 6,
+                'circle-stroke-width': 2,
+                'circle-stroke-color': '#ffffff'
+            }
+        });
+
+        // ── Interactions ──
+        var hoveredId = null;
+        map.on('mousemove', 'parcelles-fill', function(e){
+            if(e.features.length>0){
+                if(hoveredId!==null){map.setFeatureState({source:'parcelles-polygons',id:hoveredId},{hover:false});}
+                hoveredId=e.features[0].id;
+                map.setFeatureState({source:'parcelles-polygons',id:hoveredId},{hover:true});
+                map.getCanvas().style.cursor='pointer';
+            }
+        });
+        map.on('mouseleave','parcelles-fill',function(){
+            if(hoveredId!==null){map.setFeatureState({source:'parcelles-polygons',id:hoveredId},{hover:false});}
+            hoveredId=null;
+            map.getCanvas().style.cursor='';
+        });
+
+        // Click polygon → popup + focus
+        map.on('click','parcelles-fill',function(e){
+            if(e.features.length===0) return;
+            _layerClicked=true;
+            var clickedId=e.features[0].id;
+            var feature=allFeatures.find(function(f){return f.id===clickedId;});
+            if(!feature) feature={id:clickedId, properties:e.features[0].properties, geometry:null};
+            focusOnFeature(clickedId,false);
+            _currentPopup=new maplibregl.Popup({maxWidth:'360px'})
+                .setLngLat(e.lngLat)
+                .setHTML(buildPopup(feature))
+                .addTo(map);
+        });
+
+        // Click unclustered point → popup
+        map.on('click','unclustered-point',function(e){
+            if(e.features.length===0) return;
+            _layerClicked=true;
+            var props=e.features[0].properties;
+            var fid=e.features[0].id;
+            var feature=allFeatures.find(function(f){return f.id===fid;});
+            if(!feature) feature={id:fid, properties:props, geometry:null};
+            focusOnFeature(fid,false);
+            _currentPopup=new maplibregl.Popup({maxWidth:'360px'})
+                .setLngLat(e.features[0].geometry.coordinates)
+                .setHTML(buildPopup(feature))
+                .addTo(map);
+        });
+
+        // Click cluster → zoom in
+        map.on('click','clusters',function(e){
+            var features=map.queryRenderedFeatures(e.point,{layers:['clusters']});
+            var clusterId=features[0].properties.cluster_id;
+            map.getSource('parcelles-points').getClusterExpansionZoom(clusterId,function(err,zoom){
+                if(err) return;
+                map.easeTo({center:features[0].geometry.coordinates,zoom:zoom});
+            });
+        });
+
+        // Cursor on clusters
+        map.on('mouseenter','clusters',function(){map.getCanvas().style.cursor='pointer';});
+        map.on('mouseleave','clusters',function(){map.getCanvas().style.cursor='';});
+        map.on('mouseenter','unclustered-point',function(){map.getCanvas().style.cursor='pointer';});
+        map.on('mouseleave','unclustered-point',function(){map.getCanvas().style.cursor='';});
+
+        _sourcesReady = true;
+    }
+
+    /** Re-add all layers after style change (basemap switch) */
+    function reloadMapLayers(){
+        _sourcesReady = false;
+        if(allFeatures.length){
+            var gj = {type:'FeatureCollection', features: allFeatures};
+            addMapSources(gj);
+        }
+        // Re-add nearby radius if present
+        if(map.getSource('nearby-radius')===undefined && _nearbyRadiusData){
+            map.addSource('nearby-radius',{type:'geojson',data:_nearbyRadiusData});
+            map.addLayer({id:'nearby-radius-fill',type:'fill',source:'nearby-radius',paint:{'fill-color':'#2E7DBF','fill-opacity':0.05}});
+            map.addLayer({id:'nearby-radius-line',type:'line',source:'nearby-radius',paint:{'line-color':'#2E7DBF','line-width':1,'line-dasharray':[5,5]}});
+        }
+        // Re-apply 3D extrusion if mode is active
+        if (_is3D && map.getSource('parcelles-polygons') && !map.getLayer('parcelles-extrusion')) {
+            map.setLayoutProperty('parcelles-fill', 'visibility', 'none');
+            map.addLayer({
+                id: 'parcelles-extrusion', type: 'fill-extrusion', source: 'parcelles-polygons',
+                paint: {
+                    'fill-extrusion-color': STATUS_COLOR_EXPR,
+                    'fill-extrusion-height': ['interpolate',['linear'],['coalesce',['get','superficie'],100], 50,30, 200,60, 500,100, 1000,150, 5000,250],
+                    'fill-extrusion-base': 0, 'fill-extrusion-opacity': 0.75
+                }
+            }, 'parcelles-line');
+        }
+    }
+    var _nearbyRadiusData = null;
+
+    /* ═══ LOAD PARCELLES — Optimisé avec BBOX, ETag, clustering ═══ */
+    var _etag = null;
+
+    var _initialLoadDone = false;
+
+    function loadParcelles(params, onDone) {
+        if (_isLoading) return;
+        _isLoading = true;
+        params = params || {};
+
+        var url = new URL(CFG.api, window.location.origin);
+        Object.keys(params).forEach(function(k){ if(params[k]) url.searchParams.set(k, params[k]); });
+
+        var q = document.getElementById('searchInput').value.trim();
+        if (q) url.searchParams.set('search', q);
+
+        // Premier chargement : PAS de BBOX pour charger TOUTES les parcelles
+        // Chargements suivants : filtrage BBOX pour performance
+        if (_initialLoadDone) {
+            url.searchParams.set('in_bbox', getBbox());
+        }
+        url.searchParams.set('zoom', map.getZoom());
+
+        setRefresh('loading', 'Chargement…'); showSkeleton();
+
+        var headers = {};
+        if (_etag) headers['If-None-Match'] = _etag;
+
+        var t0 = performance.now();
+
+        fetch(url, { headers: headers })
+        .then(function(r) {
+            if (r.status === 304) {
+                _isLoading = false; hideSkeleton();
+                setRefresh('ok', allFeatures.length + ' parcelle(s) — cache — ' + timeStr());
+                if (onDone) onDone();
+                return null;
+            }
+            if (!r.ok) throw new Error('HTTP ' + r.status);
+            var newEtag = r.headers.get('ETag');
+            if (newEtag) _etag = newEtag;
+            return r.json();
+        })
+        .then(function(data) {
+            if (!data) return;
+
+            var gj = data;
+            if (data.results && data.results.type === 'FeatureCollection') gj = data.results;
+            allFeatures = gj.features || [];
+
+            hideSkeleton();
+
+            if (!allFeatures.length) {
+                // Clear map sources
+                if(map.getSource('parcelles-polygons')){ map.getSource('parcelles-polygons').setData({type:'FeatureCollection',features:[]}); }
+                if(map.getSource('parcelles-points')){ map.getSource('parcelles-points').setData({type:'FeatureCollection',features:[]}); }
+                updateResultsList([]);
+                setRefresh('ok', '0 parcelle — ' + timeStr());
+                updateMobileSummary(0);
+                _isLoading = false;
+                if (onDone) onDone();
+                return;
+            }
+
+            // Add or update sources + layers
+            addMapSources(gj);
+
+            var dt = Math.round(performance.now() - t0);
+            updateResultsList(allFeatures);
+            setRefresh('ok', allFeatures.length + ' parcelle(s) — ' + dt + 'ms — ' + timeStr());
+            updateMobileSummary(allFeatures.length);
+            _isLoading = false;
+            if (onDone) onDone();
+        })
+        .catch(function(err) {
+            _isLoading = false; hideSkeleton();
+            _initialLoadDone = true; // Permettre les rechargements BBOX meme apres erreur
+            var errMsg = err.message || 'Connexion interrompue';
+            if (errMsg.indexOf('Failed to fetch') >= 0 || errMsg.indexOf('NetworkError') >= 0) {
+                errMsg = 'Connexion au serveur indisponible';
+            }
+            setRefresh('err', 'Erreur — ' + timeStr());
+            document.getElementById('resultsList').innerHTML =
+                '<div class="empty-state">' +
+                '<i class="bi bi-exclamation-triangle" style="font-size:2rem;color:var(--orange)"></i>' +
+                '<p class="mt-2 fw-bold small">Donnees cartographiques indisponibles</p>' +
+                '<p style="color:var(--gray-400)" class="small">' + errMsg + '</p>' +
+                '<button onclick="_etag=null;_isLoading=false;loadParcelles(currentFilters)" style="border:none;padding:8px 20px;border-radius:8px;background:var(--orange);color:#fff;font-size:.82rem;font-weight:600;cursor:pointer;margin-top:6px">' +
+                '<i class="bi bi-arrow-clockwise me-1"></i>Reessayer</button>' +
+                '<br><button onclick="location.reload()" style="border:none;padding:6px 16px;border-radius:8px;background:var(--gray-200);color:var(--gray-600);font-size:.78rem;font-weight:600;cursor:pointer;margin-top:6px">' +
+                '<i class="bi bi-arrow-repeat me-1"></i>Recharger la page</button></div>';
+            if (onDone) onDone();
+        });
+    }
+
+    /* ═══ BBOX AUTO-RELOAD ═══ */
+    var debouncedBboxLoad = debounce(function() {
+        var bbox = getBbox();
+        if (bbox !== _lastBbox) {
+            _lastBbox = bbox;
+            _etag = null;
+            loadParcelles(currentFilters);
+        }
+    }, CFG.bboxDebounceMs);
+
+    map.on('moveend', debouncedBboxLoad);
+
+    /* ═══ SIDEBAR RESULTS — Virtual Scroll ═══ */
+    var _scrollObserver = null;
+
+    function createCard(f) {
+        var p = f.properties, card = document.createElement('div');
+        card.className = 'parcelle-card'; card.style.borderLeftColor = stColor(p.status); card.dataset.id = f.id;
+        var i = '<div class="d-flex justify-content-between align-items-start"><div class="flex-fill pe-1" style="min-width:0"><strong style="font-size:.84rem;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block;font-family:var(--font-display)">' + (p.title || 'Lot ' + p.lot_number) + '</strong>';
+        if (p.zone_name || p.address) i += '<span style="font-size:.7rem;color:var(--gray-400)"><i class="bi bi-pin-map" style="font-size:.6rem"></i> ' + (p.zone_name || '') + (p.address ? ' — ' + p.address : '') + '</span>';
+        i += '</div>' + badge(p.status_display || '', stColor(p.status)) + '</div>';
+        i += '<div class="d-flex justify-content-between align-items-center mt-1"><span class="card-price-tag">' + fmt(p.price) + ' F</span><span class="card-surface-tag">' + (p.surface_m2 || '—') + ' m²</span><span class="card-type-tag">' + (p.land_type_display || '') + '</span></div>';
+        i += '<div class="d-flex gap-1 mt-2"><button class="card-btn-view flex-fill btn-focus-map" data-fid="' + f.id + '"><i class="bi bi-geo-alt-fill me-1"></i>Voir</button>';
+        if (CFG.auth) i += '<a href="/parcelles/' + f.id + '/" class="card-btn-detail"><i class="bi bi-arrow-right-circle"></i></a>';
+        i += '</div>';
+        card.innerHTML = i;
+        card.addEventListener('click', function(e) { if (e.target.closest('a') || e.target.closest('.btn-focus-map')) return; focusOnFeature(f.id, true); });
+        card.querySelector('.btn-focus-map').addEventListener('click', function(e) { e.stopPropagation(); focusOnFeature(this.dataset.fid, true); });
+        return card;
+    }
+
+    function renderBatch(container, features, startIdx) {
+        var end = Math.min(startIdx + CFG.cardBatchSize, features.length);
+        var frag = document.createDocumentFragment();
+        for (var i = startIdx; i < end; i++) { frag.appendChild(createCard(features[i])); }
+        var oldSentinel = container.querySelector('.scroll-sentinel');
+        if (oldSentinel) oldSentinel.remove();
+        container.appendChild(frag);
+        if (end < features.length) {
+            var sentinel = document.createElement('div');
+            sentinel.className = 'scroll-sentinel';
+            container.appendChild(sentinel);
+            if (_scrollObserver) _scrollObserver.disconnect();
+            _scrollObserver = new IntersectionObserver(function(entries) {
+                if (entries[0].isIntersecting) { _scrollObserver.disconnect(); renderBatch(container, features, end); }
+            }, { root: document.querySelector('.sidebar-results'), threshold: 0.1 });
+            _scrollObserver.observe(sentinel);
+        }
+    }
+
+    function updateResultsList(features) {
+        var c = document.getElementById('resultsList');
+        if (_scrollObserver) { _scrollObserver.disconnect(); _scrollObserver = null; }
+        if (!features.length) {
+            var e = '<div class="empty-state"><i class="bi bi-map"></i><p class="mt-2 fw-bold" style="font-family:var(--font-display)">Aucune parcelle</p><p style="color:var(--gray-400);font-size:.85rem">Modifiez vos filtres</p>';
+            if (CFG.su) e += '<a href="/parcelles/deposer/" style="display:inline-flex;align-items:center;gap:6px;padding:8px 20px;border-radius:8px;background:var(--orange);color:#fff;text-decoration:none;font-size:.82rem;font-weight:600"><i class="bi bi-plus-circle"></i>Ajouter</a>';
+            else if (!CFG.auth) e += '<a href="/compte/connexion/?next=/carte/" style="display:inline-flex;align-items:center;gap:6px;padding:8px 20px;border-radius:8px;border:1.5px solid var(--green-700);color:var(--green-700);text-decoration:none;font-size:.82rem;font-weight:600"><i class="bi bi-box-arrow-in-right"></i>Se connecter</a>';
+            c.innerHTML = e + '</div>'; return;
+        }
+        c.innerHTML = '<div class="d-flex justify-content-between align-items-center px-1 py-1 mb-1"><span style="font-size:.82rem;font-weight:600;font-family:var(--font-display)"><span style="color:var(--orange)">' + features.length + '</span> parcelle(s)</span><button class="btn btn-link btn-sm p-0" style="font-size:.75rem;color:var(--gray-400);text-decoration:none" onclick="resetFilters()"><i class="bi bi-x-circle me-1"></i>Reset</button></div>';
+        var w = document.createElement('div');
+        w.id = 'cardsContainer'; c.appendChild(w);
+        renderBatch(w, features, 0);
+    }
+
+    /* ═══ CHIP LOGIC ═══ */
+    function initChips(id){var ct=document.getElementById(id);ct.querySelectorAll('.ef-chip').forEach(function(ch){ch.addEventListener('click',function(){ct.querySelectorAll('.ef-chip').forEach(function(c){c.classList.remove('active');});ch.classList.add('active');doSearch();});});}
+    initChips('statusChips');initChips('typeChips');
+    function getChip(id){var a=document.querySelector('#'+id+' .ef-chip.active');return a?a.dataset.value:'';}
+
+    function doSearch(){currentFilters={status:getChip('statusChips'),land_type:getChip('typeChips'),zone:document.getElementById('zoneSelect').value,price_min:document.getElementById('priceMin').value,price_max:document.getElementById('priceMax').value};_etag=null;loadParcelles(currentFilters);}
+    window.resetFilters=function(){document.getElementById('searchInput').value='';document.getElementById('priceMin').value='';document.getElementById('priceMax').value='';document.getElementById('zoneSelect').value='';['statusChips','typeChips'].forEach(function(id){var ct=document.getElementById(id);ct.querySelectorAll('.ef-chip').forEach(function(c){c.classList.remove('active');});ct.querySelector('.ef-chip[data-value=""]').classList.add('active');});doSearch();};
+    document.getElementById('btnSearch').addEventListener('click',doSearch);
+    document.getElementById('searchInput').addEventListener('keyup',function(e){if(e.key==='Enter')doSearch();});
+    document.getElementById('zoneSelect').addEventListener('change',doSearch);
+    document.getElementById('refreshBadge').addEventListener('click',function(){loadParcelles(currentFilters);});
+
+    /* ═══ 3D TOGGLE ═══ */
+    document.getElementById('btn3DToggle').addEventListener('click', function(){
+        var btn = this;
+        _is3D = !_is3D;
+        btn.classList.toggle('active-3d', _is3D);
+
+        if (_is3D) {
+            EyeFoncier.map.enable3D(map);
+            // Add extrusion layer if polygons source exists
+            if (map.getSource('parcelles-polygons') && !map.getLayer('parcelles-extrusion')) {
+                // Hide flat fill, show extrusion
+                map.setLayoutProperty('parcelles-fill', 'visibility', 'none');
+                map.addLayer({
+                    id: 'parcelles-extrusion',
+                    type: 'fill-extrusion',
+                    source: 'parcelles-polygons',
+                    paint: {
+                        'fill-extrusion-color': STATUS_COLOR_EXPR,
+                        'fill-extrusion-height': [
+                            'interpolate', ['linear'], ['coalesce', ['get', 'superficie'], 100],
+                            50, 30,
+                            200, 60,
+                            500, 100,
+                            1000, 150,
+                            5000, 250
+                        ],
+                        'fill-extrusion-base': 0,
+                        'fill-extrusion-opacity': 0.75
+                    }
+                }, 'parcelles-line');
+            }
+        } else {
+            EyeFoncier.map.disable3D(map);
+            // Remove extrusion, show flat fill
+            if (map.getLayer('parcelles-extrusion')) {
+                map.removeLayer('parcelles-extrusion');
+            }
+            if (map.getLayer('parcelles-fill')) {
+                map.setLayoutProperty('parcelles-fill', 'visibility', 'visible');
+            }
+        }
+    });
+
+    /* ═══ SIDEBAR TOGGLE (Desktop) ═══ */
+    var sidebarOpen=true;
+    document.getElementById('sidebarToggle').addEventListener('click',function(){
+        sidebarOpen=!sidebarOpen;
+        document.getElementById('sidebar').classList.toggle('collapsed');
+        this.classList.toggle('open',sidebarOpen);
+        this.classList.toggle('closed',!sidebarOpen);
+        document.getElementById('toggleIcon').className=sidebarOpen?'bi bi-chevron-left':'bi bi-chevron-right';
+        safeResize();
+    });
+
+    /* ═══ BOTTOM SHEET (Mobile) ═══ */
+    var bsCollapsed=true,sidebar=document.getElementById('sidebar');
+    function updateMobileSummary(n){var t=document.getElementById('bsSummaryText'),b=document.getElementById('bsSummaryBadge');if(t)t.textContent=n+' parcelle(s)';if(b)b.innerHTML=bsCollapsed?'<i class="bi bi-chevron-up"></i>':'<i class="bi bi-chevron-down"></i>';}
+    function toggleBS(){if(window.innerWidth>768)return;bsCollapsed=!bsCollapsed;sidebar.classList.toggle('collapsed',bsCollapsed);updateMobileSummary(allFeatures.length);safeResize();}
+    var bsH=document.getElementById('bsHandle'),bsS=document.getElementById('bsSummary');
+    if(bsH)bsH.addEventListener('click',toggleBS);
+    if(bsS)bsS.addEventListener('click',toggleBS);
+    if(window.innerWidth<=768){sidebar.classList.add('collapsed');bsCollapsed=true;}
+
+    /* ═══ GEOLOCATION + NEARBY ═══ */
+    var nearbyPanel=document.getElementById('nearbyPanel'), nearbyBtn=document.getElementById('btnNearby');
+
+    function clearNearbyMarkers(){
+        _nearbyMarkers.forEach(function(m){m.remove();}); _nearbyMarkers=[];
+        if(map.getSource('nearby-radius')){
+            if(map.getLayer('nearby-radius-fill')) map.removeLayer('nearby-radius-fill');
+            if(map.getLayer('nearby-radius-line')) map.removeLayer('nearby-radius-line');
+            map.removeSource('nearby-radius');
+        }
+        _nearbyRadiusData=null;
+    }
+
+    function addNearbyRadius(lng,lat,radiusM){
+        var radiusKm=radiusM/1000;
+        var points=[];
+        for(var i=0;i<=64;i++){
+            var angle=(i/64)*2*Math.PI;
+            var dx=radiusKm/111.32*Math.cos(angle);
+            var dy=radiusKm/(111.32*Math.cos(lat*Math.PI/180))*Math.sin(angle);
+            points.push([lng+dy,lat+dx]);
+        }
+        _nearbyRadiusData={type:'Feature',geometry:{type:'Polygon',coordinates:[points]}};
+        if(map.getSource('nearby-radius')){map.getSource('nearby-radius').setData(_nearbyRadiusData);}
+        else{
+            map.addSource('nearby-radius',{type:'geojson',data:_nearbyRadiusData});
+            map.addLayer({id:'nearby-radius-fill',type:'fill',source:'nearby-radius',paint:{'fill-color':'#2E7DBF','fill-opacity':0.05}});
+            map.addLayer({id:'nearby-radius-line',type:'line',source:'nearby-radius',paint:{'line-color':'#2E7DBF','line-width':1,'line-dasharray':[5,5]}});
+        }
+    }
+
+    document.getElementById('btnLocate').addEventListener('click',function(){
+        if(!navigator.geolocation)return alert('Géolocalisation non supportée.');
+        navigator.geolocation.getCurrentPosition(function(pos){
+            var lng=pos.coords.longitude, lat=pos.coords.latitude;
+            map.flyTo({center:[lng,lat],zoom:16,duration:1000});
+            if(_userMarker) _userMarker.remove();
+            var el=document.createElement('div');
+            el.style.cssText='width:20px;height:20px;background:#2E7DBF;border:3px solid #fff;border-radius:50%;box-shadow:0 2px 6px rgba(0,0,0,.3)';
+            _userMarker=new maplibregl.Marker({element:el})
+                .setLngLat([lng,lat])
+                .setPopup(new maplibregl.Popup({offset:10}).setHTML('<strong style="font-family:var(--font-display)">Vous êtes ici</strong>'))
+                .addTo(map);
+            _userMarker.togglePopup();
+            _userLngLat=[lng,lat];
+        },function(){alert('Géolocalisation refusée.');});
+    });
+
+    function loadNearbyOnMap(lat,lng,radius){
+        var list=document.getElementById('nearbyResultsList');
+        list.innerHTML='<div class="text-center py-4"><div class="spinner-border spinner-border-sm" style="color:var(--orange)"></div><p class="small mt-2 mb-0" style="color:var(--gray-400)">Recherche…</p></div>';
+        var radiusKm = radius > 100 ? radius / 1000 : radius;
+        fetch('/api/v1/parcelles/nearby/?lat='+lat+'&lng='+lng+'&radius='+radiusKm+'&limit=30')
+        .then(function(r){
+            if(!r.ok) throw new Error('HTTP '+r.status);
+            return r.json();
+        })
+        .then(function(data){
+            // Clear old nearby markers
+            _nearbyMarkers.forEach(function(m){m.remove();}); _nearbyMarkers=[];
+
+            var parcelles=data.parcelles||data.results||[];
+            var countEl=document.getElementById('nearbyPanelCount');
+            if(countEl) countEl.textContent=parcelles.length;
+            var bdg=document.getElementById('nearbyCountBadge');
+            if(bdg){
+                if(parcelles.length>0){bdg.textContent=parcelles.length;bdg.style.display='';}
+                else{bdg.style.display='none';}
+            }
+            if(!parcelles.length){list.innerHTML='<div class="text-center py-5"><div style="width:48px;height:48px;border-radius:50%;background:var(--sand);display:inline-flex;align-items:center;justify-content:center;margin-bottom:8px"><i class="bi bi-geo" style="font-size:1.3rem;color:var(--gray-200)"></i></div><p style="color:var(--gray-400);font-size:.85rem" class="mb-0">Aucune parcelle dans ce rayon.</p></div>';return;}
+            var html='';
+            parcelles.forEach(function(p){
+                var dist=p.distance_m?Math.round(p.distance_m):'?';
+                var dl=dist>1000?(dist/1000).toFixed(1)+' km':dist+' m';
+                var pl=p.price>0?Number(p.price).toLocaleString('fr-FR')+' F':'—';
+                if(p.lat&&p.lng){
+                    var el=document.createElement('div');
+                    el.style.cssText='background:#E8793B;color:#fff;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;font-size:.7rem;font-weight:700;border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.3)';
+                    el.innerHTML='<i class="bi bi-geo-alt-fill"></i>';
+                    var m=new maplibregl.Marker({element:el})
+                        .setLngLat([p.lng,p.lat])
+                        .setPopup(new maplibregl.Popup({offset:14}).setHTML('<strong>'+p.lot_number+'</strong><br>'+pl+'<br><a href="/parcelles/'+p.id+'/" style="color:var(--orange);font-weight:600">Voir</a>'))
+                        .addTo(map);
+                    _nearbyMarkers.push(m);
+                }
+                html+='<a href="/parcelles/'+p.id+'/" class="nearby-item"><div class="nearby-item-icon"><i class="bi bi-geo-alt-fill"></i></div><div class="nearby-item-info"><div class="nearby-item-title">'+(p.title||'Parcelle').substring(0,35)+'</div><div class="nearby-item-sub">Lot '+(p.lot_number||'?')+(p.zone?' • '+p.zone:'')+'</div></div><div class="nearby-item-right"><div class="nearby-item-price">'+pl+'</div><div class="nearby-item-dist"><i class="bi bi-signpost-2"></i> '+dl+'</div></div></a>';
+            });
+            list.innerHTML=html;
+        }).catch(function(err){
+            console.error('Nearby error:', err);
+            list.innerHTML='<div class="text-center py-4"><i class="bi bi-wifi-off" style="font-size:1.3rem;color:var(--gray-200)"></i><p style="color:var(--gray-400);font-size:.85rem" class="mt-2 mb-0">Erreur de chargement.</p></div>';
+        });
+    }
+
+    function openNearbyPanel(){nearbyPanel.style.maxHeight='400px';nearbyBtn.classList.add('active-nearby');}
+    function closeNearbyPanel(){nearbyPanel.style.maxHeight='0';nearbyBtn.classList.remove('active-nearby');}
+
+    nearbyBtn.addEventListener('click',function(){
+        // Toggle: if panel is open, close it
+        if(nearbyBtn.classList.contains('active-nearby')){
+            closeNearbyPanel(); clearNearbyMarkers(); return;
+        }
+        if(!navigator.geolocation)return alert('Géolocalisation non supportée.');
+        nearbyBtn.disabled=true;
+        navigator.geolocation.getCurrentPosition(function(pos){
+            var lat=pos.coords.latitude,lng=pos.coords.longitude;
+            var radius=parseInt(document.getElementById('nearbyRadius').value)||5000;
+            _userLngLat=[lng,lat];
+
+            if(_userMarker) _userMarker.remove();
+            var el=document.createElement('div');
+            el.style.cssText='width:24px;height:24px;background:#2E7DBF;border:3px solid #fff;border-radius:50%;box-shadow:0 2px 6px rgba(0,0,0,.3)';
+            _userMarker=new maplibregl.Marker({element:el}).setLngLat([lng,lat])
+                .setPopup(new maplibregl.Popup({offset:12}).setHTML('<strong>Votre position</strong>'))
+                .addTo(map);
+
+            clearNearbyMarkers();
+            addNearbyRadius(lng,lat,radius);
+
+            map.flyTo({center:[lng,lat],zoom:radius>10000?12:14,duration:1000});
+            openNearbyPanel(); loadNearbyOnMap(lat,lng,radius);
+            nearbyBtn.disabled=false;
+        },function(){
+            alert('Géolocalisation refusée.');
+            nearbyBtn.disabled=false;
+        },{enableHighAccuracy:true,timeout:15000});
+    });
+
+    document.getElementById('btnCloseNearby').addEventListener('click',closeNearbyPanel);
+    document.getElementById('nearbyRadius').addEventListener('change',function(){
+        if(_userLngLat){
+            clearNearbyMarkers();
+            var r=parseInt(this.value)||5000;
+            addNearbyRadius(_userLngLat[0],_userLngLat[1],r);
+            loadNearbyOnMap(_userLngLat[1],_userLngLat[0],r);
+        }
+    });
+
+    /* ═══ MAP CLICK ═══ */
+    map.on('click',function(e){
+        if(_layerClicked){_layerClicked=false;return;}
+        // Check if click was on any interactive layer
+        var features=map.queryRenderedFeatures(e.point,{layers:['parcelles-fill','unclustered-point','clusters']});
+        if(features.length===0) clearHighlight();
+    });
+
+    /* ═══ INIT ═══ */
+    map.on('load', function(){
+        loadParcelles({}, function() {
+            _initialLoadDone = true;
+            if (CFG.focus) { setTimeout(function() { focusOnFeature(CFG.focus, true); }, 500); }
+            else if (allFeatures.length) {
+                var bounds=EyeFoncier.map.getBoundsFromFeatures(allFeatures);
+                if(!bounds.isEmpty()) map.fitBounds(bounds,{padding:60});
+            }
+            _lastBbox = getBbox();
+        });
+    });
+
+    /* ═══ AUTO-REFRESH (chaque 60s) ═══ */
+    setInterval(function() {
+        if (document.hidden) return;
+        var sf = activeFeatureId;
+        _etag = null;
+        loadParcelles(currentFilters, function() {
+            if (sf) setTimeout(function() { focusOnFeature(sf, false); }, 200);
+        });
+    }, CFG.refreshMs);
+
+    /* ═══ BOUTON REFRESH MANUEL ═══ */
+    document.getElementById('btnRefreshMap').addEventListener('click', function() {
+        var btn = this;
+        btn.style.animation = 'spin 1s linear infinite';
+        _etag = null;
+        loadParcelles(currentFilters, function() {
+            btn.style.animation = '';
+            // Flash vert pour confirmer
+            btn.style.background = 'rgba(5,150,105,1)';
+            btn.style.boxShadow = '0 0 12px rgba(5,150,105,.5)';
+            setTimeout(function() {
+                btn.style.background = 'rgba(5,150,105,.9)';
+                btn.style.boxShadow = '';
+            }, 800);
+        });
+    });
+
+})();
+</script>
+{% endblock %}

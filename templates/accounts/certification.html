@@ -1,0 +1,219 @@
+{% extends "layouts/base.html" %}
+{% load static %}
+
+{% block title %}{{ SITE_NAME }} — Certification{% endblock %}
+
+{% block content %}
+<!-- Hero -->
+<section class="ef-cert-hero ef-reveal">
+    <div class="container">
+        <div class="ef-cert-hero-icon"><i class="bi bi-patch-check-fill"></i></div>
+        <h1>Certification — Badge de Confiance</h1>
+        <p>Renforcez la confiance des acheteurs en faisant certifier votre identité et vos biens.</p>
+    </div>
+</section>
+
+<div class="ef-page-content container">
+    <div class="row g-4">
+        <!-- MAIN COLUMN -->
+        <div class="col-lg-8 ef-reveal">
+
+            {% if existing %}
+            <!-- Existing Request Card -->
+            <div class="ef-card" style="margin-bottom:1.5rem">
+                <div class="ef-card-header" style="background:linear-gradient(135deg,var(--green-900),#0F5132);border-radius:var(--radius-lg) var(--radius-lg) 0 0">
+                    <h5 style="color:var(--white);font-weight:700;margin-bottom:.25rem"><i class="bi bi-hourglass-split me-2"></i>Demande en cours</h5>
+                    <span style="color:rgba(255,255,255,.6);font-size:.84rem">Type : {{ existing.get_cert_type_display }}</span>
+                </div>
+                <div class="ef-card-body">
+                    <!-- Progress stepper -->
+                    <div class="ef-cert-progress mb-3">
+                        {% with status=existing.status %}
+                        <div class="ef-cert-step-dot {% if status == 'pending' %}current{% elif status == 'scheduled' or status == 'in_review' or status == 'approved' %}done{% else %}pending{% endif %}">
+                            {% if status == 'pending' %}<i class="bi bi-clock"></i>{% else %}<i class="bi bi-check"></i>{% endif %}
+                        </div>
+                        <div class="ef-cert-step-line {% if status == 'scheduled' or status == 'in_review' or status == 'approved' %}done{% else %}pending{% endif %}"></div>
+                        <div class="ef-cert-step-dot {% if status == 'scheduled' %}current{% elif status == 'in_review' or status == 'approved' %}done{% elif status == 'pending' %}pending{% else %}pending{% endif %}">
+                            {% if status == 'in_review' or status == 'approved' %}<i class="bi bi-check"></i>{% elif status == 'scheduled' %}<i class="bi bi-camera-video"></i>{% else %}2{% endif %}
+                        </div>
+                        <div class="ef-cert-step-line {% if status == 'in_review' or status == 'approved' %}done{% else %}pending{% endif %}"></div>
+                        <div class="ef-cert-step-dot {% if status == 'approved' %}done{% elif status == 'in_review' %}current{% else %}pending{% endif %}">
+                            {% if status == 'approved' %}<i class="bi bi-check"></i>{% elif status == 'in_review' %}<i class="bi bi-shield-check"></i>{% else %}3{% endif %}
+                        </div>
+                        {% endwith %}
+                    </div>
+                    <div class="d-flex justify-content-between" style="font-size:.84rem;color:var(--gray-400);margin-bottom:1rem">
+                        <span>Soumise</span><span>En revue</span><span>Validée</span>
+                    </div>
+                    {% if existing.message %}
+                    <div class="ef-callout info">
+                        <i class="bi bi-chat-left-text"></i>
+                        <span>{{ existing.message }}</span>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            {% else %}
+            <!-- New Request Form -->
+            <div class="ef-card">
+                <div class="ef-card-body">
+                    <h5 style="font-weight:700;font-family:var(--font-display);color:var(--green-900);margin-bottom:.25rem">
+                        <i class="bi bi-shield-plus me-2" style="color:var(--orange)"></i>Nouvelle demande
+                    </h5>
+                    <p style="color:var(--gray-400);font-size:.84rem;margin-bottom:1.5rem">Choisissez votre formule, puis soumettez votre demande.</p>
+
+                    <form method="post" id="certForm">
+                        {% csrf_token %}
+
+                        <!-- Type Selection -->
+                        <div class="row g-3 ef-cert-type-row mb-4 ef-stagger">
+                            <div class="col-md-4">
+                                <div class="ef-cert-type-card selected" id="certCard_standard" onclick="selectCertType('standard')">
+                                    <div class="ef-check-mark"><i class="bi bi-check-lg"></i></div>
+                                    <div class="ef-cert-type-icon" style="background:var(--green-50);color:var(--green-700)"><i class="bi bi-cloud-upload"></i></div>
+                                    <h6 style="font-weight:700;font-size:.88rem;color:var(--green-900);margin-bottom:.25rem">Standard</h6>
+                                    <p style="color:var(--gray-400);font-size:.76rem;margin-bottom:.5rem">Upload de pièces d'identité</p>
+                                    <span class="ef-badge ef-badge-success">Gratuit</span>
+                                    <input type="radio" name="cert_type" value="standard" id="cert_standard" checked class="d-none">
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="ef-cert-type-card" id="certCard_visio" onclick="selectCertType('visio')">
+                                    <div class="ef-check-mark"><i class="bi bi-check-lg"></i></div>
+                                    <div class="ef-cert-type-icon" style="background:var(--blue-light);color:var(--blue)"><i class="bi bi-camera-video"></i></div>
+                                    <h6 style="font-weight:700;font-size:.88rem;color:var(--green-900);margin-bottom:.25rem">Visio</h6>
+                                    <p style="color:var(--gray-400);font-size:.76rem;margin-bottom:.5rem">Visio-vérification 15 min</p>
+                                    <span class="ef-badge ef-badge-info">5 000 FCFA</span>
+                                    <input type="radio" name="cert_type" value="visio" id="cert_visio" class="d-none">
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="ef-cert-type-card" id="certCard_premium" onclick="selectCertType('premium')">
+                                    <div class="ef-check-mark"><i class="bi bi-check-lg"></i></div>
+                                    <div class="ef-cert-type-icon" style="background:var(--orange-light);color:var(--orange)"><i class="bi bi-geo-alt"></i></div>
+                                    <h6 style="font-weight:700;font-size:.88rem;color:var(--green-900);margin-bottom:.25rem">Premium</h6>
+                                    <p style="color:var(--gray-400);font-size:.76rem;margin-bottom:.5rem">Visite terrain par géomètre</p>
+                                    <span class="ef-badge ef-badge-warning">25 000 FCFA</span>
+                                    <input type="radio" name="cert_type" value="premium" id="cert_premium" class="d-none">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Date + Message -->
+                        <div class="ef-form-group">
+                            <label class="ef-form-label" for="preferred_date">Date souhaitée <span style="color:var(--gray-400)">(optionnel)</span></label>
+                            <input type="date" name="preferred_date" id="preferred_date" class="ef-input">
+                        </div>
+                        <div class="ef-form-group">
+                            <label class="ef-form-label" for="message">Message <span style="color:var(--gray-400)">(optionnel)</span></label>
+                            <textarea name="message" id="message" rows="3" class="ef-input" placeholder="Précisions, questions, disponibilités…"></textarea>
+                        </div>
+
+                        <!-- Submit -->
+                        <button type="submit" id="certSubmitBtn" class="ef-btn ef-btn-primary ef-btn-block ef-btn-lg">
+                            <span id="certSubmitText"><i class="bi bi-send me-2"></i>Soumettre ma demande</span>
+                            <span id="certSubmitSpinner" class="d-none"><span class="spinner-border spinner-border-sm me-2"></span>Envoi en cours…</span>
+                        </button>
+                    </form>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- SIDEBAR -->
+        <div class="col-lg-4 ef-reveal-right">
+            <!-- Benefits -->
+            <div class="ef-card" style="margin-bottom:1rem">
+                <div class="ef-card-body">
+                    <h6 style="font-weight:700;font-family:var(--font-display);color:var(--green-900);margin-bottom:1rem">
+                        <i class="bi bi-shield-check me-1" style="color:var(--green-700)"></i> Pourquoi se certifier ?
+                    </h6>
+                    <ul class="ef-cert-benefits list-unstyled mb-0">
+                        <li><i class="bi bi-check-circle-fill"></i><span>Badge de confiance visible sur votre profil</span></li>
+                        <li><i class="bi bi-check-circle-fill"></i><span>Parcelles mises en avant dans les résultats</span></li>
+                        <li><i class="bi bi-check-circle-fill"></i><span>Accès prioritaire au support vendeur</span></li>
+                        <li><i class="bi bi-check-circle-fill"></i><span>Augmentez vos chances de vente de 60%</span></li>
+                        <li><i class="bi bi-check-circle-fill"></i><span>Transactions sécurisées et traçables</span></li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- How it works -->
+            <div class="ef-card" style="margin-bottom:1rem">
+                <div class="ef-card-body">
+                    <h6 style="font-weight:700;font-family:var(--font-display);color:var(--green-900);margin-bottom:1rem">
+                        <i class="bi bi-signpost-split me-1" style="color:var(--orange)"></i> Comment ça marche ?
+                    </h6>
+                    <div class="ef-cert-step-card">
+                        <div class="ef-cert-step-num">1</div>
+                        <div>
+                            <div style="font-weight:600;font-size:.88rem">Choisissez votre formule</div>
+                            <div style="font-size:.82rem;color:var(--gray-400)">Standard, Visio ou Premium</div>
+                        </div>
+                    </div>
+                    <div class="ef-cert-step-card">
+                        <div class="ef-cert-step-num">2</div>
+                        <div>
+                            <div style="font-weight:600;font-size:.88rem">Soumettez votre demande</div>
+                            <div style="font-size:.82rem;color:var(--gray-400)">Notre équipe vérifie vos documents</div>
+                        </div>
+                    </div>
+                    <div class="ef-cert-step-card">
+                        <div class="ef-cert-step-num">3</div>
+                        <div>
+                            <div style="font-weight:600;font-size:.88rem">Recevez votre badge</div>
+                            <div style="font-size:.82rem;color:var(--gray-400)">Visible sur tout votre profil</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Caution -->
+            <div class="ef-card">
+                <div class="ef-card-body">
+                    <h6 style="font-weight:700;font-family:var(--font-display);color:var(--green-900);margin-bottom:.5rem">
+                        <i class="bi bi-wallet2 me-1" style="color:var(--warning)"></i> Caution vendeur premium
+                    </h6>
+                    <p style="font-size:.84rem;color:var(--gray-400);margin-bottom:.5rem">Déposez une caution de <strong style="color:var(--green-900)">50 000 FCFA</strong> (remboursable) pour devenir vendeur premium.</p>
+                    <p style="font-size:.84rem;color:var(--gray-400);margin-bottom:0">Remboursement intégral à la clôture du compte ou après 12 mois d'activité.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+/* Type card selection */
+function selectCertType(value) {
+    document.querySelectorAll('.ef-cert-type-card').forEach(function(c) { c.classList.remove('selected'); });
+    document.getElementById('certCard_' + value).classList.add('selected');
+    document.getElementById('cert_' + value).checked = true;
+}
+
+/* Anti-double-click */
+(function() {
+    var form = document.getElementById('certForm');
+    if (!form) return;
+    var submitted = false;
+    form.addEventListener('submit', function(e) {
+        if (submitted) { e.preventDefault(); return; }
+        submitted = true;
+        var btn = document.getElementById('certSubmitBtn');
+        var txt = document.getElementById('certSubmitText');
+        var spin = document.getElementById('certSubmitSpinner');
+        btn.disabled = true;
+        btn.style.opacity = '.7';
+        txt.classList.add('d-none');
+        spin.classList.remove('d-none');
+        setTimeout(function() {
+            submitted = false;
+            btn.disabled = false;
+            btn.style.opacity = '1';
+            txt.classList.remove('d-none');
+            spin.classList.add('d-none');
+        }, 10000);
+    });
+})();
+</script>
+{% endblock %}

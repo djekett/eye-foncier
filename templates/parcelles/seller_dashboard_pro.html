@@ -1,0 +1,153 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}Dashboard Pro — EYE-FONCIER{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+        <div>
+            <h2 class="fw-bold" style="font-family:var(--font-display);color:var(--green-900)">
+                <i class="bi bi-grid-1x2-fill"></i> Dashboard Promoteur
+            </h2>
+            <p class="mb-0" style="color:var(--gray-400)">Gestion avancee de vos parcelles</p>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{% url 'parcelles:bulk_upload' %}" class="btn" style="background:#E8790A;color:#fff;border-radius:var(--radius-sm)">
+                <i class="bi bi-cloud-upload"></i> Import en lot
+            </a>
+            <a href="{% url 'parcelles:create' %}" class="btn" style="background:var(--green-900);color:#fff;border-radius:var(--radius-sm)">
+                <i class="bi bi-plus-lg"></i> Ajouter
+            </a>
+        </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-md-2">
+            <div class="card border-0 shadow-sm text-center p-3" style="border-radius:var(--radius-md)">
+                <div style="font-size:1.5rem;font-weight:800;color:var(--green-900)">{{ stats.total }}</div>
+                <div style="font-size:.72rem;color:var(--gray-400)">Total</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-2">
+            <div class="card border-0 shadow-sm text-center p-3" style="border-radius:var(--radius-md)">
+                <div style="font-size:1.5rem;font-weight:800;color:#16a34a">{{ stats.disponible }}</div>
+                <div style="font-size:.72rem;color:var(--gray-400)">Disponibles</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-2">
+            <div class="card border-0 shadow-sm text-center p-3" style="border-radius:var(--radius-md)">
+                <div style="font-size:1.5rem;font-weight:800;color:#d97706">{{ stats.reserve }}</div>
+                <div style="font-size:.72rem;color:var(--gray-400)">Reservees</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-2">
+            <div class="card border-0 shadow-sm text-center p-3" style="border-radius:var(--radius-md)">
+                <div style="font-size:1.5rem;font-weight:800;color:#2563eb">{{ stats.vendu }}</div>
+                <div style="font-size:.72rem;color:var(--gray-400)">Vendues</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-2">
+            <div class="card border-0 shadow-sm text-center p-3" style="border-radius:var(--radius-md)">
+                <div style="font-size:1.5rem;font-weight:800;color:#E8790A">{{ stats.transactions_pending }}</div>
+                <div style="font-size:.72rem;color:var(--gray-400)">En cours</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-2">
+            <div class="card border-0 shadow-sm text-center p-3" style="border-radius:var(--radius-md)">
+                <div style="font-size:1.2rem;font-weight:800;color:var(--gold)">{{ stats.total_revenue|floatformat:0 }}</div>
+                <div style="font-size:.72rem;color:var(--gray-400)">FCFA Revenus</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Gestion en lot -->
+    <div class="card border-0 shadow-sm" style="border-radius:var(--radius-lg)">
+        <div class="card-body p-4">
+            <h5 class="fw-bold mb-3" style="color:var(--green-900)">
+                <i class="bi bi-list-check"></i> Mes parcelles
+            </h5>
+
+            <form method="post">
+                {% csrf_token %}
+                <!-- Actions groupees -->
+                <div class="d-flex gap-2 mb-3 flex-wrap align-items-center" style="font-size:.85rem">
+                    <select name="bulk_action" class="form-select form-select-sm" style="width:auto;border-radius:var(--radius-sm)">
+                        <option value="">Action groupee...</option>
+                        <option value="set_disponible">Remettre en disponible</option>
+                        <option value="set_price">Modifier le prix</option>
+                    </select>
+                    <input type="number" name="new_price" class="form-control form-control-sm" placeholder="Nouveau prix (FCFA)" style="width:180px;border-radius:var(--radius-sm)">
+                    <button type="submit" class="btn btn-sm" style="background:var(--green-900);color:#fff;border-radius:var(--radius-sm)">
+                        <i class="bi bi-check2"></i> Appliquer
+                    </button>
+                    <label class="ms-auto mb-0" style="font-size:.78rem;color:var(--gray-400)">
+                        <input type="checkbox" id="select-all" onchange="toggleAll(this)"> Tout selectionner
+                    </label>
+                </div>
+
+                <!-- Tableau -->
+                <div class="table-responsive">
+                    <table class="table" style="font-size:.82rem">
+                        <thead>
+                            <tr style="color:var(--gray-400)">
+                                <th style="width:30px"></th>
+                                <th>Lot</th>
+                                <th>Titre</th>
+                                <th>Type</th>
+                                <th>Surface</th>
+                                <th>Prix (FCFA)</th>
+                                <th>Statut</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for p in parcelles %}
+                            <tr>
+                                <td><input type="checkbox" name="selected_parcelles" value="{{ p.pk }}" class="parcelle-check"></td>
+                                <td><strong style="color:var(--green-900)">{{ p.lot_number }}</strong></td>
+                                <td>{{ p.title|truncatewords:4 }}</td>
+                                <td><span class="badge" style="background:#f0fdf4;color:var(--green-700);font-size:.68rem">{{ p.get_land_type_display }}</span></td>
+                                <td>{{ p.surface_m2 }} m²</td>
+                                <td style="font-family:var(--font-mono)">{% if p.price %}{{ p.price|floatformat:0 }}{% else %}—{% endif %}</td>
+                                <td>
+                                    {% if p.status == "disponible" %}
+                                    <span class="badge" style="background:#dcfce7;color:#16a34a;font-size:.68rem">Disponible</span>
+                                    {% elif p.status == "reserve" %}
+                                    <span class="badge" style="background:#fef3c7;color:#d97706;font-size:.68rem">Reserve</span>
+                                    {% elif p.status == "vendu" %}
+                                    <span class="badge" style="background:#dbeafe;color:#2563eb;font-size:.68rem">Vendu</span>
+                                    {% else %}
+                                    <span class="badge" style="background:#f3f4f6;color:#6b7280;font-size:.68rem">{{ p.status }}</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <a href="{% url 'parcelles:detail' pk=p.pk %}" class="btn btn-sm" style="border:1px solid var(--gray-200);border-radius:var(--radius-sm);font-size:.72rem;color:var(--gray-600)">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                    <a href="{% url 'parcelles:edit' pk=p.pk %}" class="btn btn-sm" style="border:1px solid var(--gray-200);border-radius:var(--radius-sm);font-size:.72rem;color:var(--gray-600)">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="8" class="text-center py-4" style="color:var(--gray-400)">
+                                    Aucune parcelle. <a href="{% url 'parcelles:create' %}" style="color:var(--green-700)">Ajoutez votre premiere parcelle</a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+function toggleAll(el) {
+    document.querySelectorAll(".parcelle-check").forEach(c => c.checked = el.checked);
+}
+</script>
+{% endblock %}

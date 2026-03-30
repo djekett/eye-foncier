@@ -1,0 +1,191 @@
+{% extends "layouts/base.html" %}
+{% load humanize %}
+
+{% block title %}Cotation {{ cotation.reference }} | Eye-Foncier{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <nav aria-label="fil d'ariane">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'transactions:list' %}">Transactions</a></li>
+            <li class="breadcrumb-item active">Cotation {{ cotation.reference }}</li>
+        </ol>
+    </nav>
+
+    <div class="row">
+        <!-- Statut de la cotation -->
+        <div class="col-lg-8 mb-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="bi bi-receipt"></i> Cotation {{ cotation.reference }}
+                    </h5>
+                    <span class="badge bg-white text-success">
+                        {{ cotation.get_status_display }}
+                    </span>
+                </div>
+                <div class="card-body">
+                    {% if cotation.parcelle %}
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Parcelle :</span>
+                        <a href="{% url 'parcelles:detail' pk=cotation.parcelle.pk %}">
+                            <strong>{{ cotation.parcelle.lot_number }} — {{ cotation.parcelle.title }}</strong>
+                        </a>
+                    </div>
+                    {% endif %}
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Montant cotation :</span>
+                        <strong class="text-success">{{ cotation.amount|intcomma }} FCFA</strong>
+                    </div>
+                    {% if cotation.property_price %}
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Prix du bien :</span>
+                        <span>{{ cotation.property_price|intcomma }} FCFA</span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Solde restant :</span>
+                        <strong>{{ cotation.remaining_balance|intcomma }} FCFA</strong>
+                    </div>
+                    {% endif %}
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Payée le :</span>
+                        <span>{{ cotation.paid_at|date:"d/m/Y à H:i" }}</span>
+                    </div>
+                    {% if cotation.expires_at %}
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Expire le :</span>
+                        <span>{{ cotation.expires_at|date:"d/m/Y" }}</span>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Droits débloqués -->
+            {% if cotation.is_valid %}
+            <div class="card border-0 shadow-sm mt-4">
+                <div class="card-header bg-light">
+                    <h6 class="mb-0 fw-bold">
+                        <i class="bi bi-unlock text-success"></i> Vos droits débloqués
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        {% if can_visit %}
+                        <div class="col-md-4">
+                            <a href="{% url 'transactions:request_visit' parcelle_pk=cotation.parcelle.pk %}"
+                               class="card text-center text-decoration-none p-3 border-success h-100">
+                                <i class="bi bi-geo-alt text-success fs-3"></i>
+                                <h6 class="mt-2 text-success">Visiter la parcelle</h6>
+                                <small class="text-muted">Demander un bon de visite</small>
+                            </a>
+                        </div>
+                        {% endif %}
+
+                        {% if can_view_docs %}
+                        <div class="col-md-4">
+                            <a href="{% url 'documents:list' parcelle_pk=cotation.parcelle.pk %}"
+                               class="card text-center text-decoration-none p-3 border-primary h-100">
+                                <i class="bi bi-file-earmark-lock text-primary fs-3"></i>
+                                <h6 class="mt-2 text-primary">Documents filigranés</h6>
+                                <small class="text-muted">Consulter les documents vérifiés</small>
+                            </a>
+                        </div>
+                        {% endif %}
+
+                        {% if can_reserve %}
+                        <div class="col-md-4">
+                            <a href="{% url 'transactions:reserve' parcelle_pk=cotation.parcelle.pk %}"
+                               class="card text-center text-decoration-none p-3 border-warning h-100">
+                                <i class="bi bi-bookmark-star text-warning fs-3"></i>
+                                <h6 class="mt-2 text-warning">Réserver</h6>
+                                <small class="text-muted">Procéder à l'achat définitif</small>
+                            </a>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Progression de la vérification -->
+        <div class="col-lg-4">
+            {% if verification %}
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-light">
+                    <h6 class="mb-0 fw-bold">
+                        <i class="bi bi-clipboard-check"></i> Vérification Eye-Foncier
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="progress mb-3" style="height: 8px;">
+                        <div class="progress-bar bg-success" style="width: {{ verification.progress_percent }}%"></div>
+                    </div>
+                    <small class="text-muted">{{ verification.progress_percent }}% complété</small>
+
+                    <ul class="list-unstyled mt-3">
+                        <li class="mb-2">
+                            {% if verification.status != 'created' %}
+                                <i class="bi bi-check-circle-fill text-success"></i>
+                            {% else %}
+                                <i class="bi bi-circle text-muted"></i>
+                            {% endif %}
+                            Vérificateur assigné
+                        </li>
+                        <li class="mb-2">
+                            {% if verification.seller_contacted_at %}
+                                <i class="bi bi-check-circle-fill text-success"></i>
+                            {% else %}
+                                <i class="bi bi-circle text-muted"></i>
+                            {% endif %}
+                            Vendeur contacté
+                        </li>
+                        <li class="mb-2">
+                            {% if verification.docs_received_at %}
+                                <i class="bi bi-check-circle-fill text-success"></i>
+                            {% else %}
+                                <i class="bi bi-circle text-muted"></i>
+                            {% endif %}
+                            Documents reçus
+                        </li>
+                        <li class="mb-2">
+                            {% if verification.docs_verified_at %}
+                                <i class="bi bi-check-circle-fill text-success"></i>
+                            {% else %}
+                                <i class="bi bi-circle text-muted"></i>
+                            {% endif %}
+                            Documents vérifiés
+                        </li>
+                        <li class="mb-2">
+                            {% if verification.client_contacted_at %}
+                                <i class="bi bi-check-circle-fill text-success"></i>
+                            {% else %}
+                                <i class="bi bi-circle text-muted"></i>
+                            {% endif %}
+                            Vous êtes contacté
+                        </li>
+                        <li class="mb-2">
+                            {% if verification.rdv_date %}
+                                <i class="bi bi-check-circle-fill text-success"></i>
+                                <strong>RDV : {{ verification.rdv_date|date:"d/m/Y à H:i" }}</strong>
+                            {% else %}
+                                <i class="bi bi-circle text-muted"></i>
+                                RDV programmé
+                            {% endif %}
+                        </li>
+                        <li class="mb-2">
+                            {% if verification.status == 'completed' %}
+                                <i class="bi bi-check-circle-fill text-success"></i>
+                            {% else %}
+                                <i class="bi bi-circle text-muted"></i>
+                            {% endif %}
+                            Achat définitif
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

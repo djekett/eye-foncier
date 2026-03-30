@@ -1,0 +1,217 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}Dashboard Analyse SIG — {{ SITE_NAME }}{% endblock %}
+
+{% block content %}
+<div class="ef-section-hero">
+    <div class="hero-content">
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
+            <div>
+                <h1><i class="bi bi-bar-chart-line me-2"></i>Analyse SIG & Matching</h1>
+                <p>Systeme d'Aide a la Decision — Vue d'ensemble</p>
+            </div>
+            <div class="d-flex gap-2 flex-wrap">
+                <a href="{% url 'analysis:buyer_profile' %}" class="ef-btn ef-btn-primary">
+                    <i class="bi bi-person-gear"></i> Mon Profil Acheteur
+                </a>
+                <a href="{% url 'analysis:matching_results' %}" class="ef-btn" style="background:rgba(255,255,255,.12);color:var(--white);border:1px solid rgba(255,255,255,.2)">
+                    <i class="bi bi-stars"></i> Mes Matchs
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="ef-page-content">
+    <!-- Stat Cards -->
+    <div class="row g-3 mb-4 ef-stagger">
+        <div class="col-sm-6 col-xl-3">
+            <div class="ef-stat-card">
+                <div class="ef-stat-icon" style="background:var(--green-50);color:var(--green-700)">
+                    <i class="bi bi-map"></i>
+                </div>
+                <div>
+                    <div class="ef-stat-value" style="color:var(--green-900)">{{ analyzed_parcelles }}</div>
+                    <div class="ef-stat-label">Parcelles analysees</div>
+                    <div class="ef-stat-label" style="font-size:.72rem">sur {{ total_parcelles }} totales</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-xl-3">
+            <div class="ef-stat-card">
+                <div class="ef-stat-icon" style="background:var(--blue-light);color:var(--blue)">
+                    <i class="bi bi-speedometer2"></i>
+                </div>
+                <div>
+                    <div class="ef-stat-value" style="color:var(--blue)">
+                        {% if avg_score %}{{ avg_score|floatformat:0 }}{% else %}—{% endif %}
+                    </div>
+                    <div class="ef-stat-label">Score moyen / 100</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-xl-3">
+            <div class="ef-stat-card">
+                <div class="ef-stat-icon" style="background:var(--orange-light);color:var(--orange)">
+                    <i class="bi bi-shield-exclamation"></i>
+                </div>
+                <div>
+                    <div class="ef-stat-value" style="color:var(--orange)">{{ risk_assessments }}</div>
+                    <div class="ef-stat-label">Evaluations risques</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-6 col-xl-3">
+            <div class="ef-stat-card">
+                <div class="ef-stat-icon" style="background:var(--gold-light);color:var(--gold)">
+                    <i class="bi bi-file-earmark-pdf"></i>
+                </div>
+                <div>
+                    <div class="ef-stat-value" style="color:var(--gold)">{{ reports_count }}</div>
+                    <div class="ef-stat-label">Rapports PDF generes</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4 mb-4">
+        <!-- Distribution des risques -->
+        <div class="col-lg-5">
+            <div class="ef-card h-100">
+                <div class="ef-card-header">
+                    <h6><i class="bi bi-pie-chart" style="color:var(--orange)"></i> Distribution des risques</h6>
+                </div>
+                <div class="ef-card-body">
+                    <canvas id="riskChart" height="220"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Top parcelles -->
+        <div class="col-lg-7">
+            <div class="ef-card h-100">
+                <div class="ef-card-header">
+                    <h6><i class="bi bi-trophy" style="color:var(--gold)"></i> Top 5 — Meilleures parcelles</h6>
+                </div>
+                <div class="ef-card-body" style="padding:0">
+                    <table class="ef-table">
+                        <thead>
+                            <tr>
+                                <th>Parcelle</th>
+                                <th>Zone</th>
+                                <th>Score</th>
+                                <th>Risque</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for ra in top_parcelles %}
+                            <tr>
+                                <td class="fw-bold">{{ ra.parcelle.lot_number }}</td>
+                                <td class="ef-col-muted">{{ ra.parcelle.zone|default:"—" }}</td>
+                                <td>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <div style="width:60px;background:var(--gray-200);border-radius:6px;overflow:hidden;height:8px">
+                                            <div style="width:{{ ra.overall_score|floatformat:0 }}%;background:{% if ra.overall_score >= 70 %}var(--success){% elif ra.overall_score >= 45 %}var(--warning){% else %}var(--danger){% endif %};height:100%;border-radius:6px"></div>
+                                        </div>
+                                        <span class="ef-col-mono" style="font-size:.82rem;font-weight:700">{{ ra.overall_score|floatformat:0 }}</span>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="ef-badge {% if ra.overall_risk == 'low' %}ef-badge-success{% elif ra.overall_risk == 'medium' %}ef-badge-warning{% else %}ef-badge-danger{% endif %}">
+                                        {{ ra.get_overall_risk_display }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <a href="{% url 'analysis:parcelle_analysis' ra.parcelle.pk %}" class="ef-btn ef-btn-outline-green ef-btn-sm">
+                                        <i class="bi bi-search"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr><td colspan="5" class="text-center py-4" style="color:var(--gray-400)">Aucune analyse disponible</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Dernières analyses -->
+    <div class="ef-card">
+        <div class="ef-card-header">
+            <h6><i class="bi bi-clock-history" style="color:var(--orange)"></i> Analyses recentes</h6>
+        </div>
+        <div class="ef-card-body" style="padding:0">
+            <div class="table-responsive">
+                <table class="ef-table">
+                    <thead>
+                        <tr>
+                            <th>Parcelle</th>
+                            <th>Pente moy.</th>
+                            <th>Categorie</th>
+                            <th>Drainage</th>
+                            <th>Score tech.</th>
+                            <th>Source</th>
+                            <th>Date</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for ta in recent_analyses %}
+                        <tr>
+                            <td class="fw-bold">{{ ta.parcelle.lot_number }}</td>
+                            <td class="ef-col-mono">{{ ta.slope_mean|floatformat:1 }}%</td>
+                            <td>
+                                <span class="ef-badge {% if ta.slope_mean < 5 %}ef-badge-success{% elif ta.slope_mean < 15 %}ef-badge-warning{% else %}ef-badge-danger{% endif %}">
+                                    {{ ta.get_slope_category_display }}
+                                </span>
+                            </td>
+                            <td>{{ ta.get_drainage_quality_display|default:"—" }}</td>
+                            <td class="ef-col-mono"><strong>{{ ta.technical_score|floatformat:0 }}/100</strong></td>
+                            <td class="ef-col-muted">{{ ta.dem_source|truncatechars:25 }}</td>
+                            <td class="ef-col-muted">{{ ta.analyzed_at|date:"d/m/Y H:i" }}</td>
+                            <td>
+                                <a href="{% url 'analysis:parcelle_analysis' ta.parcelle.pk %}" class="ef-btn ef-btn-outline-green ef-btn-sm">
+                                    <i class="bi bi-graph-up"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="8" class="text-center py-4" style="color:var(--gray-400)">Aucune analyse effectuee</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+const ctx = document.getElementById('riskChart');
+if (ctx) {
+    new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: ['Faible', 'Moyen', 'Élevé', 'Critique'],
+            datasets: [{
+                data: [{{ risk_distribution.low }}, {{ risk_distribution.medium }}, {{ risk_distribution.high }}, {{ risk_distribution.critical }}],
+                backgroundColor: ['#059669', '#D97706', '#DC2626', '#991B1B'],
+                borderWidth: 0,
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: { position: 'bottom', labels: { padding: 15, font: { size: 12, family: "'DM Sans'" } } },
+            },
+            cutout: '55%',
+        }
+    });
+}
+</script>
+{% endblock %}

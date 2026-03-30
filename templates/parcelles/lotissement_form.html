@@ -1,0 +1,690 @@
+{% extends "layouts/base.html" %}
+{% load static %}
+
+{% block title %}Nouveau Lotissement — {{ SITE_NAME }}{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@mapbox/mapbox-gl-draw@1.4.3/dist/mapbox-gl-draw.css">
+<style>
+.lot-form{max-width:1200px;margin:0 auto;padding:0 clamp(16px,4vw,48px) 60px}
+.form-card{background:var(--white);border-radius:var(--radius-lg);box-shadow:var(--shadow-sm);border:1px solid var(--gray-200);overflow:hidden;margin-bottom:1.25rem}
+.form-card-header{padding:14px 20px;border-bottom:1px solid var(--gray-100);display:flex;align-items:center;gap:10px}
+.form-card-header h5{font-family:var(--font-display);font-weight:700;color:var(--green-900);margin:0;font-size:.95rem}
+.form-card-body{padding:20px}
+.form-label{font-size:.82rem;font-weight:600;color:var(--dark);margin-bottom:4px}
+.viab-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+.viab-item{display:flex;align-items:center;gap:8px;padding:10px 14px;border-radius:var(--radius-md);border:1.5px solid var(--gray-200);cursor:pointer;transition:all .2s}
+.viab-item:has(input:checked){border-color:var(--green-700);background:var(--green-50)}
+.viab-item input{accent-color:var(--green-700)}
+#lotMap{width:100%;height:450px;border-radius:var(--radius-md);border:1px solid var(--gray-200)}
+
+/* Import tabs */
+.import-tabs{display:flex;gap:4px;margin-bottom:12px;border-bottom:2px solid var(--gray-100);padding-bottom:0}
+.import-tab{padding:8px 16px;font-size:.78rem;font-weight:600;border:none;background:none;color:var(--gray-400);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;transition:all .2s;border-radius:var(--radius-sm) var(--radius-sm) 0 0}
+.import-tab:hover{color:var(--green-700);background:var(--green-50)}
+.import-tab.active{color:var(--green-900);border-bottom-color:var(--orange);background:var(--sand)}
+.import-panel{display:none;padding:12px 0 0}
+.import-panel.active{display:block}
+
+/* Preview feedback */
+.preview-feedback{margin-top:10px;padding:10px 14px;border-radius:var(--radius-md);font-size:.82rem;display:none}
+.preview-feedback.success{display:block;background:rgba(5,150,105,.08);color:#059669;border:1px solid rgba(5,150,105,.2)}
+.preview-feedback.error{display:block;background:rgba(239,68,68,.08);color:#dc2626;border:1px solid rgba(239,68,68,.2)}
+.preview-feedback.loading{display:block;background:rgba(59,130,246,.08);color:#2563eb;border:1px solid rgba(59,130,246,.2)}
+
+/* Map toolbar */
+.map-toolbar{display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap}
+.map-tool-btn{padding:6px 14px;border-radius:var(--radius-sm);font-size:.78rem;font-weight:600;border:1.5px solid var(--gray-200);background:var(--white);color:var(--gray-600);cursor:pointer;transition:all .2s;display:inline-flex;align-items:center;gap:5px}
+.map-tool-btn:hover{border-color:var(--orange);color:var(--orange);background:var(--orange-light)}
+.map-tool-btn.active{background:var(--green-900);color:#fff;border-color:var(--green-900)}
+.map-tool-btn.danger{border-color:var(--danger);color:var(--danger)}
+.map-tool-btn.danger:hover{background:var(--danger);color:#fff}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="lot-form">
+    <nav style="font-size:.85rem;margin-bottom:20px">
+        <a href="{% url 'parcelles:lotissement_list' %}" style="color:var(--green-700);text-decoration:none;font-weight:500">Lotissements</a>
+        <span style="color:var(--gray-300);margin:0 8px">/</span>
+        <span style="color:var(--gray-400)">Nouveau</span>
+    </nav>
+
+    <h2 style="color:var(--green-900);font-family:var(--font-display);margin:0 0 1.5rem">
+        <i class="bi bi-building" style="color:var(--orange)"></i> Creer un lotissement
+    </h2>
+
+    <form method="post" enctype="multipart/form-data" id="lotForm">
+        {% csrf_token %}
+        <input type="hidden" name="geometry_json" id="id_geometry_json">
+
+        <div class="row g-4">
+            <!-- Colonne gauche : Infos -->
+            <div class="col-lg-5">
+                <div class="form-card">
+                    <div class="form-card-header">
+                        <i class="bi bi-info-circle" style="color:var(--green-700)"></i>
+                        <h5>Informations</h5>
+                    </div>
+                    <div class="form-card-body">
+                        <div class="mb-3">
+                            <label class="form-label">Nom du lotissement *</label>
+                            <input type="text" name="name" class="form-control" required placeholder="Ex: Lotissement Riviera Fonciere">
+                        </div>
+                        <div class="row g-3 mb-3">
+                            <div class="col-6">
+                                <label class="form-label">Code unique *</label>
+                                <input type="text" name="code" class="form-control" required placeholder="LOT-ABJ-001" style="font-family:var(--font-mono)">
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label">Zone</label>
+                                <select name="zone" class="form-select">
+                                    <option value="">-- Selectionner --</option>
+                                    {% for z in zones %}
+                                    <option value="{{ z.pk }}">{{ z.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Description</label>
+                            <textarea name="description" class="form-control" rows="3" placeholder="Decrivez le lotissement, ses atouts..."></textarea>
+                        </div>
+                        <div class="row g-3 mb-3">
+                            <div class="col-4">
+                                <label class="form-label">Nb d'ilots</label>
+                                <input type="number" name="total_ilots" class="form-control" min="0" value="0">
+                            </div>
+                            <div class="col-4">
+                                <label class="form-label">Prix min/m2</label>
+                                <input type="number" name="price_per_m2_min" class="form-control" placeholder="FCFA">
+                            </div>
+                            <div class="col-4">
+                                <label class="form-label">Prix max/m2</label>
+                                <input type="number" name="price_per_m2_max" class="form-control" placeholder="FCFA">
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Plan de morcellement (image)</label>
+                            <input type="file" name="plan_image" class="form-control" accept="image/*">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Viabilisation -->
+                <div class="form-card">
+                    <div class="form-card-header">
+                        <i class="bi bi-gear" style="color:var(--orange)"></i>
+                        <h5>Viabilisation</h5>
+                    </div>
+                    <div class="form-card-body">
+                        <div class="viab-grid">
+                            <label class="viab-item">
+                                <input type="checkbox" name="has_water">
+                                <i class="bi bi-droplet-fill" style="color:#3b82f6"></i>
+                                <span style="font-size:.88rem;font-weight:600">Eau potable</span>
+                            </label>
+                            <label class="viab-item">
+                                <input type="checkbox" name="has_electricity">
+                                <i class="bi bi-lightning-fill" style="color:#f59e0b"></i>
+                                <span style="font-size:.88rem;font-weight:600">Electricite</span>
+                            </label>
+                            <label class="viab-item">
+                                <input type="checkbox" name="has_road">
+                                <i class="bi bi-signpost-2-fill" style="color:#059669"></i>
+                                <span style="font-size:.88rem;font-weight:600">Voirie bitumee</span>
+                            </label>
+                            <label class="viab-item">
+                                <input type="checkbox" name="has_drainage">
+                                <i class="bi bi-water" style="color:#0891b2"></i>
+                                <span style="font-size:.88rem;font-weight:600">Assainissement</span>
+                            </label>
+                            <label class="viab-item">
+                                <input type="checkbox" name="has_public_spaces">
+                                <i class="bi bi-tree-fill" style="color:#16a34a"></i>
+                                <span style="font-size:.88rem;font-weight:600">Espaces publics</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Documents juridiques -->
+                <div class="form-card">
+                    <div class="form-card-header">
+                        <i class="bi bi-file-earmark-lock" style="color:#8b5cf6"></i>
+                        <h5>Documents juridiques</h5>
+                    </div>
+                    <div class="form-card-body">
+                        <p style="font-size:.82rem;color:var(--gray-400);margin:0 0 12px">
+                            Ces documents renforcent la credibilite du lotissement aupres des acheteurs.
+                        </p>
+                        <div class="mb-3">
+                            <label class="form-label">N deg. d'arrete d'approbation</label>
+                            <input type="text" name="approval_reference" class="form-control" placeholder="Ex: Arrete N deg. 2025-URB-0042">
+                            <small style="font-size:.72rem;color:var(--gray-400)">Reference de l'arrete d'approbation du ministere de l'Urbanisme</small>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label"><i class="bi bi-file-earmark-check me-1" style="color:#059669"></i> Arrete d'approbation (PDF/image)</label>
+                            <input type="file" name="arrete_approbation" class="form-control" accept=".pdf,.jpg,.jpeg,.png">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label"><i class="bi bi-file-earmark-text me-1" style="color:#2563eb"></i> Attestation villageoise / Lettre d'attribution</label>
+                            <input type="file" name="attestation_villageoise" class="form-control" accept=".pdf,.jpg,.jpeg,.png">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label"><i class="bi bi-rulers me-1" style="color:var(--orange)"></i> Dossier technique (geometre expert)</label>
+                            <input type="file" name="dossier_technique" class="form-control" accept=".pdf,.zip,.jpg,.jpeg,.png">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label"><i class="bi bi-shield-lock me-1" style="color:#dc2626"></i> Certificat de propriete / Etat foncier</label>
+                            <input type="file" name="certificat_propriete" class="form-control" accept=".pdf,.jpg,.jpeg,.png">
+                            <small style="font-size:.72rem;color:var(--gray-400)">Indispensable pour verifier l'absence d'hypotheques ou de litiges</small>
+                        </div>
+                    </div>
+                </div>
+
+                <button type="submit" class="ef-btn ef-btn-primary w-100" style="padding:14px" id="submitBtn">
+                    <i class="bi bi-check-lg"></i> Creer le lotissement
+                </button>
+            </div>
+
+            <!-- Colonne droite : Carte + Import -->
+            <div class="col-lg-7">
+                <div class="form-card">
+                    <div class="form-card-header">
+                        <i class="bi bi-bounding-box" style="color:var(--orange)"></i>
+                        <h5>Perimetre du lotissement</h5>
+                        <span id="surfaceBadge" style="margin-left:auto;font-size:.78rem;font-weight:600;color:var(--gray-400);display:none">
+                            <i class="bi bi-check-circle-fill" style="color:#059669"></i> <span id="surfaceValue"></span>
+                        </span>
+                    </div>
+                    <div class="form-card-body">
+                        <!-- Import multi-format tabs -->
+                        <div class="import-tabs">
+                            <button type="button" class="import-tab active" data-tab="draw"><i class="bi bi-pencil-square"></i> Dessiner</button>
+                            <button type="button" class="import-tab" data-tab="file"><i class="bi bi-file-earmark-arrow-up"></i> Fichier</button>
+                            <button type="button" class="import-tab" data-tab="coords"><i class="bi bi-pin-map"></i> Coordonnees</button>
+                        </div>
+
+                        <!-- Tab: Dessin -->
+                        <div class="import-panel active" id="panel-draw">
+                            <p style="font-size:.82rem;color:var(--gray-400);margin:0 0 8px">
+                                Utilisez la barre d'outils pour dessiner le contour. Cliquez pour ajouter des sommets, double-cliquez pour terminer.
+                            </p>
+                            <div class="map-toolbar">
+                                <button type="button" class="map-tool-btn" id="btnDrawPolygon"><i class="bi bi-pentagon"></i> Dessiner</button>
+                                <button type="button" class="map-tool-btn" id="btnEditPolygon"><i class="bi bi-pencil"></i> Modifier</button>
+                                <button type="button" class="map-tool-btn danger" id="btnDeletePolygon"><i class="bi bi-trash3"></i> Supprimer</button>
+                                <button type="button" class="map-tool-btn" id="btnUndoVertex"><i class="bi bi-arrow-counterclockwise"></i> Annuler sommet</button>
+                            </div>
+                        </div>
+
+                        <!-- Tab: Import fichier -->
+                        <div class="import-panel" id="panel-file">
+                            <p style="font-size:.82rem;color:var(--gray-400);margin:0 0 8px">
+                                Importez un fichier contenant les limites foncieres. Formats supportes :
+                                <strong>Shapefile (.shp/.zip)</strong>, <strong>DXF</strong>, <strong>TXT/CSV</strong> (points geometriques).
+                            </p>
+                            <div style="display:flex;gap:8px;align-items:end">
+                                <div style="flex:1">
+                                    <input type="file" id="importFile" class="form-control" accept=".shp,.zip,.dxf,.txt,.csv,.pts,.coord">
+                                </div>
+                                <button type="button" class="map-tool-btn" id="btnImportPreview" style="height:38px">
+                                    <i class="bi bi-eye"></i> Previsualiser
+                                </button>
+                                <button type="button" class="map-tool-btn active" id="btnImportApply" style="height:38px;display:none">
+                                    <i class="bi bi-check-lg"></i> Appliquer
+                                </button>
+                            </div>
+                            <div id="importFeedback" class="preview-feedback"></div>
+                        </div>
+
+                        <!-- Tab: Coordonnees manuelles -->
+                        <div class="import-panel" id="panel-coords">
+                            <p style="font-size:.82rem;color:var(--gray-400);margin:0 0 8px">
+                                Saisissez les coordonnees X,Y (un point par ligne). Formats : <code>X Y</code>, <code>N X Y</code>, <code>X,Y</code>.
+                                Les coordonnees UTM Zone 30N sont automatiquement converties en WGS84.
+                            </p>
+                            <textarea id="coordsInput" class="form-control" rows="6" placeholder="Exemple :
+1 351250.00 592750.00
+2 351450.00 592750.00
+3 351450.00 592550.00
+4 351250.00 592550.00" style="font-family:var(--font-mono);font-size:.78rem"></textarea>
+                            <div style="display:flex;gap:8px;margin-top:8px">
+                                <button type="button" class="map-tool-btn" id="btnCoordsPreview"><i class="bi bi-eye"></i> Previsualiser</button>
+                                <button type="button" class="map-tool-btn active" id="btnCoordsApply" style="display:none"><i class="bi bi-check-lg"></i> Appliquer</button>
+                            </div>
+                            <div id="coordsFeedback" class="preview-feedback"></div>
+                        </div>
+
+                        <div id="lotMap" style="margin-top:12px"></div>
+
+                        <!-- Validation topologique -->
+                        <div id="topoValidation" style="margin-top:8px;display:none">
+                            <div id="topoStatus" style="padding:8px 12px;border-radius:var(--radius-sm);font-size:.78rem;font-weight:600"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mapbox/mapbox-gl-draw@1.4.3/dist/mapbox-gl-draw.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // ═══ SHIM: mapbox-gl-draw needs mapboxgl ═══
+    if (typeof mapboxgl === 'undefined' && typeof maplibregl !== 'undefined') {
+        window.mapboxgl = maplibregl;
+    }
+
+    // ═══ CSRF TOKEN ═══
+    var csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+    // ═══ MAP INIT ═══
+    var map = new maplibregl.Map({
+        container: 'lotMap',
+        style: (typeof EyeFoncier !== 'undefined' && EyeFoncier.mapStyles)
+            ? EyeFoncier.mapStyles.streets
+            : { version: 8, sources: { osm: { type: 'raster', tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'], tileSize: 256 } }, layers: [{ id: 'osm', type: 'raster', source: 'osm' }] },
+        center: [-4.008, 5.36],
+        zoom: 13
+    });
+    map.addControl(new maplibregl.NavigationControl(), 'top-right');
+
+    // ═══ DRAW CONTROL ═══
+    var draw = new MapboxDraw({
+        displayControlsDefault: false,
+        controls: {},
+        defaultMode: 'simple_select',
+        styles: [
+            // Polygon fill
+            { id: 'gl-draw-polygon-fill', type: 'fill', filter: ['all', ['==', '$type', 'Polygon'], ['!=', 'mode', 'static']],
+              paint: { 'fill-color': '#E8793B', 'fill-outline-color': '#E8793B', 'fill-opacity': 0.15 } },
+            // Polygon stroke active
+            { id: 'gl-draw-polygon-stroke-active', type: 'line', filter: ['all', ['==', '$type', 'Polygon'], ['!=', 'mode', 'static']],
+              paint: { 'line-color': '#E8793B', 'line-width': 3 } },
+            // Vertex points
+            { id: 'gl-draw-point', type: 'circle', filter: ['all', ['==', '$type', 'Point'], ['==', 'meta', 'vertex']],
+              paint: { 'circle-radius': 6, 'circle-color': '#fff', 'circle-stroke-color': '#E8793B', 'circle-stroke-width': 2 } },
+            // Midpoints
+            { id: 'gl-draw-point-mid', type: 'circle', filter: ['all', ['==', '$type', 'Point'], ['==', 'meta', 'midpoint']],
+              paint: { 'circle-radius': 4, 'circle-color': '#E8793B', 'circle-opacity': 0.6 } },
+            // Static fill (after import)
+            { id: 'gl-draw-polygon-fill-static', type: 'fill', filter: ['all', ['==', '$type', 'Polygon'], ['==', 'mode', 'static']],
+              paint: { 'fill-color': '#059669', 'fill-outline-color': '#059669', 'fill-opacity': 0.15 } },
+            // Static stroke
+            { id: 'gl-draw-polygon-stroke-static', type: 'line', filter: ['all', ['==', '$type', 'Polygon'], ['==', 'mode', 'static']],
+              paint: { 'line-color': '#059669', 'line-width': 2 } },
+            // Line stroke
+            { id: 'gl-draw-line', type: 'line', filter: ['all', ['==', '$type', 'LineString'], ['!=', 'mode', 'static']],
+              paint: { 'line-color': '#E8793B', 'line-width': 2, 'line-dasharray': [2, 2] } }
+        ]
+    });
+    map.addControl(draw);
+
+    // ═══ STATE ═══
+    var _previewGeoJSON = null;  // Holds imported features for "Apply"
+
+    // ═══ GEOMETRY UPDATE ═══
+    function updateGeometry() {
+        var data = draw.getAll();
+        if (data.features.length > 0) {
+            // Take first polygon
+            var polygon = null;
+            for (var i = 0; i < data.features.length; i++) {
+                if (data.features[i].geometry.type === 'Polygon' || data.features[i].geometry.type === 'MultiPolygon') {
+                    polygon = data.features[i];
+                    break;
+                }
+            }
+            if (!polygon) {
+                clearGeometry();
+                return;
+            }
+
+            var geom = polygon.geometry;
+            document.getElementById('id_geometry_json').value = JSON.stringify(geom);
+            document.getElementById('surfaceBadge').style.display = '';
+
+            // Calculate surface (approximate with Shoelace formula)
+            if (geom.type === 'Polygon' && geom.coordinates && geom.coordinates[0]) {
+                var coords = geom.coordinates[0];
+                var area = 0;
+                for (var j = 0; j < coords.length - 1; j++) {
+                    area += coords[j][0] * coords[j+1][1];
+                    area -= coords[j+1][0] * coords[j][1];
+                }
+                area = Math.abs(area / 2) * 111320 * 111320 * Math.cos(coords[0][1] * Math.PI / 180);
+                document.getElementById('surfaceValue').textContent = Math.round(area).toLocaleString('fr-FR') + ' m2 (approx.)';
+            }
+
+            // Topology validation
+            validateTopology(geom);
+        } else {
+            clearGeometry();
+        }
+    }
+
+    function clearGeometry() {
+        document.getElementById('id_geometry_json').value = '';
+        document.getElementById('surfaceBadge').style.display = 'none';
+        document.getElementById('topoValidation').style.display = 'none';
+    }
+
+    // ═══ TOPOLOGY VALIDATION ═══
+    function validateTopology(geom) {
+        var el = document.getElementById('topoValidation');
+        var status = document.getElementById('topoStatus');
+        el.style.display = 'block';
+
+        var issues = [];
+        if (geom.type === 'Polygon' && geom.coordinates && geom.coordinates[0]) {
+            var ring = geom.coordinates[0];
+            // Check closed polygon
+            if (ring.length < 4) {
+                issues.push('Polygone incomplet (minimum 3 sommets + fermeture)');
+            }
+            var first = ring[0], last = ring[ring.length - 1];
+            if (first[0] !== last[0] || first[1] !== last[1]) {
+                issues.push('Polygone non ferme (premier et dernier point differents)');
+            }
+            // Check self-intersection (simplified check)
+            if (ring.length > 4) {
+                for (var i = 0; i < ring.length - 1; i++) {
+                    for (var j = i + 2; j < ring.length - 1; j++) {
+                        if (i === 0 && j === ring.length - 2) continue;
+                        if (segmentsIntersect(ring[i], ring[i+1], ring[j], ring[j+1])) {
+                            issues.push('Auto-intersection detectee');
+                            i = ring.length; // break outer
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+
+        if (issues.length === 0) {
+            status.innerHTML = '<i class="bi bi-check-circle-fill" style="color:#059669"></i> Topologie valide — polygone ferme, pas d\'auto-intersection';
+            status.style.background = 'rgba(5,150,105,.08)';
+            status.style.color = '#059669';
+        } else {
+            status.innerHTML = '<i class="bi bi-exclamation-triangle-fill" style="color:#d97706"></i> ' + issues.join(' | ');
+            status.style.background = 'rgba(245,158,11,.08)';
+            status.style.color = '#d97706';
+        }
+    }
+
+    function segmentsIntersect(a, b, c, d) {
+        var det = (b[0]-a[0])*(d[1]-c[1]) - (b[1]-a[1])*(d[0]-c[0]);
+        if (Math.abs(det) < 1e-10) return false;
+        var t = ((c[0]-a[0])*(d[1]-c[1]) - (c[1]-a[1])*(d[0]-c[0])) / det;
+        var u = -((b[0]-a[0])*(c[1]-a[1]) - (b[1]-a[1])*(c[0]-a[0])) / det;
+        return t > 0.001 && t < 0.999 && u > 0.001 && u < 0.999;
+    }
+
+    // ═══ DRAW EVENTS ═══
+    map.on('draw.create', updateGeometry);
+    map.on('draw.update', updateGeometry);
+    map.on('draw.delete', function() { clearGeometry(); });
+
+    // ═══ TOOLBAR BUTTONS ═══
+    document.getElementById('btnDrawPolygon').addEventListener('click', function() {
+        // Delete existing polygons first (only allow 1)
+        var all = draw.getAll();
+        if (all.features.length > 0) {
+            draw.deleteAll();
+            clearGeometry();
+        }
+        draw.changeMode('draw_polygon');
+        setActiveToolBtn(this);
+    });
+
+    document.getElementById('btnEditPolygon').addEventListener('click', function() {
+        var all = draw.getAll();
+        if (all.features.length > 0) {
+            draw.changeMode('direct_select', { featureId: all.features[0].id });
+            setActiveToolBtn(this);
+        }
+    });
+
+    document.getElementById('btnDeletePolygon').addEventListener('click', function() {
+        draw.deleteAll();
+        clearGeometry();
+        draw.changeMode('simple_select');
+        resetToolBtns();
+    });
+
+    document.getElementById('btnUndoVertex').addEventListener('click', function() {
+        // Send Escape to cancel the last vertex in draw mode
+        try {
+            var mode = draw.getMode();
+            if (mode === 'draw_polygon') {
+                // MapboxDraw doesn't have native undo, but we can
+                // trigger trash on the incomplete polygon and restart
+                draw.trash();
+            }
+        } catch (e) {}
+    });
+
+    function setActiveToolBtn(btn) {
+        document.querySelectorAll('.map-tool-btn:not(.danger)').forEach(function(b) { b.classList.remove('active'); });
+        if (btn && !btn.classList.contains('danger')) btn.classList.add('active');
+    }
+    function resetToolBtns() {
+        document.querySelectorAll('.map-tool-btn').forEach(function(b) { b.classList.remove('active'); });
+    }
+
+    // ═══ TAB SWITCHING ═══
+    document.querySelectorAll('.import-tab').forEach(function(tab) {
+        tab.addEventListener('click', function() {
+            document.querySelectorAll('.import-tab').forEach(function(t) { t.classList.remove('active'); });
+            document.querySelectorAll('.import-panel').forEach(function(p) { p.classList.remove('active'); });
+            tab.classList.add('active');
+            document.getElementById('panel-' + tab.dataset.tab).classList.add('active');
+        });
+    });
+
+    // ═══ FILE IMPORT — PREVIEW ═══
+    document.getElementById('btnImportPreview').addEventListener('click', function() {
+        var fileInput = document.getElementById('importFile');
+        if (!fileInput.files.length) {
+            showFeedback('importFeedback', 'error', 'Veuillez selectionner un fichier.');
+            return;
+        }
+        var formData = new FormData();
+        formData.append('file', fileInput.files[0]);
+
+        showFeedback('importFeedback', 'loading', '<i class="bi bi-hourglass-split"></i> Analyse du fichier en cours...');
+
+        fetch('/api/v1/parcelles/shapefile-preview/', {
+            method: 'POST',
+            headers: { 'X-CSRFToken': csrfToken },
+            body: formData
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            if (data.error) {
+                showFeedback('importFeedback', 'error', '<i class="bi bi-x-circle"></i> ' + data.error);
+                return;
+            }
+            _previewGeoJSON = data;
+            showPreviewOnMap(data);
+            showFeedback('importFeedback', 'success',
+                '<i class="bi bi-check-circle"></i> ' + data.count + ' entite(s) trouvee(s) — CRS: ' + data.crs_info +
+                ' — Format: ' + (data.format || 'auto'));
+            document.getElementById('btnImportApply').style.display = '';
+        })
+        .catch(function(err) {
+            showFeedback('importFeedback', 'error', '<i class="bi bi-x-circle"></i> Erreur: ' + err.message);
+        });
+    });
+
+    document.getElementById('btnImportApply').addEventListener('click', function() {
+        if (_previewGeoJSON && _previewGeoJSON.features && _previewGeoJSON.features.length) {
+            applyImportedGeometry(_previewGeoJSON.features);
+            showFeedback('importFeedback', 'success', '<i class="bi bi-check-circle-fill"></i> Perimetre applique avec succes !');
+            this.style.display = 'none';
+        }
+    });
+
+    // ═══ COORDINATES IMPORT — PREVIEW ═══
+    document.getElementById('btnCoordsPreview').addEventListener('click', function() {
+        var text = document.getElementById('coordsInput').value.trim();
+        if (!text) {
+            showFeedback('coordsFeedback', 'error', 'Veuillez saisir des coordonnees.');
+            return;
+        }
+
+        showFeedback('coordsFeedback', 'loading', '<i class="bi bi-hourglass-split"></i> Analyse des coordonnees...');
+
+        fetch('/api/v1/parcelles/shapefile-preview/', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': csrfToken,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ coordinates: text })
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            if (data.error) {
+                showFeedback('coordsFeedback', 'error', '<i class="bi bi-x-circle"></i> ' + data.error);
+                return;
+            }
+            _previewGeoJSON = data;
+            showPreviewOnMap(data);
+            var pts = data.features[0] ? (data.features[0].properties.points_count || '?') : '?';
+            showFeedback('coordsFeedback', 'success',
+                '<i class="bi bi-check-circle"></i> Polygone genere (' + pts + ' sommets) — ' + data.crs_info);
+            document.getElementById('btnCoordsApply').style.display = '';
+        })
+        .catch(function(err) {
+            showFeedback('coordsFeedback', 'error', '<i class="bi bi-x-circle"></i> Erreur: ' + err.message);
+        });
+    });
+
+    document.getElementById('btnCoordsApply').addEventListener('click', function() {
+        if (_previewGeoJSON && _previewGeoJSON.features && _previewGeoJSON.features.length) {
+            applyImportedGeometry(_previewGeoJSON.features);
+            showFeedback('coordsFeedback', 'success', '<i class="bi bi-check-circle-fill"></i> Perimetre applique avec succes !');
+            this.style.display = 'none';
+        }
+    });
+
+    // ═══ PREVIEW ON MAP ═══
+    function showPreviewOnMap(geojson) {
+        // Remove existing preview layer
+        if (map.getLayer('preview-fill')) map.removeLayer('preview-fill');
+        if (map.getLayer('preview-line')) map.removeLayer('preview-line');
+        if (map.getLayer('preview-points')) map.removeLayer('preview-points');
+        if (map.getSource('preview')) map.removeSource('preview');
+
+        map.addSource('preview', { type: 'geojson', data: geojson });
+        map.addLayer({
+            id: 'preview-fill', type: 'fill', source: 'preview',
+            paint: { 'fill-color': '#2563eb', 'fill-opacity': 0.15 }
+        });
+        map.addLayer({
+            id: 'preview-line', type: 'line', source: 'preview',
+            paint: { 'line-color': '#2563eb', 'line-width': 2, 'line-dasharray': [4, 2] }
+        });
+        // Show vertex points
+        var pointFeatures = [];
+        geojson.features.forEach(function(f) {
+            if (f.geometry && f.geometry.coordinates) {
+                var ring = f.geometry.type === 'Polygon' ? f.geometry.coordinates[0] : (f.geometry.coordinates[0] ? f.geometry.coordinates[0][0] : []);
+                ring.forEach(function(c, idx) {
+                    pointFeatures.push({ type: 'Feature', geometry: { type: 'Point', coordinates: c }, properties: { idx: idx + 1 } });
+                });
+            }
+        });
+        if (pointFeatures.length) {
+            if (map.getSource('preview-pts')) { map.removeLayer('preview-pts-layer'); map.removeSource('preview-pts'); }
+            map.addSource('preview-pts', { type: 'geojson', data: { type: 'FeatureCollection', features: pointFeatures } });
+            map.addLayer({
+                id: 'preview-pts-layer', type: 'circle', source: 'preview-pts',
+                paint: { 'circle-radius': 5, 'circle-color': '#2563eb', 'circle-stroke-color': '#fff', 'circle-stroke-width': 2 }
+            });
+        }
+
+        // Fit bounds
+        var bounds = new maplibregl.LngLatBounds();
+        geojson.features.forEach(function(f) {
+            if (f.geometry && f.geometry.coordinates) {
+                var ring = f.geometry.type === 'Polygon' ? f.geometry.coordinates[0] :
+                    (f.geometry.type === 'MultiPolygon' ? f.geometry.coordinates[0][0] : []);
+                ring.forEach(function(c) { bounds.extend(c); });
+            }
+        });
+        if (!bounds.isEmpty()) map.fitBounds(bounds, { padding: 60 });
+    }
+
+    // ═══ APPLY IMPORTED GEOMETRY TO DRAW ═══
+    function applyImportedGeometry(features) {
+        // Remove preview layers
+        ['preview-fill', 'preview-line', 'preview-points', 'preview-pts-layer'].forEach(function(id) {
+            if (map.getLayer(id)) map.removeLayer(id);
+        });
+        ['preview', 'preview-pts'].forEach(function(id) {
+            if (map.getSource(id)) map.removeSource(id);
+        });
+
+        // Clear existing draw features
+        draw.deleteAll();
+
+        // Add the first polygon feature to draw
+        var added = false;
+        for (var i = 0; i < features.length; i++) {
+            var geom = features[i].geometry;
+            if (geom && (geom.type === 'Polygon' || geom.type === 'MultiPolygon')) {
+                if (geom.type === 'MultiPolygon') {
+                    // Convert to single polygon (take first)
+                    geom = { type: 'Polygon', coordinates: geom.coordinates[0] };
+                }
+                draw.add({ type: 'Feature', geometry: geom, properties: {} });
+                added = true;
+                break;
+            }
+        }
+
+        if (added) {
+            updateGeometry();
+            // Switch to draw tab
+            document.querySelectorAll('.import-tab').forEach(function(t) { t.classList.remove('active'); });
+            document.querySelectorAll('.import-panel').forEach(function(p) { p.classList.remove('active'); });
+            document.querySelector('.import-tab[data-tab="draw"]').classList.add('active');
+            document.getElementById('panel-draw').classList.add('active');
+        }
+    }
+
+    // ═══ FEEDBACK HELPER ═══
+    function showFeedback(id, type, html) {
+        var el = document.getElementById(id);
+        el.className = 'preview-feedback ' + type;
+        el.innerHTML = html;
+    }
+
+    // ═══ GEOLOCATION ═══
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(function(pos) {
+            map.flyTo({ center: [pos.coords.longitude, pos.coords.latitude], zoom: 14 });
+        });
+    }
+
+    // ═══ FORM VALIDATION ═══
+    document.getElementById('lotForm').addEventListener('submit', function(e) {
+        var geomVal = document.getElementById('id_geometry_json').value;
+        if (!geomVal) {
+            e.preventDefault();
+            alert('Veuillez dessiner ou importer le perimetre du lotissement.');
+            return false;
+        }
+    });
+});
+</script>
+{% endblock %}

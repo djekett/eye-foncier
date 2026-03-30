@@ -1,0 +1,138 @@
+{% extends "layouts/base.html" %}
+{% load humanize %}
+
+{% block title %}Statistiques Transactions — {{ SITE_NAME }}{% endblock %}
+
+{% block content %}
+<div class="container" style="padding-bottom:60px;max-width:1100px">
+
+    <div class="d-flex align-items-center justify-content-between mb-4">
+        <h4 class="mb-0" style="font-weight:800;color:var(--green-900)">
+            <i class="bi bi-bar-chart me-2"></i>Statistiques Transactions
+        </h4>
+        <a href="{% url 'transactions:list' %}" class="btn btn-sm btn-outline-secondary">
+            <i class="bi bi-arrow-left me-1"></i> Retour
+        </a>
+    </div>
+
+    <!-- KPIs -->
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-md-3">
+            <div class="card text-center p-3" style="border:none;border-radius:var(--radius-md);background:#f0fdf4">
+                <div style="font-size:.75rem;color:var(--gray-500)">Total transactions</div>
+                <div style="font-weight:800;font-size:1.5rem;color:var(--green-900)">{{ stats.total }}</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="card text-center p-3" style="border:none;border-radius:var(--radius-md);background:#eff6ff">
+                <div style="font-size:.75rem;color:var(--gray-500)">Finalisées</div>
+                <div style="font-weight:800;font-size:1.5rem;color:#2563eb">{{ stats.completed }}</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="card text-center p-3" style="border:none;border-radius:var(--radius-md);background:#fefce8">
+                <div style="font-size:.75rem;color:var(--gray-500)">Volume finalisé</div>
+                <div style="font-weight:800;color:#ca8a04">{{ stats.total_amount|intcomma }} FCFA</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="card text-center p-3" style="border:none;border-radius:var(--radius-md);background:#fef2f2">
+                <div style="font-size:.75rem;color:var(--gray-500)">Litiges en cours</div>
+                <div style="font-weight:800;font-size:1.5rem;color:#dc2626">{{ stats.disputes }}</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-3 mb-4">
+        <div class="col-md-4">
+            <div class="card text-center p-3" style="border:none;border-radius:var(--radius-md);background:#faf5ff">
+                <div style="font-size:.75rem;color:var(--gray-500)">Séquestre en cours</div>
+                <div style="font-weight:800;color:#7c3aed">{{ stats.escrow_amount|intcomma }} FCFA</div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card text-center p-3" style="border:none;border-radius:var(--radius-md);background:#fff7ed">
+                <div style="font-size:.75rem;color:var(--gray-500)">Annulées</div>
+                <div style="font-weight:800;font-size:1.5rem;color:#ea580c">{{ stats.cancelled }}</div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card text-center p-3" style="border:none;border-radius:var(--radius-md);background:#f0fdf4">
+                <div style="font-size:.75rem;color:var(--gray-500)">Taux de complétion</div>
+                <div style="font-weight:800;font-size:1.5rem;color:var(--green-900)">
+                    {% if stats.total > 0 %}
+                    {% widthratio stats.completed stats.total 100 %}%
+                    {% else %}
+                    0%
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Répartition par statut -->
+    <div class="card mb-4" style="border:none;border-radius:var(--radius-lg);box-shadow:var(--shadow-sm)">
+        <div class="card-header" style="background:#f8fafc;border-bottom:1px solid #e2e8f0">
+            <h5 class="mb-0" style="font-weight:700;font-size:.95rem">Répartition par statut</h5>
+        </div>
+        <div class="card-body">
+            {% for item in stats.by_status %}
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <span style="font-size:.85rem">{{ item.status }}</span>
+                <div class="d-flex align-items-center gap-2">
+                    <div class="progress" style="width:200px;height:8px;border-radius:4px">
+                        {% if stats.total > 0 %}
+                        <div class="progress-bar bg-success" style="width:{% widthratio item.count stats.total 100 %}%"></div>
+                        {% endif %}
+                    </div>
+                    <span class="badge bg-secondary" style="font-size:.75rem">{{ item.count }}</span>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Transactions récentes -->
+    <div class="card" style="border:none;border-radius:var(--radius-lg);box-shadow:var(--shadow-sm)">
+        <div class="card-header" style="background:#f8fafc;border-bottom:1px solid #e2e8f0">
+            <h5 class="mb-0" style="font-weight:700;font-size:.95rem">10 dernières transactions</h5>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-sm table-hover mb-0" style="font-size:.82rem">
+                    <thead style="background:#f8fafc">
+                        <tr>
+                            <th style="padding:10px 12px">Réf.</th>
+                            <th style="padding:10px 12px">Parcelle</th>
+                            <th style="padding:10px 12px">Acheteur</th>
+                            <th class="text-end" style="padding:10px 12px">Montant</th>
+                            <th style="padding:10px 12px">Statut</th>
+                            <th style="padding:10px 12px">Date</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for tx in stats.recent %}
+                        <tr>
+                            <td style="padding:8px 12px">
+                                <a href="{% url 'transactions:detail' tx.pk %}" style="font-weight:600;color:var(--green-900)">
+                                    {{ tx.reference }}
+                                </a>
+                            </td>
+                            <td style="padding:8px 12px">{{ tx.parcelle.lot_number }}</td>
+                            <td style="padding:8px 12px">{{ tx.buyer.get_full_name }}</td>
+                            <td class="text-end" style="padding:8px 12px;font-weight:600">{{ tx.amount|intcomma }}</td>
+                            <td style="padding:8px 12px">
+                                <span class="badge {% if tx.status == 'completed' %}bg-success{% elif tx.status == 'cancelled' %}bg-danger{% elif tx.status == 'disputed' %}bg-warning text-dark{% else %}bg-info{% endif %}" style="font-size:.7rem">
+                                    {{ tx.get_status_display }}
+                                </span>
+                            </td>
+                            <td style="padding:8px 12px;color:var(--gray-500)">{{ tx.created_at|date:"d/m/Y" }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,84 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}Documentation — {{ SITE_NAME }}{% endblock %}
+
+{% block extra_css %}
+<style>
+.doc-hero{background:linear-gradient(135deg,#0B3D2E 0%,#0F5132 60%,#1A6B4A 100%);padding:120px 0 4.5rem;margin-top:-100px;position:relative;overflow:hidden}
+.doc-hero::before{content:'';position:absolute;top:-30%;left:-10%;width:50%;height:160%;background:radial-gradient(circle,rgba(232,121,59,.06) 0%,transparent 70%);pointer-events:none}
+.doc-hero::after{content:'';position:absolute;bottom:0;left:0;right:0;height:4px;background:repeating-linear-gradient(90deg,#E8793B 0,#E8793B 20px,var(--gold) 20px,var(--gold) 40px,#0B3D2E 40px,#0B3D2E 60px)}
+.doc-hero h1{font-size:clamp(1.8rem,4vw,2.6rem);font-weight:800;letter-spacing:-.03em;line-height:1.1;color:#fff;font-family:var(--font-display)}
+
+.doc-card-link{text-decoration:none;display:block;height:100%}
+.doc-card-link:hover .ef-card{transform:translateY(-6px);box-shadow:0 8px 32px rgba(11,61,46,.12);border-color:var(--orange)}
+.doc-card-link:hover .doc-icon-wrap{transform:scale(1.08)}
+.doc-card-link:hover .doc-arrow{opacity:1;transform:translateX(0)}
+.doc-icon-wrap{width:64px;height:64px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.5rem;margin:0 auto 1rem;transition:all .2s}
+.doc-title{font-weight:700;font-size:1.05rem;color:var(--green-900);margin-bottom:.5rem;font-family:var(--font-display)}
+.doc-desc{color:var(--gray-400);font-size:.84rem;line-height:1.6;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;font-family:var(--font-body)}
+.doc-arrow{position:absolute;bottom:16px;right:16px;width:32px;height:32px;border-radius:50%;background:rgba(232,121,59,.08);display:flex;align-items:center;justify-content:center;color:var(--orange);font-size:.8rem;transition:all .2s;opacity:0;transform:translateX(-4px)}
+
+.doc-quick-links{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-top:-26px;position:relative;z-index:5}
+
+@media(max-width:768px){.doc-hero{padding:100px 0 3.5rem}.doc-quick-links{margin-top:-20px;gap:6px}.doc-icon-wrap{width:52px;height:52px;font-size:1.3rem}}
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="ef-section-hero doc-hero">
+    <div class="container text-center">
+        <div class="d-inline-flex align-items-center gap-2 mb-3" style="backdrop-filter:blur(12px);background:rgba(232,121,59,.1);border:1px solid rgba(232,121,59,.15);border-radius:8px;padding:5px 14px">
+            <i class="bi bi-book-half" style="font-size:.8rem;color:var(--orange)"></i>
+            <span style="font-size:.78rem;font-weight:600;color:var(--orange)">Centre d'aide</span>
+        </div>
+        <h1 class="mb-3">Documentation &<br><span style="color:var(--orange)">Guides d'utilisation</span></h1>
+        <p style="color:rgba(255,255,255,.6);font-size:1rem;max-width:480px;margin:0 auto;line-height:1.7;font-family:var(--font-body)">Guides pratiques, FAQ et procédures pour bien utiliser EYE-FONCIER et sécuriser vos transactions.</p>
+    </div>
+</section>
+
+<div class="container">
+    <div class="doc-quick-links">
+        <a href="{% url 'content:articles' %}" class="ef-btn ef-btn-sm" style="background:#fff;border:1px solid var(--gray-200);color:var(--green-900);box-shadow:0 2px 8px rgba(0,0,0,.04);font-family:var(--font-display)"><i class="bi bi-newspaper me-1" style="color:var(--orange)"></i> Blog</a>
+        <a href="{% url 'content:announcements' %}" class="ef-btn ef-btn-sm" style="background:#fff;border:1px solid var(--gray-200);color:var(--green-900);box-shadow:0 2px 8px rgba(0,0,0,.04);font-family:var(--font-display)"><i class="bi bi-bell me-1" style="color:var(--orange)"></i> Annonces</a>
+        <a href="{% url 'websig:map' %}" class="ef-btn ef-btn-sm" style="background:#fff;border:1px solid var(--gray-200);color:var(--green-900);box-shadow:0 2px 8px rgba(0,0,0,.04);font-family:var(--font-display)"><i class="bi bi-map me-1" style="color:var(--orange)"></i> Carte</a>
+    </div>
+</div>
+
+<div class="ef-page-content container py-5">
+    {% if docs %}
+    <div class="row g-4">
+        {% for doc in docs %}
+        <div class="col-md-6 col-lg-4">
+            <a href="{% url 'content:doc_detail' doc.slug %}" class="doc-card-link">
+                <div class="ef-card h-100 position-relative" style="transition:all .2s">
+                    <div class="ef-card-body text-center py-4 px-3">
+                        <div class="doc-icon-wrap" style="background:{% cycle 'var(--green-50)' 'var(--blue-light)' 'rgba(139,92,246,.08)' 'var(--orange-light)' 'rgba(236,72,153,.08)' 'var(--gold-light)' %}">
+                            <i class="{{ doc.icon }}" style="color:{% cycle 'var(--green-700)' '#3b82f6' '#7c3aed' 'var(--orange)' '#db2777' '#f59e0b' %}"></i>
+                        </div>
+                        <h5 class="doc-title">{{ doc.title }}</h5>
+                        <p class="doc-desc">{{ doc.content|truncatechars:120 }}</p>
+                        {% if doc.children.count %}
+                        <span class="ef-badge ef-badge-success" style="margin-top:10px">
+                            <i class="bi bi-layers" style="font-size:.7rem"></i>
+                            {{ doc.children.count }} sous-page{{ doc.children.count|pluralize }}
+                        </span>
+                        {% endif %}
+                    </div>
+                    <span class="doc-arrow"><i class="bi bi-arrow-right"></i></span>
+                </div>
+            </a>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="ef-empty-state">
+        <div style="width:80px;height:80px;border-radius:50%;background:var(--green-50);display:inline-flex;align-items:center;justify-content:center;margin-bottom:1rem">
+            <i class="bi bi-book" style="font-size:2rem;color:var(--green-700)"></i>
+        </div>
+        <h5 style="font-family:var(--font-display);color:var(--green-900);font-weight:700;margin-bottom:.5rem">Documentation en cours de rédaction</h5>
+        <p style="color:var(--gray-400);max-width:360px;margin:0 auto;font-family:var(--font-body)">Les guides et FAQ seront disponibles très prochainement. En attendant, consultez nos articles.</p>
+        <a href="{% url 'content:articles' %}" class="ef-btn ef-btn-primary" style="margin-top:16px"><i class="bi bi-journal"></i> Voir le blog</a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

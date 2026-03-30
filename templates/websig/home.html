@@ -1,0 +1,539 @@
+{% extends "layouts/base.html" %}
+{% load static humanize %}
+
+{% block title %}{{ SITE_NAME }} — Devenez Proprietaire en Toute Securite{% endblock %}
+
+{% block content %}
+<!-- ===== HERO SECTION ===== -->
+<section class="ef-hero">
+    <div class="ef-pattern-bg"></div>
+    <div class="ef-hero-inner">
+        <!-- Left Content -->
+        <div>
+            <div class="ef-hero-badge">
+                <span class="dot"></span>
+                Plateforme certifiee & securisee
+            </div>
+            <h1>
+                Devenez Proprietaire<br>
+                en <span class="highlight">Toute Securite</span>
+            </h1>
+            <p class="ef-hero-sub">
+                La 1ere plateforme de transaction fonciere securisee en Cote d'Ivoire.
+                Recherchez, verifiez et achetez vos biens fonciers en toute confiance.
+            </p>
+            <div class="ef-hero-actions">
+                <a href="{% url 'parcelles:list' %}" class="ef-btn-primary">
+                    <i class="bi bi-search"></i> Explorer les biens
+                </a>
+                <a href="{% url 'websig:map' %}" class="ef-btn-secondary">
+                    <i class="bi bi-map"></i> Voir la carte
+                </a>
+            </div>
+            <div class="ef-hero-stats">
+                <div class="ef-hero-stat">
+                    <strong>{{ total_parcelles|default:"150" }}+</strong>
+                    <span>Biens verifies</span>
+                </div>
+                <div class="ef-hero-stat">
+                    <strong>{{ total_zones|default:"12" }}</strong>
+                    <span>Zones couvertes</span>
+                </div>
+                <div class="ef-hero-stat">
+                    <strong>100%</strong>
+                    <span>Securise</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Visual — Property Card -->
+        <div class="ef-hero-visual d-none d-lg-block">
+            <div class="ef-hero-card">
+                {% if recent_parcelles and recent_parcelles.0 %}
+                {% with p=recent_parcelles.0 %}
+                {% if p.main_image %}
+                <img src="{{ p.main_image }}" alt="{{ p.title }}">
+                {% else %}
+                <div class="ef-hero-card-placeholder">
+                    <i class="bi bi-geo-alt"></i>
+                </div>
+                {% endif %}
+                <div class="ef-hero-card-info">
+                    <h3>{{ p.title|truncatechars:35 }}</h3>
+                    <div class="loc"><i class="bi bi-geo-alt-fill"></i> {{ p.address|default:"Yamoussoukro, CI" }}</div>
+                    <div class="ef-hero-card-price">{{ p.price|intcomma }} FCFA</div>
+                </div>
+                {% endwith %}
+                {% else %}
+                <div class="ef-hero-card-placeholder">
+                    <i class="bi bi-building"></i>
+                </div>
+                <div class="ef-hero-card-info">
+                    <h3>Terrain Residentiel Premium</h3>
+                    <div class="loc"><i class="bi bi-geo-alt-fill"></i> Cocody, Abidjan</div>
+                    <div class="ef-hero-card-price">25 000 000 FCFA</div>
+                </div>
+                {% endif %}
+            </div>
+
+
+            <div class="ef-hero-float location-tag">
+                <div class="ef-shield-icon"><i class="bi bi-shield-check"></i></div>
+                <span>Transaction securisee</span>
+            </div>
+
+        </div>
+    </div>
+</section>
+
+<!-- ===== SEARCH BAR ===== -->
+<div class="ef-search-section ef-section">
+    <div class="ef-search-box">
+        <div class="ef-search-tabs">
+            <button type="button" class="ef-search-tab active" data-type="vente"><i class="bi bi-house-door me-1"></i>Acheter</button>
+        </div>
+        <form class="ef-search-fields" action="{% url 'parcelles:list' %}" method="get">
+            <input type="hidden" name="transaction_type" id="search-transaction-type" value="vente">
+            <div class="ef-search-field">
+                <label><i class="bi bi-geo-alt" style="color:var(--orange);margin-right:4px"></i>Localisation</label>
+                <select name="zone">
+                    <option value="">Toutes les zones</option>
+                    {% for zone in zones %}
+                    <option value="{{ zone.pk }}">{{ zone.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="ef-search-field">
+                <label><i class="bi bi-building" style="color:var(--green-700);margin-right:4px"></i>Type de bien</label>
+                <select name="land_type">
+                    <option value="">Tous les types</option>
+                    <option value="residentiel">Résidentiel</option>
+                    <option value="commercial">Commercial</option>
+                    <option value="agricole">Agricole</option>
+                    <option value="industriel">Industriel</option>
+                </select>
+            </div>
+            <div class="ef-search-field">
+                <label><i class="bi bi-wallet2" style="color:var(--gold);margin-right:4px"></i>Budget max</label>
+                <select name="price_max">
+                    <option value="">Sans limite</option>
+                    <option value="5000000">&lt; 5M FCFA</option>
+                    <option value="15000000">&lt; 15M FCFA</option>
+                    <option value="30000000">&lt; 30M FCFA</option>
+                    <option value="50000000">&lt; 50M FCFA</option>
+                    <option value="100000000">&lt; 100M FCFA</option>
+                </select>
+            </div>
+            <button type="submit" class="ef-search-btn">
+                <i class="bi bi-search"></i> Rechercher
+            </button>
+        </form>
+        <!-- Popular searches -->
+        <div class="ef-search-popular">
+            <span class="ef-search-popular-label"><i class="bi bi-fire"></i> Populaire :</span>
+            <a href="{% url 'parcelles:list' %}?land_type=residentiel" class="ef-search-chip">
+                <i class="bi bi-house-door"></i> Residentiel
+            </a>
+            <a href="{% url 'parcelles:list' %}?status=disponible" class="ef-search-chip">
+                <span style="width:6px;height:6px;border-radius:50%;background:var(--success);display:inline-block"></span> Disponible
+            </a>
+            <a href="{% url 'parcelles:list' %}?price_max=15000000" class="ef-search-chip">
+                <i class="bi bi-tag"></i> &lt; 15M FCFA
+            </a>
+            <a href="{% url 'websig:map' %}" class="ef-search-chip">
+                <i class="bi bi-map"></i> Carte
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- ===== BIENS A LA UNE ===== -->
+<section class="ef-properties ef-section">
+    <div class="ef-section-header">
+        <div>
+            <h2>Biens <span class="accent">a la une</span></h2>
+            <p>Les dernieres opportunites verifiees sur la plateforme</p>
+        </div>
+        <a href="{% url 'parcelles:list' %}" class="ef-view-all">
+            Voir tout <i class="bi bi-arrow-right"></i>
+        </a>
+    </div>
+    <div class="ef-properties-grid">
+        {% for parcelle in recent_parcelles %}
+        <a href="{% url 'parcelles:detail' pk=parcelle.pk %}" class="ef-property-card" style="text-decoration:none">
+            <div class="ef-property-img">
+                {% if parcelle.main_image %}
+                <img src="{{ parcelle.main_image }}" alt="{{ parcelle.title }}">
+                {% else %}
+                <div style="width:100%;height:100%;background:linear-gradient(135deg,var(--green-50),var(--orange-light));display:flex;align-items:center;justify-content:center">
+                    <i class="bi bi-geo-alt" style="font-size:2.5rem;color:var(--green-700);opacity:.3"></i>
+                </div>
+                {% endif %}
+                <div class="ef-property-badges">
+                    <span class="ef-badge ef-badge-sale">
+                        {{ parcelle.get_status_display|default:"Disponible" }}
+                    </span>
+                </div>
+                <button class="ef-property-fav" onclick="event.preventDefault();event.stopPropagation();toggleLike(this,'{{ parcelle.pk }}')" data-parcelle-id="{{ parcelle.pk }}">
+                    <i class="bi bi-heart{% if parcelle.pk in user_liked_ids %}-fill{% endif %}"></i>
+                </button>
+                <div class="ef-property-price">{{ parcelle.price|intcomma }} FCFA</div>
+            </div>
+            <div class="ef-property-body">
+                <h3>{{ parcelle.title }}</h3>
+                <div class="ef-property-loc">
+                    <i class="bi bi-geo-alt-fill"></i>
+                    {{ parcelle.address|default:"Non renseignee" }}
+                </div>
+                <div class="ef-property-tags">
+                    <span class="ef-property-tag"><i class="bi bi-aspect-ratio me-1"></i>{{ parcelle.surface_m2 }} m&sup2;</span>
+                    <span class="ef-property-tag"><i class="bi bi-tag me-1"></i>{{ parcelle.get_land_type_display }}</span>
+                    {% if parcelle.trust_badge %}
+                    <span class="ef-property-certified"><i class="bi bi-patch-check-fill"></i> Certifie</span>
+                    {% endif %}
+                </div>
+            </div>
+        </a>
+        {% empty %}
+        <div style="grid-column:1/-1;text-align:center;padding:60px 20px;color:var(--gray-400)">
+            <i class="bi bi-building" style="font-size:3rem;opacity:.3;display:block;margin-bottom:12px"></i>
+            <p>Aucun bien disponible pour le moment</p>
+            <a href="{% url 'parcelles:create' %}" class="ef-btn-primary" style="margin-top:16px">
+                <i class="bi bi-plus-circle"></i> Deposer un bien
+            </a>
+        </div>
+        {% endfor %}
+    </div>
+</section>
+
+<!-- ===== SIMULATEUR ===== -->
+<section class="ef-simulator-section ef-section">
+    <div class="ef-pattern-bg"></div>
+    <div class="ef-sim-inner">
+        <h2>Simulez votre <span class="accent">investissement</span></h2>
+        <p class="ef-sim-sub">Estimez vos mensualites et visualisez votre parcours vers la propriete en temps reel</p>
+
+        <div class="ef-sim-grid">
+            <!-- Controls -->
+            <div class="ef-sim-controls">
+                <div class="ef-sim-field">
+                    <label>
+                        Prix du bien
+                        <strong id="simPriceDisplay">25 000 000 FCFA</strong>
+                    </label>
+                    <input type="range" class="ef-sim-range" id="simPrice" min="2000000" max="100000000" step="500000" value="25000000">
+                </div>
+                <div class="ef-sim-field">
+                    <label>
+                        Apport initial
+                        <strong id="simApportDisplay">5 000 000 FCFA</strong>
+                    </label>
+                    <input type="range" class="ef-sim-range" id="simApport" min="0" max="50000000" step="250000" value="5000000">
+                </div>
+                <div class="ef-sim-field">
+                    <label>
+                        Duree (mois)
+                        <strong id="simDureeDisplay">36 mois</strong>
+                    </label>
+                    <input type="range" class="ef-sim-range" id="simDuree" min="6" max="120" step="6" value="36">
+                </div>
+            </div>
+
+            <!-- Result with Ring -->
+            <div class="ef-sim-result">
+                <div class="ef-sim-ownership">
+                    <div class="ef-sim-ownership-label">Propriete acquise</div>
+                    <div class="ef-sim-ring">
+                        <svg viewBox="0 0 160 160">
+                            <circle class="ef-sim-ring-bg" cx="80" cy="80" r="68"/>
+                            <circle class="ef-sim-ring-fill" id="simRingFill" cx="80" cy="80" r="68"
+                                stroke-dasharray="427.26" stroke-dashoffset="384.53"/>
+                        </svg>
+                        <div class="ef-sim-ring-text">
+                            <span class="ef-sim-ring-pct" id="simOwnershipPct">20%</span>
+                            <span class="ef-sim-ring-sub">acquise</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="ef-sim-stats">
+                    <div class="ef-sim-stat">
+                        <div class="ef-sim-stat-val" id="simMensualite">555 556 FCFA</div>
+                        <div class="ef-sim-stat-label">Mensualite</div>
+                    </div>
+                    <div class="ef-sim-stat">
+                        <div class="ef-sim-stat-val" id="simReste">20 000 000 FCFA</div>
+                        <div class="ef-sim-stat-label">Reste a payer</div>
+                    </div>
+                </div>
+                <div class="ef-sim-total-box">
+                    <div class="ef-sim-total-label">Cout total estime</div>
+                    <div class="ef-sim-total-value" id="simTotal">25 000 000 FCFA</div>
+                </div>
+                <a href="{% url 'parcelles:list' %}" class="ef-sim-cta">
+                    <i class="bi bi-search me-2"></i> Trouver un bien dans ce budget
+                </a>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ===== CONFIANCE ===== -->
+<section class="ef-trust ef-section">
+    <div class="ef-section-header" style="max-width:1200px;margin:0 auto 40px;justify-content:center;text-align:center">
+        <div>
+            <h2>Pourquoi <span class="accent">EYE-FONCIER</span> ?</h2>
+            <p>La confiance au coeur de chaque transaction</p>
+        </div>
+    </div>
+    <div class="ef-trust-grid">
+        <div class="ef-trust-card">
+            <div class="ef-trust-icon"><i class="bi bi-shield-lock-fill"></i></div>
+            <div class="ef-trust-stat">100%</div>
+            <h3>Transactions securisees</h3>
+            <p>Chiffrement AES-256, sequestre bancaire et assurance anti-arnaque integree</p>
+        </div>
+        <div class="ef-trust-card">
+            <div class="ef-trust-icon" style="background:var(--orange-light);color:var(--orange)"><i class="bi bi-graph-up-arrow"></i></div>
+            <div class="ef-trust-stat">85%</div>
+            <h3>Taux de satisfaction</h3>
+            <p>Nos utilisateurs recommandent EYE-FONCIER pour la transparence et la fiabilite</p>
+        </div>
+        <div class="ef-trust-card">
+            <div class="ef-trust-icon" style="background:var(--blue-light);color:var(--blue)"><i class="bi bi-clock-history"></i></div>
+            <div class="ef-trust-stat">-50%</div>
+            <h3>Temps de transaction</h3>
+            <p>Reduisez de moitie le temps de votre acquisition grace au digital</p>
+        </div>
+        <div class="ef-trust-card">
+            <div class="ef-trust-icon" style="background:var(--gold-light);color:var(--gold)"><i class="bi bi-phone-fill"></i></div>
+            <div class="ef-trust-stat">100%</div>
+            <h3>Mobile & Accessible</h3>
+            <p>Payez via Wave, Orange Money, MTN MoMo. Optimise pour les reseaux 3G</p>
+        </div>
+    </div>
+</section>
+
+<!-- ===== COMMENT CA MARCHE ===== -->
+<section class="ef-how ef-section">
+    <div class="ef-section-header" style="max-width:1200px;margin:0 auto 48px;justify-content:center;text-align:center">
+        <div>
+            <h2>Comment <span class="accent">ca marche</span> ?</h2>
+            <p>3 etapes simples vers la propriete</p>
+        </div>
+    </div>
+    <div class="ef-steps">
+        <div class="ef-step">
+            <div class="ef-step-num">1</div>
+            <h3>Trouvez votre bien</h3>
+            <p>Explorez notre catalogue de terrains verifies ou utilisez la carte interactive pour trouver votre emplacement ideal</p>
+        </div>
+        <div class="ef-step">
+            <div class="ef-step-num">2</div>
+            <h3>Verifiez & Simulez</h3>
+            <p>Consultez les documents certifies, le Eye Score de fiabilite, et simulez vos mensualites en temps reel</p>
+        </div>
+        <div class="ef-step">
+            <div class="ef-step-num">3</div>
+            <h3>Achetez en securite</h3>
+            <p>Transaction securisee avec sequestre bancaire, accompagnement notarial et suivi digital de bout en bout</p>
+        </div>
+    </div>
+</section>
+
+<!-- ===== CATEGORIES ===== -->
+<section class="ef-categories ef-section">
+    <div class="ef-section-header" style="max-width:1200px;margin:0 auto 40px">
+        <div>
+            <h2>Explorez par <span class="accent">categorie</span></h2>
+            <p>Trouvez le type de bien qui correspond a votre projet</p>
+        </div>
+    </div>
+    <div class="ef-cat-grid">
+        <a href="{% url 'parcelles:list' %}?type=residentiel" class="ef-cat-card" style="text-decoration:none">
+            <img src="https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=400&h=300&fit=crop" alt="Residentiel" loading="lazy">
+            <div class="ef-cat-overlay">
+                <h3>Residentiel</h3>
+                <span>Terrains a batir</span>
+            </div>
+        </a>
+        <a href="{% url 'parcelles:list' %}?type=commercial" class="ef-cat-card" style="text-decoration:none">
+            <img src="https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=400&h=300&fit=crop" alt="Commercial" loading="lazy">
+            <div class="ef-cat-overlay">
+                <h3>Commercial</h3>
+                <span>Bureaux & Commerces</span>
+            </div>
+        </a>
+        <a href="{% url 'parcelles:list' %}?type=agricole" class="ef-cat-card" style="text-decoration:none">
+            <img src="https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=400&h=300&fit=crop" alt="Agricole" loading="lazy">
+            <div class="ef-cat-overlay">
+                <h3>Agricole</h3>
+                <span>Plantations & Fermes</span>
+            </div>
+        </a>
+        <a href="{% url 'parcelles:list' %}?type=industriel" class="ef-cat-card" style="text-decoration:none">
+            <img src="https://images.unsplash.com/photo-1565610222536-ef125c59da2e?w=400&h=300&fit=crop" alt="Industriel" loading="lazy">
+            <div class="ef-cat-overlay">
+                <h3>Industriel</h3>
+                <span>Zones industrielles</span>
+            </div>
+        </a>
+    </div>
+</section>
+
+<!-- ===== TEMOIGNAGES ===== -->
+<section class="ef-testimonials ef-section">
+    <div class="ef-section-header" style="max-width:1200px;margin:0 auto 40px;justify-content:center;text-align:center">
+        <div>
+            <h2>Ce que disent <span class="accent">nos clients</span></h2>
+            <p>Ils nous font confiance pour securiser leur investissement</p>
+        </div>
+    </div>
+    <div class="ef-test-grid">
+        <div class="ef-test-card">
+            <div class="ef-test-quote">
+                Grace a EYE-FONCIER, j'ai pu acheter mon terrain en toute serenite. Le processus de verification m'a rassure a 100%.
+            </div>
+            <div class="ef-test-author">
+                <div class="ef-test-avatar">AK</div>
+                <div>
+                    <div class="ef-test-name">Amadou K.</div>
+                    <div class="ef-test-role">Acheteur - Abidjan</div>
+                </div>
+            </div>
+        </div>
+        <div class="ef-test-card">
+            <div class="ef-test-quote">
+                En tant que promoteur, la digitalisation de mon portefeuille m'a fait gagner un temps precieux. Les leads sont qualifies.
+            </div>
+            <div class="ef-test-author">
+                <div class="ef-test-avatar" style="background:var(--orange)">FT</div>
+                <div>
+                    <div class="ef-test-name">Fatou T.</div>
+                    <div class="ef-test-role">Promotrice - Yamoussoukro</div>
+                </div>
+            </div>
+        </div>
+        <div class="ef-test-card">
+            <div class="ef-test-quote">
+                Le simulateur d'achat-vente m'a permis de planifier mon investissement et de convaincre ma banque. Tres professionnel.
+            </div>
+            <div class="ef-test-author">
+                <div class="ef-test-avatar" style="background:var(--green-700)">JB</div>
+                <div>
+                    <div class="ef-test-name">Jean-Baptiste M.</div>
+                    <div class="ef-test-role">Investisseur - Bouake</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ===== CTA FINAL ===== -->
+<section class="ef-cta-final ef-section">
+    <div class="ef-pattern-bg"></div>
+    <h2>Pret a securiser votre<br>investissement foncier ?</h2>
+    <p>Rejoignez des milliers d'utilisateurs qui font confiance a EYE-FONCIER pour leurs transactions foncieres.</p>
+    <div class="ef-cta-buttons">
+        <a href="{% url 'accounts:register' %}" class="ef-btn-primary" style="font-size:16px;padding:16px 32px">
+            <i class="bi bi-rocket-takeoff"></i> Commencer maintenant
+        </a>
+        <a href="#" class="ef-cta-app">
+            <i class="bi bi-apple" style="font-size:20px"></i>
+            <span style="text-align:left"><small style="font-size:10px;opacity:.7;display:block">Bientot sur</small>App Store</span>
+        </a>
+        <a href="#" class="ef-cta-app">
+            <i class="bi bi-google-play" style="font-size:20px"></i>
+            <span style="text-align:left"><small style="font-size:10px;opacity:.7;display:block">Bientot sur</small>Google Play</span>
+        </a>
+    </div>
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+/* ═══ Like / Reaction Toggle (AJAX) ═══ */
+function toggleLike(btn, pk) {
+    {% if user.is_authenticated %}
+    var icon = btn.querySelector('i');
+    var csrfToken = '{{ csrf_token }}';
+    fetch('/parcelles/' + pk + '/reaction/', {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': csrfToken,
+            'X-Requested-With': 'XMLHttpRequest',
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: 'reaction_type=like',
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        if (data.active) {
+            icon.className = 'bi bi-heart-fill';
+            btn.style.color = '#ef4444';
+        } else {
+            icon.className = 'bi bi-heart';
+            btn.style.color = '';
+        }
+    })
+    .catch(function() {});
+    {% else %}
+    window.location.href = "{% url 'accounts:login' %}?next=" + window.location.pathname;
+    {% endif %}
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Search tabs — sync with hidden input
+    var tabs = document.querySelectorAll('.ef-search-tab');
+    var txTypeInput = document.getElementById('search-transaction-type');
+    tabs.forEach(function(tab) {
+        tab.addEventListener('click', function() {
+            tabs.forEach(function(t) { t.classList.remove('active'); });
+            tab.classList.add('active');
+            if (txTypeInput) txTypeInput.value = tab.getAttribute('data-type');
+        });
+    });
+
+    // Simulator logic
+    var priceSlider = document.getElementById('simPrice');
+    var apportSlider = document.getElementById('simApport');
+    var dureeSlider = document.getElementById('simDuree');
+    if (priceSlider && apportSlider && dureeSlider) {
+        var circumference = 2 * Math.PI * 68; // r=68
+
+        function formatFCFA(n) {
+            return new Intl.NumberFormat('fr-FR').format(n) + ' FCFA';
+        }
+
+        function updateSim() {
+            var price = parseInt(priceSlider.value);
+            var apport = parseInt(apportSlider.value);
+            var duree = parseInt(dureeSlider.value);
+
+            if (apport > price) { apport = price; apportSlider.value = apport; }
+            apportSlider.max = price;
+
+            var reste = price - apport;
+            var mensualite = duree > 0 ? Math.round(reste / duree) : 0;
+            var ownership = price > 0 ? Math.round((apport / price) * 100) : 0;
+
+            document.getElementById('simPriceDisplay').textContent = formatFCFA(price);
+            document.getElementById('simApportDisplay').textContent = formatFCFA(apport);
+            document.getElementById('simDureeDisplay').textContent = duree + ' mois';
+            document.getElementById('simMensualite').textContent = formatFCFA(mensualite);
+            document.getElementById('simReste').textContent = formatFCFA(reste);
+            document.getElementById('simTotal').textContent = formatFCFA(price);
+            document.getElementById('simOwnershipPct').textContent = ownership + '%';
+
+            // Ring animation
+            var offset = circumference - (ownership / 100) * circumference;
+            document.getElementById('simRingFill').setAttribute('stroke-dashoffset', offset);
+        }
+
+        priceSlider.addEventListener('input', updateSim);
+        apportSlider.addEventListener('input', updateSim);
+        dureeSlider.addEventListener('input', updateSim);
+        updateSim();
+    }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,220 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}Mon Profil — {{ SITE_NAME }}{% endblock %}
+
+{% block content %}
+<div class="ef-page-header ef-reveal">
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
+        <div>
+            <h2 class="ef-page-title"><i class="bi bi-person-gear"></i> Mon Profil</h2>
+            <p class="ef-page-subtitle">Gerez vos informations personnelles et votre verification</p>
+        </div>
+        <a href="{% url 'accounts:dashboard' %}" class="ef-btn ef-btn-outline-green ef-btn-sm">
+            <i class="bi bi-arrow-left"></i> Tableau de bord
+        </a>
+    </div>
+</div>
+
+<div class="ef-page-content">
+    <div class="row g-4">
+        <!-- Sidebar profil -->
+        <div class="col-lg-4 ef-reveal-left">
+            <!-- Card Avatar -->
+            <div class="ef-card mb-3">
+                <div class="ef-card-body text-center" style="padding:28px 20px">
+                    {% if user.profile.avatar %}
+                    <img src="{{ user.profile.avatar.url }}" class="rounded-circle mb-3" width="110" height="110" style="object-fit:cover;border:3px solid var(--green-100)">
+                    {% else %}
+                    <div style="width:110px;height:110px;border-radius:50%;background:linear-gradient(135deg,var(--green-50),var(--green-100));display:inline-flex;align-items:center;justify-content:center;margin-bottom:1rem">
+                        <i class="bi bi-person-fill" style="font-size:2.5rem;color:var(--green-700)"></i>
+                    </div>
+                    {% endif %}
+                    <h5 style="font-family:var(--font-display);font-weight:700;color:var(--green-900);margin-bottom:8px">{{ user.get_full_name }}</h5>
+                    <div class="d-flex justify-content-center gap-1 flex-wrap mb-3">
+                        <span class="ef-badge ef-badge-dark">{{ user.get_role_display }}</span>
+                        {% if user.is_verified %}
+                        <span class="ef-badge ef-badge-orange"><i class="bi bi-patch-check-fill"></i> Verifie</span>
+                        {% endif %}
+                    </div>
+                    <div style="border-top:1px solid var(--gray-100);padding-top:16px">
+                        <p style="color:var(--gray-400);font-size:.85rem;margin-bottom:4px;display:flex;align-items:center;justify-content:center;gap:6px">
+                            <i class="bi bi-envelope"></i> {{ user.email }}
+                        </p>
+                        {% if user.phone %}
+                        <p style="color:var(--gray-400);font-size:.85rem;margin-bottom:0;display:flex;align-items:center;justify-content:center;gap:6px">
+                            <i class="bi bi-phone"></i> {{ user.phone }}
+                        </p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Card KYC Status -->
+            <div class="ef-card mb-3">
+                <div class="ef-card-header">
+                    <h6><i class="bi bi-shield-check" style="color:var(--green-700)"></i> Verification KYC</h6>
+                </div>
+                <div class="ef-card-body">
+                    <div class="ef-progress-tracker">
+                        <div class="ef-progress-step completed">
+                            <div class="ef-progress-dot"><i class="bi bi-check2"></i></div>
+                            <div>
+                                <div class="ef-progress-label">Inscription</div>
+                                <div class="ef-progress-sub">Compte cree</div>
+                            </div>
+                        </div>
+                        <div class="ef-progress-step {% if user.profile.id_document %}completed{% else %}active{% endif %}">
+                            <div class="ef-progress-dot">
+                                {% if user.profile.id_document %}<i class="bi bi-check2"></i>{% else %}<i class="bi bi-upload"></i>{% endif %}
+                            </div>
+                            <div>
+                                <div class="ef-progress-label">Piece d'identite</div>
+                                <div class="ef-progress-sub">{% if user.profile.id_document %}Document soumis{% else %}A telecharger{% endif %}</div>
+                            </div>
+                        </div>
+                        <div class="ef-progress-step {% if user.is_verified %}completed{% elif user.profile.id_document %}active{% endif %}">
+                            <div class="ef-progress-dot">
+                                {% if user.is_verified %}<i class="bi bi-check2"></i>{% else %}3{% endif %}
+                            </div>
+                            <div>
+                                <div class="ef-progress-label">Verification</div>
+                                <div class="ef-progress-sub">{% if user.is_verified %}Approuve{% else %}En attente{% endif %}</div>
+                            </div>
+                        </div>
+                    </div>
+                    {% if not user.is_verified %}
+                    <a href="{% url 'accounts:certification' %}" class="ef-btn ef-btn-outline-orange ef-btn-sm ef-btn-block" style="margin-top:16px">
+                        <i class="bi bi-patch-check"></i> Demander la certification
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Quick Stats -->
+            <div class="ef-card">
+                <div class="ef-card-header">
+                    <h6><i class="bi bi-bar-chart" style="color:var(--orange)"></i> Activite</h6>
+                </div>
+                <div class="ef-card-body" style="padding:16px 20px">
+                    <div class="ef-info-row">
+                        <span class="ef-info-label">Membre depuis</span>
+                        <span class="ef-info-value" style="font-size:.82rem">{{ user.date_joined|date:"d/m/Y" }}</span>
+                    </div>
+                    <div class="ef-info-row">
+                        <span class="ef-info-label">Derniere connexion</span>
+                        <span class="ef-info-value" style="font-size:.82rem">{{ user.last_login|date:"d/m/Y H:i" }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Formulaire -->
+        <div class="col-lg-8 ef-reveal-right">
+            <div class="ef-card">
+                <div class="ef-card-header">
+                    <h6><i class="bi bi-pencil-square" style="color:var(--orange)"></i> Modifier mon profil</h6>
+                </div>
+                <div class="ef-card-body">
+                    <form method="post" enctype="multipart/form-data">
+                        {% csrf_token %}
+
+                        <!-- Informations personnelles -->
+                        <h6 style="font-family:var(--font-display);font-weight:700;color:var(--green-900);font-size:.9rem;margin-bottom:16px;display:flex;align-items:center;gap:8px">
+                            <span style="width:28px;height:28px;border-radius:var(--radius-sm);background:var(--green-50);display:inline-flex;align-items:center;justify-content:center"><i class="bi bi-person" style="color:var(--green-700);font-size:.8rem"></i></span>
+                            Informations personnelles
+                        </h6>
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-6">
+                                <div class="ef-form-group">
+                                    <label class="ef-form-label">Prenom</label>
+                                    {{ user_form.first_name }}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="ef-form-group">
+                                    <label class="ef-form-label">Nom</label>
+                                    {{ user_form.last_name }}
+                                </div>
+                            </div>
+                            <div class="col-12">
+                                <div class="ef-form-group">
+                                    <label class="ef-form-label">Telephone</label>
+                                    <div class="ef-input-icon">
+                                        <i class="bi bi-phone"></i>
+                                        {{ user_form.phone }}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Photo & Bio -->
+                        <h6 style="font-family:var(--font-display);font-weight:700;color:var(--green-900);font-size:.9rem;margin-bottom:16px;display:flex;align-items:center;gap:8px">
+                            <span style="width:28px;height:28px;border-radius:var(--radius-sm);background:var(--orange-light);display:inline-flex;align-items:center;justify-content:center"><i class="bi bi-image" style="color:var(--orange);font-size:.8rem"></i></span>
+                            Photo & Biographie
+                        </h6>
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-6">
+                                <div class="ef-form-group">
+                                    <label class="ef-form-label">Photo de profil</label>
+                                    {{ profile_form.avatar }}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="ef-form-group">
+                                    <label class="ef-form-label">Biographie</label>
+                                    {{ profile_form.bio }}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Adresse -->
+                        <h6 style="font-family:var(--font-display);font-weight:700;color:var(--green-900);font-size:.9rem;margin-bottom:16px;display:flex;align-items:center;gap:8px">
+                            <span style="width:28px;height:28px;border-radius:var(--radius-sm);background:var(--blue-light);display:inline-flex;align-items:center;justify-content:center"><i class="bi bi-geo-alt" style="color:var(--blue);font-size:.8rem"></i></span>
+                            Adresse
+                        </h6>
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-4">
+                                <div class="ef-form-group">
+                                    <label class="ef-form-label">Adresse</label>
+                                    {{ profile_form.address }}
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="ef-form-group">
+                                    <label class="ef-form-label">Ville</label>
+                                    {{ profile_form.city }}
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="ef-form-group">
+                                    <label class="ef-form-label">Pays</label>
+                                    {{ profile_form.country }}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- KYC Document -->
+                        <h6 style="font-family:var(--font-display);font-weight:700;color:var(--green-900);font-size:.9rem;margin-bottom:16px;display:flex;align-items:center;gap:8px">
+                            <span style="width:28px;height:28px;border-radius:var(--radius-sm);background:rgba(212,168,83,.12);display:inline-flex;align-items:center;justify-content:center"><i class="bi bi-file-earmark-lock" style="color:var(--gold);font-size:.8rem"></i></span>
+                            Verification KYC
+                        </h6>
+                        <div class="ef-form-group">
+                            <label class="ef-form-label">Piece d'identite (CNI, Passeport)</label>
+                            {{ profile_form.id_document }}
+                            <small style="color:var(--gray-400);font-size:.78rem;display:block;margin-top:6px">
+                                <i class="bi bi-info-circle me-1"></i>Document necessaire pour la verification de votre compte.
+                            </small>
+                        </div>
+
+                        <div style="border-top:1px solid var(--gray-100);padding-top:20px;margin-top:8px;display:flex;justify-content:flex-end">
+                            <button type="submit" class="ef-btn ef-btn-primary" style="padding:10px 32px">
+                                <i class="bi bi-check-lg"></i> Enregistrer les modifications
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

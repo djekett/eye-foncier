@@ -1,0 +1,106 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}Annonces — {{ SITE_NAME }}{% endblock %}
+
+{% block extra_css %}
+<style>
+.ann-hero{background:linear-gradient(135deg,#0B3D2E 0%,#0F5132 60%,#1A6B4A 100%);padding:120px 0 4.5rem;margin-top:-100px;position:relative;overflow:hidden}
+.ann-hero::before{content:'';position:absolute;top:-30%;right:-10%;width:50%;height:160%;background:radial-gradient(circle,rgba(232,121,59,.08) 0%,transparent 70%);pointer-events:none}
+.ann-hero::after{content:'';position:absolute;bottom:0;left:0;right:0;height:4px;background:repeating-linear-gradient(90deg,#E8793B 0,#E8793B 20px,var(--gold) 20px,var(--gold) 40px,#0B3D2E 40px,#0B3D2E 60px)}
+.ann-hero h1{font-size:clamp(1.8rem,4vw,2.6rem);font-weight:800;letter-spacing:-.03em;line-height:1.1;color:#fff;font-family:var(--font-display)}
+
+.ann-timeline{position:relative;padding-left:32px}
+.ann-timeline::before{content:'';position:absolute;left:11px;top:0;bottom:0;width:2px;background:linear-gradient(180deg,var(--green-900) 0%,#e2e8f0 100%);border-radius:2px}
+.ann-item{position:relative;margin-bottom:20px}
+.ann-item::before{content:'';position:absolute;left:-25px;top:20px;width:12px;height:12px;border-radius:50%;border:2.5px solid #fff;box-shadow:0 0 0 2px var(--green-900);z-index:1}
+.ann-item.urgent::before{background:var(--danger);box-shadow:0 0 0 2px var(--danger)}
+.ann-item.important::before{background:var(--warning);box-shadow:0 0 0 2px var(--warning)}
+.ann-item.info::before{background:#3b82f6;box-shadow:0 0 0 2px #3b82f6}
+
+.ann-card-inner{border-left:4px solid transparent;transition:all .2s}
+.ann-card-inner:hover{transform:translateX(4px)}
+.ann-card-inner.pinned.border-urgent{border-left-color:var(--danger)}
+.ann-card-inner.pinned.border-important{border-left-color:var(--warning)}
+.ann-card-inner.pinned.border-info{border-left-color:#3b82f6}
+
+.ann-pin{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:50px;font-size:.68rem;font-weight:700;background:rgba(239,68,68,.08);color:var(--danger)}
+
+.ann-stats{display:flex;gap:12px;flex-wrap:wrap;margin-top:-28px;position:relative;z-index:5;justify-content:center}
+.ann-stat{backdrop-filter:blur(16px);background:rgba(255,255,255,.9);border:1px solid rgba(0,0,0,.04);border-radius:12px;padding:12px 20px;display:flex;align-items:center;gap:10px;box-shadow:0 2px 12px rgba(0,0,0,.06);min-width:140px}
+.ann-stat-num{font-size:1.3rem;font-weight:800;line-height:1;color:var(--green-900);font-family:var(--font-mono)}
+.ann-stat-label{font-size:.74rem;color:var(--gray-400);font-weight:500;font-family:var(--font-body)}
+
+@media(max-width:768px){.ann-hero{padding:100px 0 3.5rem}.ann-timeline{padding-left:24px}.ann-item::before{left:-17px;width:10px;height:10px}.ann-stats{margin-top:-20px;gap:8px}.ann-stat{padding:10px 14px;min-width:auto;flex:1}}
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="ef-section-hero ann-hero">
+    <div class="container text-center">
+        <div class="d-inline-flex align-items-center gap-2 mb-3" style="backdrop-filter:blur(12px);background:rgba(232,121,59,.1);border:1px solid rgba(232,121,59,.15);border-radius:8px;padding:5px 14px">
+            <i class="bi bi-megaphone-fill" style="font-size:.8rem;color:var(--orange)"></i>
+            <span style="font-size:.78rem;font-weight:600;color:var(--orange)">Annonces officielles</span>
+        </div>
+        <h1 class="mb-3">Mises à jour &<br><span style="color:var(--orange)">Informations</span></h1>
+        <p style="color:rgba(255,255,255,.6);font-size:1rem;max-width:460px;margin:0 auto;line-height:1.7;font-family:var(--font-body)">Nouveautés, mises à jour et communications importantes de la plateforme EYE-FONCIER.</p>
+    </div>
+</section>
+
+<div class="container">
+    <div class="ann-stats">
+        {% with total=announcements|length %}
+        <div class="ann-stat">
+            <div class="ann-stat-num">{{ total }}</div>
+            <div class="ann-stat-label">Annonce{{ total|pluralize }} active{{ total|pluralize }}</div>
+        </div>
+        {% endwith %}
+    </div>
+</div>
+
+<div class="ef-page-content container py-5" style="max-width:800px">
+    {% if announcements %}
+    <div class="ann-timeline">
+        {% for a in announcements %}
+        <div class="ann-item {{ a.priority }}">
+            <div class="ef-card ann-card-inner {% if a.is_pinned %}pinned {% if a.priority == 'urgent' %}border-urgent{% elif a.priority == 'important' %}border-important{% else %}border-info{% endif %}{% endif %}">
+                <div class="ef-card-body p-4">
+                    <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3">
+                        <div class="d-flex align-items-center gap-2 flex-wrap">
+                            {% if a.is_pinned %}<span class="ann-pin"><i class="bi bi-pin-fill"></i> Épinglée</span>{% endif %}
+                            <span class="ef-badge {% if a.priority == 'urgent' %}ef-badge-danger{% elif a.priority == 'important' %}ef-badge-warning{% else %}ef-badge-info{% endif %}">
+                                <i class="bi bi-{% if a.priority == 'urgent' %}exclamation-triangle-fill{% elif a.priority == 'important' %}exclamation-circle-fill{% else %}info-circle-fill{% endif %}"></i>
+                                {{ a.get_priority_display }}
+                            </span>
+                        </div>
+                        <small class="ef-col-muted" style="font-size:.76rem">
+                            <i class="bi bi-calendar3 me-1"></i>{{ a.created_at|date:"d/m/Y à H:i" }}
+                        </small>
+                    </div>
+
+                    <h5 style="font-weight:700;line-height:1.3;color:var(--green-900);font-family:var(--font-display)" class="mb-2">{{ a.title }}</h5>
+                    <div style="color:var(--gray-400);line-height:1.75;font-size:.92rem;font-family:var(--font-body)">{{ a.content|linebreaksbr }}</div>
+
+                    {% if a.author %}
+                    <div class="mt-3 pt-3 d-flex align-items-center gap-2" style="border-top:1px solid #f1f5f9">
+                        <div class="d-flex align-items-center justify-content-center" style="width:28px;height:28px;border-radius:50%;background:var(--green-50);font-size:.7rem;font-weight:700;color:var(--green-900)">
+                            {{ a.author.first_name|default:"E"|truncatechars:1|upper }}
+                        </div>
+                        <span style="font-size:.84rem;color:var(--gray-400);font-family:var(--font-body)">{{ a.author.get_full_name|default:"Équipe EYE-Foncier" }}</span>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="ef-empty-state">
+        <div style="width:80px;height:80px;border-radius:50%;background:var(--green-50);display:inline-flex;align-items:center;justify-content:center;margin-bottom:1rem">
+            <i class="bi bi-bell-slash" style="font-size:2rem;color:var(--green-700)"></i>
+        </div>
+        <h5 style="font-family:var(--font-display);color:var(--green-900);font-weight:700;margin-bottom:.5rem">Aucune annonce pour le moment</h5>
+        <p style="color:var(--gray-400);max-width:340px;margin:0 auto;font-family:var(--font-body)">Tout va bien ! Aucune communication en cours. Revenez régulièrement.</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

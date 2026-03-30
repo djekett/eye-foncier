@@ -1,0 +1,81 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}Inspection Terrain — {{ parcelle.lot_number }} — {{ SITE_NAME }}{% endblock %}
+
+{% block content %}
+<div style="padding:0 clamp(16px,4vw,48px) 60px;max-width:800px;margin:0 auto">
+
+    <!-- Breadcrumb -->
+    <nav style="font-size:.85rem;margin-bottom:20px" class="ef-reveal">
+        <a href="{% url 'parcelles:list' %}" style="color:var(--green-700);text-decoration:none;font-weight:500">Parcelles</a>
+        <span style="color:var(--gray-300);margin:0 6px">/</span>
+        <a href="{% url 'parcelles:detail' parcelle.pk %}" style="color:var(--green-700);text-decoration:none;font-weight:500">{{ parcelle.lot_number }}</a>
+        <span style="color:var(--gray-300);margin:0 6px">/</span>
+        <a href="{% url 'parcelles:analysis' parcelle.pk %}" style="color:var(--green-700);text-decoration:none;font-weight:500">Analyse</a>
+        <span style="color:var(--gray-300);margin:0 6px">/</span>
+        <span style="color:var(--gray-400)">Inspection terrain</span>
+    </nav>
+
+    <div class="ef-card ef-reveal">
+        <div class="ef-card-header" style="background:linear-gradient(135deg,var(--green-900),#145a3e);padding:20px 24px;border-radius:var(--radius-lg) var(--radius-lg) 0 0">
+            <h3 style="color:#fff;font-family:var(--font-display);margin:0">
+                <i class="bi bi-binoculars" style="color:var(--orange)"></i> Inspection Terrain
+            </h3>
+            <p style="color:rgba(255,255,255,.7);margin:4px 0 0;font-size:.88rem">
+                Lot {{ parcelle.lot_number }} — {{ parcelle.title }}
+            </p>
+        </div>
+
+        <div class="ef-card-body" style="padding:24px">
+            <!-- Résumé parcelle -->
+            <div style="background:var(--sand);border-radius:var(--radius-md);padding:14px 18px;margin-bottom:20px;display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:.88rem">
+                <div>
+                    <span style="color:var(--gray-400)">Surface déclarée</span><br>
+                    <strong>{{ parcelle.surface_m2|floatformat:0 }} m²</strong>
+                </div>
+                <div>
+                    <span style="color:var(--gray-400)">Zone</span><br>
+                    <strong>{{ parcelle.zone|default:"—" }}</strong>
+                </div>
+                <div>
+                    <span style="color:var(--gray-400)">Adresse</span><br>
+                    <strong>{{ parcelle.address|default:"Non renseignée" }}</strong>
+                </div>
+                <div>
+                    <span style="color:var(--gray-400)">Score actuel</span><br>
+                    <strong style="color:var(--green-900)">{{ analysis.overall_score }}/100 ({{ analysis.reliability_grade }})</strong>
+                </div>
+            </div>
+
+            <form method="post">
+                {% csrf_token %}
+
+                <div class="ef-form-group">
+                    <label class="ef-form-label">Score d'inspection terrain (0 à 100)</label>
+                    <input type="number" name="terrain_score" class="ef-form-control"
+                           min="0" max="100" value="50" required
+                           style="max-width:200px">
+                    <small style="color:var(--gray-400)">
+                        0 = terrain inaccessible ou non conforme, 100 = parfaitement conforme
+                    </small>
+                </div>
+
+                <div class="ef-form-group">
+                    <label class="ef-form-label">Notes d'inspection</label>
+                    <textarea name="terrain_notes" rows="5" class="ef-form-control"
+                              placeholder="Décrivez l'état du terrain, les bornes, l'accessibilité, les constructions voisines, les anomalies constatées..."></textarea>
+                </div>
+
+                <div style="display:flex;gap:10px;margin-top:20px">
+                    <button type="submit" class="ef-btn ef-btn-primary" style="padding:10px 28px">
+                        <i class="bi bi-check-lg"></i> Enregistrer l'inspection
+                    </button>
+                    <a href="{% url 'parcelles:analysis' parcelle.pk %}" class="ef-btn ef-btn-outline-secondary">
+                        Annuler
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

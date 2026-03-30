@@ -1,0 +1,58 @@
+{% load static %}
+<!-- Kente Line -->
+<div class="ef-kente-line"></div>
+
+<footer class="ef-footer mt-auto">
+    <div class="ef-footer-inner">
+        <!-- Brand -->
+        <div class="ef-footer-brand">
+            <a class="ef-logo" href="{% url 'websig:home' %}" style="color:white">
+                <div class="ef-logo-icon" style="background:rgba(255,255,255,.06)">
+                    <img src="{% static 'img/logo.png' %}" alt="Logo">
+                </div>
+                <span>EYE</span>-FONCIER
+            </a>
+            <p>La 1ere plateforme de transaction fonciere securisee en Cote d'Ivoire.</p>
+            <div class="ef-footer-badges">
+                <span class="ef-footer-badge"><i class="bi bi-shield-check me-1"></i>Securise SSL</span>
+                <span class="ef-footer-badge"><i class="bi bi-patch-check me-1"></i>Conforme ARTCI</span>
+            </div>
+        </div>
+
+        <!-- Acheteurs -->
+        <div class="ef-footer-col">
+            <h4>Acheteurs</h4>
+            <a href="{% url 'parcelles:list' %}">Rechercher un bien</a>
+            <a href="{% url 'websig:map' %}">Carte interactive</a>
+            <a href="{% url 'analysis:buyer_profile' %}">Mon profil acheteur</a>
+            <a href="{% url 'accounts:register' %}">Creer un compte</a>
+        </div>
+
+        <!-- Professionnels -->
+        <div class="ef-footer-col">
+            <h4>Professionnels</h4>
+            <a href="{% url 'parcelles:create' %}">Deposer une annonce</a>
+            <a href="{% url 'transactions:list' %}">Mes transactions</a>
+            <a href="{% url 'analysis:dashboard' %}">Dashboard Analyse</a>
+            <a href="{% url 'content:documentation' %}">Documentation API</a>
+        </div>
+
+        <!-- Contact -->
+        <div class="ef-footer-col">
+            <h4>Contact</h4>
+            <a href="mailto:eyeafrica07@gmail.com"><i class="bi bi-envelope me-1"></i> eyeafrica07@gmail.com</a>
+            <a href="tel:+2250709422551"><i class="bi bi-phone me-1"></i> +225 07 09 42 25 51</a>
+            <a href="#"><i class="bi bi-geo-alt me-1"></i> Yamoussoukro, CI</a>
+        </div>
+    </div>
+
+    <div class="ef-footer-bottom">
+        <p>&copy; {% now "Y" %} EYE-FONCIER. Tous droits reserves. <span style="opacity:.5">Conforme ARTCI</span></p>
+        <div class="ef-footer-social">
+            <a href="#" title="Facebook"><i class="bi bi-facebook"></i></a>
+            <a href="#" title="Instagram"><i class="bi bi-instagram"></i></a>
+            <a href="#" title="LinkedIn"><i class="bi bi-linkedin"></i></a>
+            <a href="#" title="YouTube"><i class="bi bi-youtube"></i></a>
+        </div>
+    </div>
+</footer>

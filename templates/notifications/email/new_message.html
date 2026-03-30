@@ -1,0 +1,43 @@
+{% extends "notifications/email_base.html" %}
+{% block email_content %}
+<tr>
+    <td style="padding:32px">
+        <h2 style="color:#0B3D2E;margin:0 0 16px;font-size:18px;font-weight:700">
+            {{ title }}
+        </h2>
+
+        <p style="color:#374151;font-size:15px;line-height:1.6;margin:0 0 20px">
+            {{ message }}
+        </p>
+
+        {% if data.sender_name %}
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f8faf9;border-radius:8px;margin:0 0 24px;border-left:4px solid #16a34a">
+            <tr>
+                <td style="padding:16px">
+                    <p style="color:#0B3D2E;font-size:14px;font-weight:600;margin:0 0 8px">
+                        {{ data.sender_name }}
+                    </p>
+                    {% if data.message_preview %}
+                    <p style="color:#6b7280;font-size:13px;margin:0;font-style:italic">
+                        "{{ data.message_preview }}"
+                    </p>
+                    {% endif %}
+                </td>
+            </tr>
+        </table>
+        {% endif %}
+
+        {% if data.action_url %}
+        <table role="presentation" cellspacing="0" cellpadding="0" style="margin:0 auto">
+            <tr>
+                <td style="background:#16a34a;border-radius:8px;padding:12px 28px">
+                    <a href="{{ data.action_url }}" style="color:#ffffff;text-decoration:none;font-weight:700;font-size:14px">
+                        Répondre au message
+                    </a>
+                </td>
+            </tr>
+        </table>
+        {% endif %}
+    </td>
+</tr>
+{% endblock %}

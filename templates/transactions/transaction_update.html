@@ -1,0 +1,52 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}Mettre à jour — {{ transaction.reference }} — {{ SITE_NAME }}{% endblock %}
+
+{% block content %}
+<div class="ef-page-header">
+    <nav class="ef-breadcrumb">
+        <a href="{% url 'transactions:detail' transaction.pk %}">{{ transaction.reference }}</a>
+        <span class="sep">/</span>
+        <span class="current">Modifier</span>
+    </nav>
+</div>
+
+<div class="ef-page-content" style="max-width:600px; margin:0 auto">
+    <div class="ef-card">
+        <div class="ef-card-header">
+            <h3 style="font-family:var(--font-display); color:#0B3D2E; margin:0">
+                <i class="bi bi-pencil-square" style="color:#E8793B"></i> Mettre à jour la transaction
+            </h3>
+            <span style="font-size:.85rem; color:#6b7280">{{ transaction.reference }}</span>
+        </div>
+        <div class="ef-card-body">
+            <!-- Transaction summary -->
+            <div style="background:#F7F4EE; border-radius:.5rem; padding:1rem; margin-bottom:1.5rem; display:flex; justify-content:space-between; align-items:center">
+                <div>
+                    <p style="font-weight:600; margin:0 0 .15rem">{{ transaction.parcelle.title }}</p>
+                    <span style="font-size:.8rem; color:#6b7280">Acheteur : {{ transaction.buyer.get_full_name }}</span>
+                </div>
+                <span style="font-family:var(--font-mono); font-weight:700; color:#0B3D2E">{{ transaction.amount|floatformat:0 }} FCFA</span>
+            </div>
+
+            <form method="post">
+                {% csrf_token %}
+                <div class="ef-form-group">
+                    <label class="ef-form-label">Nouveau statut</label>
+                    {{ form.status }}
+                </div>
+                <div class="ef-form-group">
+                    <label class="ef-form-label">Notes</label>
+                    {{ form.notes }}
+                </div>
+                <div style="display:flex; gap:.75rem">
+                    <button type="submit" class="ef-btn ef-btn-primary">
+                        <i class="bi bi-check-lg"></i> Enregistrer
+                    </button>
+                    <a href="{% url 'transactions:detail' transaction.pk %}" class="ef-btn ef-btn-outline-green">Annuler</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

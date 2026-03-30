@@ -1,0 +1,241 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}Profil Acheteur — {{ SITE_NAME }}{% endblock %}
+
+{% block content %}
+<div class="ef-page-header ef-reveal">
+    <div class="container">
+        <nav class="ef-breadcrumb mb-3">
+            <a href="{% url 'analysis:dashboard' %}">Analyses</a>
+            <span class="sep">/</span>
+            <span class="current">Mon Profil Acheteur</span>
+        </nav>
+        <h2 style="font-family:var(--font-display);color:var(--green-900);font-weight:800">
+            <i class="bi bi-person-gear me-2" style="color:var(--orange)"></i>Mon Profil Acheteur
+        </h2>
+        <p style="color:var(--gray-400)">Configurez vos critères pour que l'algorithme vous trouve les meilleures parcelles.</p>
+    </div>
+</div>
+
+<div class="ef-page-content container">
+    <form method="post">
+        {% csrf_token %}
+
+        {% if form.errors %}
+        <div class="ef-card" style="border-left:4px solid var(--danger);margin-bottom:1.5rem">
+            <div class="ef-card-body" style="font-size:.88rem">
+                <i class="bi bi-exclamation-triangle me-1" style="color:var(--danger)"></i>
+                {% for error in form.non_field_errors %}{{ error }}<br>{% endfor %}
+                {% for field in form %}{% for error in field.errors %}<strong>{{ field.label }}</strong> : {{ error }}<br>{% endfor %}{% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="row g-4">
+            <!-- Colonne gauche : Budget & Surface -->
+            <div class="col-lg-6 ef-reveal">
+                <div class="ef-card" style="margin-bottom:1.5rem">
+                    <div class="ef-card-header">
+                        <h6><i class="bi bi-cash-stack me-2" style="color:var(--green-700)"></i>Budget & Surface</h6>
+                    </div>
+                    <div class="ef-card-body">
+                        <div class="row g-3">
+                            <div class="col-6">
+                                <div class="ef-form-group">
+                                    <label class="ef-form-label">Budget min (FCFA)</label>
+                                    {{ form.budget_min }}
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="ef-form-group">
+                                    <label class="ef-form-label">Budget max (FCFA)</label>
+                                    {{ form.budget_max }}
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="ef-form-group">
+                                    <label class="ef-form-label">Surface min (m²)</label>
+                                    {{ form.surface_min }}
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="ef-form-group">
+                                    <label class="ef-form-label">Surface max (m²)</label>
+                                    {{ form.surface_max }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="ef-card" style="margin-bottom:1.5rem">
+                    <div class="ef-card-header">
+                        <h6><i class="bi bi-heart me-2" style="color:var(--green-700)"></i>Préférences</h6>
+                    </div>
+                    <div class="ef-card-body">
+                        <div class="ef-form-group">
+                            <label class="ef-form-label">Type de projet</label>
+                            {{ form.project_type }}
+                        </div>
+                        <div class="ef-form-group">
+                            <label class="ef-form-label">Style de vie</label>
+                            {{ form.lifestyle }}
+                        </div>
+                        <div class="ef-form-group">
+                            <label class="ef-form-label">Tolérance au risque</label>
+                            {{ form.risk_tolerance }}
+                        </div>
+                        <div class="ef-form-group">
+                            <label class="ef-form-label">Types de terrain</label>
+                            <div class="d-flex flex-wrap gap-2">
+                                {% for choice in form.preferred_land_types %}
+                                <div class="form-check">{{ choice }}</div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="ef-card">
+                    <div class="ef-card-header">
+                        <h6><i class="bi bi-geo-alt me-2" style="color:var(--green-700)"></i>Localisation</h6>
+                    </div>
+                    <div class="ef-card-body">
+                        <div class="ef-form-group">
+                            <label class="ef-form-label">Zones préférées</label>
+                            <div style="border:1px solid var(--gray-200);border-radius:8px;padding:.5rem;max-height:150px;overflow-y:auto">
+                                {{ form.preferred_zones }}
+                            </div>
+                        </div>
+                        <div class="row g-3">
+                            <div class="col-6">
+                                <div class="ef-form-group">
+                                    <label class="ef-form-label">Latitude (réf.)</label>
+                                    {{ form.ref_latitude }}
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="ef-form-group">
+                                    <label class="ef-form-label">Longitude (réf.)</label>
+                                    {{ form.ref_longitude }}
+                                </div>
+                            </div>
+                            <div class="col-12">
+                                <div class="ef-form-group">
+                                    <label class="ef-form-label">Temps de trajet max (min)</label>
+                                    {{ form.max_travel_minutes }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Colonne droite : Pondération & Notifications -->
+            <div class="col-lg-6 ef-reveal-right">
+                <div class="ef-card" style="border-top:3px solid var(--green-700);margin-bottom:1.5rem">
+                    <div class="ef-card-header">
+                        <h6><i class="bi bi-sliders me-2" style="color:var(--green-700)"></i>Pondération de l'algorithme</h6>
+                        <div style="color:var(--gray-400);font-size:.84rem;font-weight:400;margin-top:.25rem">
+                            Ajustez l'importance de chaque critère. La somme doit être = 1.0
+                        </div>
+                    </div>
+                    <div class="ef-card-body">
+                        <div class="ef-form-group">
+                            <label class="ef-form-label d-flex justify-content-between">
+                                <span><i class="bi bi-currency-dollar" style="color:var(--green-700)"></i> Prix (Wp)</span>
+                                <span id="wp_val" style="font-family:var(--font-mono)">{{ form.weight_price.value|default:"0.30" }}</span>
+                            </label>
+                            {{ form.weight_price }}
+                            <div style="font-size:.78rem;color:var(--gray-400);margin-top:.25rem">Importance du rapport qualité/prix</div>
+                        </div>
+                        <div class="ef-form-group">
+                            <label class="ef-form-label d-flex justify-content-between">
+                                <span><i class="bi bi-geo" style="color:var(--blue)"></i> Localisation (Wl)</span>
+                                <span id="wl_val" style="font-family:var(--font-mono)">{{ form.weight_location.value|default:"0.25" }}</span>
+                            </label>
+                            {{ form.weight_location }}
+                            <div style="font-size:.78rem;color:var(--gray-400);margin-top:.25rem">Proximité et zone préférée</div>
+                        </div>
+                        <div class="ef-form-group">
+                            <label class="ef-form-label d-flex justify-content-between">
+                                <span><i class="bi bi-graph-up" style="color:var(--warning)"></i> Technique (Wt)</span>
+                                <span id="wt_val" style="font-family:var(--font-mono)">{{ form.weight_technical.value|default:"0.25" }}</span>
+                            </label>
+                            {{ form.weight_technical }}
+                            <div style="font-size:.78rem;color:var(--gray-400);margin-top:.25rem">Qualité du terrain (pente, drainage, etc.)</div>
+                        </div>
+                        <div class="ef-form-group">
+                            <label class="ef-form-label d-flex justify-content-between">
+                                <span><i class="bi bi-shield-check" style="color:var(--blue)"></i> Fiabilité vendeur (Wv)</span>
+                                <span id="wv_val" style="font-family:var(--font-mono)">{{ form.weight_seller.value|default:"0.20" }}</span>
+                            </label>
+                            {{ form.weight_seller }}
+                            <div style="font-size:.78rem;color:var(--gray-400);margin-top:.25rem">Documents, KYC, historique</div>
+                        </div>
+
+                        <div class="ef-card" style="background:var(--sand);font-size:.88rem;padding:.75rem 1rem;margin-top:.5rem">
+                            <strong>Total :</strong> <span id="weight_total" style="font-family:var(--font-mono)">1.00</span>
+                            <span id="weight_status" class="ms-2"></span>
+                        </div>
+
+                        <div style="background:var(--green-50);border-radius:8px;padding:.75rem 1rem;margin-top:1rem">
+                            <strong style="font-size:.84rem">Formule de matching :</strong>
+                            <div style="font-family:var(--font-mono);font-size:.84rem;margin-top:.25rem">
+                                S = (Wp × S<sub>prix</sub>) + (Wl × S<sub>loc</sub>) + (Wt × S<sub>tech</sub>) + (Wv × S<sub>vendeur</sub>)
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="ef-card">
+                    <div class="ef-card-header">
+                        <h6><i class="bi bi-bell me-2" style="color:var(--warning)"></i>Notifications</h6>
+                    </div>
+                    <div class="ef-card-body">
+                        <div class="form-check mb-3">
+                            {{ form.notify_on_match }}
+                            <label class="form-check-label" for="{{ form.notify_on_match.id_for_label }}">
+                                Recevoir des alertes « Opportunité en Or »
+                            </label>
+                        </div>
+                        <div class="ef-form-group">
+                            <label class="ef-form-label">Seuil d'alerte (%)</label>
+                            {{ form.match_threshold }}
+                            <div style="font-size:.78rem;color:var(--gray-400);margin-top:.25rem">Notification si score ≥ ce seuil</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-4 d-grid">
+                    <button type="submit" class="ef-btn ef-btn-primary ef-btn-lg ef-btn-block">
+                        <i class="bi bi-check-lg me-1"></i>Sauvegarder & Lancer le Matching
+                    </button>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+
+<script>
+// Live weight total calculation
+document.querySelectorAll('#id_weight_price, #id_weight_location, #id_weight_technical, #id_weight_seller').forEach(el => {
+    el.addEventListener('input', updateWeightTotal);
+});
+function updateWeightTotal() {
+    const wp = parseFloat(document.getElementById('id_weight_price').value) || 0;
+    const wl = parseFloat(document.getElementById('id_weight_location').value) || 0;
+    const wt = parseFloat(document.getElementById('id_weight_technical').value) || 0;
+    const wv = parseFloat(document.getElementById('id_weight_seller').value) || 0;
+    const total = wp + wl + wt + wv;
+    document.getElementById('weight_total').textContent = total.toFixed(2);
+    const status = document.getElementById('weight_status');
+    if (Math.abs(total - 1.0) < 0.05) {
+        status.innerHTML = '<span style="color:var(--success)">✓ OK</span>';
+    } else {
+        status.innerHTML = '<span style="color:var(--danger)">✗ Doit être ≈ 1.0</span>';
+    }
+}
+updateWeightTotal();
+</script>
+{% endblock %}

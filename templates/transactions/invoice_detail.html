@@ -1,0 +1,164 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}Facture {{ invoice.invoice_number }} — {{ SITE_NAME }}{% endblock %}
+
+{% block extra_css %}
+<style>
+.inv-page{padding:0 clamp(16px,4vw,48px) 60px;max-width:900px;margin:0 auto}
+.inv-header-bar{background:linear-gradient(135deg,var(--green-900),#145a3e);border-radius:var(--radius-lg);padding:24px 30px;color:#fff;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1rem;margin-bottom:1.5rem}
+.inv-number{font-size:1.4rem;font-weight:900;font-family:var(--font-display)}
+.inv-status{display:inline-flex;padding:6px 16px;border-radius:20px;font-weight:700;font-size:.82rem;text-transform:uppercase;letter-spacing:.5px}
+.inv-status-paid{background:rgba(34,197,94,.2);color:#86efac}
+.inv-status-issued{background:rgba(251,191,36,.2);color:#fde68a}
+.inv-status-draft{background:rgba(255,255,255,.15);color:rgba(255,255,255,.7)}
+.inv-status-overdue{background:rgba(239,68,68,.2);color:#fca5a5}
+.inv-grid{display:grid;grid-template-columns:1fr 1fr;gap:1.25rem;margin-bottom:1.5rem}
+.inv-box{background:var(--white);border-radius:var(--radius-lg);box-shadow:var(--shadow-sm);border:1px solid var(--gray-200);padding:18px 22px}
+.inv-box h5{font-size:.7rem;text-transform:uppercase;letter-spacing:1px;color:var(--gray-400);margin:0 0 8px;font-weight:700}
+.inv-box .name{font-weight:700;color:var(--green-900);font-size:.95rem}
+.inv-box p{margin:2px 0;font-size:.88rem;color:var(--dark)}
+.inv-table{width:100%;border-collapse:collapse}
+.inv-table thead th{background:var(--green-900);color:#fff;padding:10px 14px;font-size:.78rem;text-transform:uppercase;letter-spacing:.5px;text-align:left}
+.inv-table thead th:last-child,.inv-table thead th:nth-child(3),.inv-table thead th:nth-child(4){text-align:right}
+.inv-table tbody td{padding:10px 14px;border-bottom:1px solid var(--gray-100);font-size:.88rem}
+.inv-table tbody td:last-child,.inv-table tbody td:nth-child(3),.inv-table tbody td:nth-child(4){text-align:right;font-family:'Courier New',monospace;font-weight:600}
+.inv-table tfoot td{padding:8px 14px;font-size:.88rem}
+.inv-total-row{font-weight:800;font-size:1rem;color:var(--green-900);border-top:2px solid var(--green-900)}
+.inv-meta-row{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--gray-100);font-size:.88rem}
+.inv-meta-row:last-child{border-bottom:none}
+.inv-meta-label{color:var(--gray-400);font-weight:500}
+.inv-meta-value{font-weight:600;color:var(--dark)}
+@media(max-width:640px){.inv-grid{grid-template-columns:1fr}.inv-header-bar{flex-direction:column;text-align:center}}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="inv-page">
+
+    <!-- Breadcrumb -->
+    <nav style="font-size:.85rem;margin-bottom:20px" class="ef-reveal">
+        <a href="{% url 'transactions:invoice_list' %}" style="color:var(--green-700);text-decoration:none;font-weight:500">Factures</a>
+        <span style="color:var(--gray-300);margin:0 6px">/</span>
+        <span style="color:var(--gray-400)">{{ invoice.invoice_number }}</span>
+    </nav>
+
+    <!-- Header -->
+    <div class="inv-header-bar ef-reveal">
+        <div>
+            <p class="inv-number">{{ invoice.invoice_number }}</p>
+            <p style="margin:4px 0 0;opacity:.7;font-size:.88rem">{{ invoice.get_invoice_type_display }}</p>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px">
+            <span class="inv-status inv-status-{{ invoice.status }}">{{ invoice.get_status_display }}</span>
+            {% if invoice.pdf_file %}
+            <a href="{% url 'transactions:invoice_pdf' invoice.pk %}" class="ef-btn" style="background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.3);font-size:.82rem;padding:8px 18px" target="_blank">
+                <i class="bi bi-download"></i> PDF
+            </a>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Emetteur / Client -->
+    <div class="inv-grid ef-stagger">
+        <div class="inv-box">
+            <h5>Emetteur</h5>
+            <p class="name">EYE-FONCIER</p>
+            <p>Plateforme de Transaction Fonciere Securisee</p>
+            <p style="font-size:.82rem;color:var(--gray-400)">Abidjan, Cote d'Ivoire</p>
+        </div>
+        <div class="inv-box">
+            <h5>Client</h5>
+            <p class="name">{{ invoice.client_name }}</p>
+            <p>{{ invoice.client_email }}</p>
+            {% if invoice.client_phone %}<p>Tel: {{ invoice.client_phone }}</p>{% endif %}
+        </div>
+    </div>
+
+    <!-- Méta-données -->
+    <div class="ef-card ef-reveal" style="margin-bottom:1.5rem">
+        <div class="ef-card-body" style="padding:16px 22px">
+            <div class="inv-meta-row">
+                <span class="inv-meta-label">Date d'emission</span>
+                <span class="inv-meta-value">{{ invoice.issued_at|date:"d/m/Y" }}</span>
+            </div>
+            {% if invoice.payment_reference %}
+            <div class="inv-meta-row">
+                <span class="inv-meta-label">Reference paiement</span>
+                <span class="inv-meta-value">{{ invoice.payment_reference }}</span>
+            </div>
+            {% endif %}
+            {% if invoice.payment_method %}
+            <div class="inv-meta-row">
+                <span class="inv-meta-label">Mode de paiement</span>
+                <span class="inv-meta-value">{{ invoice.get_payment_method_display }}</span>
+            </div>
+            {% endif %}
+            {% if invoice.paid_at %}
+            <div class="inv-meta-row">
+                <span class="inv-meta-label">Date paiement</span>
+                <span class="inv-meta-value">{{ invoice.paid_at|date:"d/m/Y H:i" }}</span>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Lignes de facture -->
+    <div class="ef-card ef-reveal" style="margin-bottom:1.5rem;overflow-x:auto">
+        <table class="inv-table">
+            <thead>
+                <tr>
+                    <th style="width:55%">Description</th>
+                    <th style="width:10%;text-align:center">Qte</th>
+                    <th style="width:17%">Prix unit.</th>
+                    <th style="width:18%">Total</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in invoice.line_items %}
+                <tr>
+                    <td>
+                        {{ item.description }}
+                        {% if item.detail %}<br><span style="font-size:.78rem;color:var(--gray-400);font-style:italic">{{ item.detail }}</span>{% endif %}
+                    </td>
+                    <td style="text-align:center">{{ item.quantity }}</td>
+                    <td>{{ item.unit_price|floatformat:0 }} FCFA</td>
+                    <td>{{ item.total|floatformat:0 }} FCFA</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+            <tfoot>
+                <tr>
+                    <td colspan="3" style="text-align:right;color:var(--gray-400)">Sous-total HT</td>
+                    <td style="text-align:right;font-family:'Courier New',monospace;font-weight:600">{{ invoice.subtotal|floatformat:0 }} FCFA</td>
+                </tr>
+                {% if invoice.tax_amount %}
+                <tr>
+                    <td colspan="3" style="text-align:right;color:var(--gray-400)">TVA ({{ invoice.tax_rate }}%)</td>
+                    <td style="text-align:right;font-family:'Courier New',monospace;font-weight:600">{{ invoice.tax_amount|floatformat:0 }} FCFA</td>
+                </tr>
+                {% endif %}
+                <tr>
+                    <td colspan="3" style="text-align:right" class="inv-total-row">TOTAL TTC</td>
+                    <td style="text-align:right;font-family:'Courier New',monospace" class="inv-total-row">{{ invoice.total|floatformat:0 }} FCFA</td>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+
+    <!-- Description -->
+    {% if invoice.description %}
+    <div class="ef-card ef-reveal" style="margin-bottom:1.5rem">
+        <div class="ef-card-body" style="padding:16px 22px">
+            <h6 style="font-size:.78rem;text-transform:uppercase;color:var(--gray-400);margin:0 0 6px;letter-spacing:1px">Details</h6>
+            <p style="margin:0;font-size:.88rem;color:var(--dark)">{{ invoice.description }}</p>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Footer -->
+    <div style="text-align:center;padding:20px 0;font-size:.78rem;color:var(--gray-300)">
+        <p>Facture generee automatiquement par la plateforme EYE-FONCIER.</p>
+        <p>Ce document fait office de justificatif de paiement.</p>
+    </div>
+</div>
+{% endblock %}

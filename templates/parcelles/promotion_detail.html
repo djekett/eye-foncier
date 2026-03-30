@@ -1,0 +1,181 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}Promotion {{ parcelle.lot_number }} — {{ SITE_NAME }}{% endblock %}
+
+{% block content %}
+<div class="container py-4" style="max-width:900px">
+    <nav aria-label="breadcrumb" class="mb-3">
+        <ol class="breadcrumb small">
+            <li class="breadcrumb-item"><a href="{% url 'parcelles:my_promotions' %}" class="text-success">Mes promotions</a></li>
+            <li class="breadcrumb-item active">{{ parcelle.lot_number }}</li>
+        </ol>
+    </nav>
+
+    <div class="row g-4">
+        <!-- Infos campagne -->
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <div>
+                            <h4 class="fw-bold mb-1">
+                                <i class="bi bi-megaphone me-2 text-warning"></i>
+                                Promotion — Lot {{ parcelle.lot_number }}
+                            </h4>
+                            <p class="text-muted mb-0">{{ parcelle.title }}</p>
+                        </div>
+                        <span class="badge px-3 py-2 fs-6
+                            {% if campaign.status == 'active' %}bg-success
+                            {% elif campaign.status == 'pending_payment' %}bg-warning text-dark
+                            {% elif campaign.status == 'completed' %}bg-secondary
+                            {% elif campaign.status == 'paused' %}bg-info
+                            {% else %}bg-light text-dark border{% endif %}">
+                            {{ campaign.get_status_display }}
+                        </span>
+                    </div>
+
+                    <div class="row g-3 mb-4">
+                        <div class="col-6 col-md-3">
+                            <div class="text-center p-3 rounded" style="background:#f0fdf4">
+                                <div class="small text-muted">Plan</div>
+                                <div class="fw-bold" style="color:#166534">{{ campaign.get_campaign_type_display }}</div>
+                            </div>
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <div class="text-center p-3 rounded" style="background:#fffbeb">
+                                <div class="small text-muted">Durée</div>
+                                <div class="fw-bold text-warning">{{ campaign.duration_weeks }} sem.</div>
+                            </div>
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <div class="text-center p-3 rounded" style="background:#eff6ff">
+                                <div class="small text-muted">Montant</div>
+                                <div class="fw-bold text-primary">{{ campaign.amount_paid|floatformat:0 }} FCFA</div>
+                            </div>
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <div class="text-center p-3 rounded" style="background:#faf5ff">
+                                <div class="small text-muted">Paiement</div>
+                                <div class="fw-bold" style="color:#8b5cf6">{{ campaign.get_payment_method_display }}</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {% if campaign.highlight_text %}
+                    <div class="alert alert-warning border-0 mb-4">
+                        <i class="bi bi-chat-quote me-1"></i>
+                        <strong>Accroche :</strong> {{ campaign.highlight_text }}
+                    </div>
+                    {% endif %}
+
+                    <!-- Dates -->
+                    <div class="row g-2 small text-muted">
+                        <div class="col-md-4">
+                            <i class="bi bi-calendar-plus me-1"></i> Créée : {{ campaign.created_at|date:"d/m/Y H:i" }}
+                        </div>
+                        {% if campaign.start_date %}
+                        <div class="col-md-4">
+                            <i class="bi bi-play-circle me-1"></i> Début : {{ campaign.start_date|date:"d/m/Y" }}
+                        </div>
+                        {% endif %}
+                        {% if campaign.end_date %}
+                        <div class="col-md-4">
+                            <i class="bi bi-stop-circle me-1"></i> Fin : {{ campaign.end_date|date:"d/m/Y" }}
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Statistiques -->
+            <div class="card border-0 shadow-sm mt-3">
+                <div class="card-body">
+                    <h5 class="fw-bold mb-3"><i class="bi bi-bar-chart me-2 text-success"></i>Performance</h5>
+                    <div class="row g-3">
+                        <div class="col-4">
+                            <div class="text-center">
+                                <div class="display-5 fw-bold" style="color:#166534">{{ campaign.impressions }}</div>
+                                <div class="small text-muted">Impressions</div>
+                                <div class="text-muted" style="font-size:.7rem">Nombre de fois affichée</div>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="text-center">
+                                <div class="display-5 fw-bold text-primary">{{ campaign.clicks }}</div>
+                                <div class="small text-muted">Clics</div>
+                                <div class="text-muted" style="font-size:.7rem">Acheteurs intéressés</div>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="text-center">
+                                <div class="display-5 fw-bold text-warning">{{ campaign.ctr }}%</div>
+                                <div class="small text-muted">Taux de clic</div>
+                                <div class="text-muted" style="font-size:.7rem">Efficacité de la campagne</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar parcelle -->
+        <div class="col-lg-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <h6 class="fw-bold mb-3">Parcelle promue</h6>
+                    <div class="small mb-2">
+                        <span class="text-muted">Lot :</span> <strong>{{ parcelle.lot_number }}</strong>
+                    </div>
+                    {% if parcelle.price %}
+                    <div class="small mb-2">
+                        <span class="text-muted">Prix :</span>
+                        <strong style="color:#166534">{{ parcelle.price|floatformat:0 }} FCFA</strong>
+                    </div>
+                    {% endif %}
+                    {% if parcelle.surface_m2 %}
+                    <div class="small mb-2">
+                        <span class="text-muted">Surface :</span> {{ parcelle.surface_m2|floatformat:0 }} m²
+                    </div>
+                    {% endif %}
+                    {% if parcelle.zone %}
+                    <div class="small mb-2">
+                        <span class="text-muted">Zone :</span> {{ parcelle.zone.name }}
+                    </div>
+                    {% endif %}
+                    <a href="{% url 'parcelles:detail' parcelle.pk %}" class="btn btn-outline-success btn-sm w-100 mt-3">
+                        <i class="bi bi-eye me-1"></i> Voir la parcelle
+                    </a>
+                </div>
+            </div>
+
+            {% if campaign.status == 'pending_payment' %}
+            <div class="card border-warning mt-3">
+                <div class="card-body text-center">
+                    <i class="bi bi-exclamation-triangle text-warning" style="font-size:2rem"></i>
+                    <h6 class="fw-bold mt-2">Paiement en attente</h6>
+                    <p class="text-muted small">Votre campagne sera activée dès réception du paiement.</p>
+                    <div class="fw-bold fs-5 text-warning mb-3">{{ campaign.amount_paid|floatformat:0 }} FCFA</div>
+
+                    <form method="post" action="{% url 'transactions:payment_initiate' %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="payment_type" value="promotion">
+                        <input type="hidden" name="amount" value="{{ campaign.amount_paid|floatformat:0 }}">
+                        <input type="hidden" name="reference_id" value="{{ campaign.pk }}">
+                        <input type="hidden" name="description" value="Promotion {{ campaign.get_campaign_type_display }} — Lot {{ parcelle.lot_number }}">
+                        <button type="submit" class="btn btn-success w-100 fw-bold">
+                            <i class="bi bi-lock me-1"></i> Payer maintenant — {{ campaign.amount_paid|floatformat:0 }} FCFA
+                        </button>
+                    </form>
+
+                    <div class="mt-3 d-flex justify-content-center gap-3 small text-muted">
+                        <span><i class="bi bi-phone me-1"></i>Mobile Money</span>
+                        <span><i class="bi bi-credit-card me-1"></i>Carte</span>
+                        <span><i class="bi bi-tsunami me-1"></i>Wave</span>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,272 @@
+{% extends "layouts/base.html" %}
+{% load static humanize %}
+
+{% block title %}Boutiques — Marketplace | {{ SITE_NAME }}{% endblock %}
+
+{% block extra_css %}
+<style>
+.marketplace-page{max-width:1200px;margin:0 auto;padding:0 clamp(16px,4vw,48px) 60px}
+
+/* Hero */
+.mp-hero{
+    background:linear-gradient(135deg,#0B3D2E 0%,#145a3e 40%,#1a6b4a 70%,#E8793B 100%);
+    border-radius:var(--radius-lg);padding:40px 36px;color:#fff;position:relative;overflow:hidden;margin-bottom:1.5rem
+}
+.mp-hero::before{
+    content:'';position:absolute;inset:0;
+    background:url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.04'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E") repeat;
+}
+.mp-hero>*{position:relative;z-index:1}
+.mp-hero h1{font-family:var(--font-display);font-weight:900;font-size:1.8rem;margin:0 0 8px}
+.mp-hero p{font-size:.92rem;opacity:.85;max-width:500px;margin:0}
+
+/* Stats bar */
+.mp-stats{display:flex;gap:1.5rem;margin-top:20px;flex-wrap:wrap}
+.mp-stat{display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.12);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.15);border-radius:var(--radius-md);padding:10px 18px}
+.mp-stat-val{font-family:var(--font-mono);font-weight:800;font-size:1.2rem}
+.mp-stat-lbl{font-size:.72rem;opacity:.7}
+
+/* Search & Filters */
+.mp-toolbar{
+    background:var(--white);border-radius:var(--radius-lg);box-shadow:var(--shadow-sm);
+    border:1px solid var(--gray-200);padding:16px 20px;margin-bottom:1.5rem;
+    display:flex;gap:12px;flex-wrap:wrap;align-items:center
+}
+.mp-search{position:relative;flex:1;min-width:200px}
+.mp-search i{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--gray-400);font-size:.85rem}
+.mp-search input{
+    width:100%;padding:10px 14px 10px 38px;border-radius:var(--radius-sm);border:1.5px solid var(--gray-200);
+    font-size:.85rem;font-family:var(--font-body);background:var(--sand);transition:all var(--transition);
+    box-sizing:border-box
+}
+.mp-search input:focus{border-color:var(--orange);background:var(--white);box-shadow:0 0 0 3px rgba(232,121,59,.12);outline:none}
+.mp-select{
+    padding:10px 14px;border-radius:var(--radius-sm);border:1.5px solid var(--gray-200);
+    font-size:.82rem;font-family:var(--font-body);background:var(--sand);cursor:pointer;
+    min-width:140px;transition:all var(--transition);box-sizing:border-box
+}
+.mp-select:focus{border-color:var(--orange);outline:none}
+
+/* Grid */
+.mp-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:1.25rem}
+
+/* Boutique Card */
+.boutique-card{
+    background:var(--white);border-radius:var(--radius-lg);border:1px solid var(--gray-200);
+    overflow:hidden;transition:all .3s ease;text-decoration:none;color:inherit;display:block;
+    position:relative
+}
+.boutique-card:hover{transform:translateY(-4px);box-shadow:var(--shadow-lg);border-color:var(--green-300)}
+.boutique-card-banner{height:100px;background:linear-gradient(135deg,var(--green-900),var(--green-700));position:relative;overflow:hidden}
+.boutique-card-banner img{width:100%;height:100%;object-fit:cover}
+.boutique-card-banner-overlay{position:absolute;inset:0;background:linear-gradient(180deg,transparent 40%,rgba(0,0,0,.3) 100%)}
+.boutique-card-avatar{
+    width:64px;height:64px;border-radius:50%;border:3px solid var(--white);
+    background:var(--white);display:flex;align-items:center;justify-content:center;
+    overflow:hidden;position:absolute;left:16px;top:68px;box-shadow:var(--shadow-sm)
+}
+.boutique-card-avatar img{width:100%;height:100%;object-fit:cover}
+.boutique-card-avatar i{font-size:1.5rem;color:var(--green-700)}
+.boutique-card-body{padding:40px 16px 16px}
+.boutique-card-name{
+    font-family:var(--font-display);font-weight:700;font-size:.95rem;color:var(--green-900);
+    margin:0 0 2px;display:flex;align-items:center;gap:6px
+}
+.boutique-card-specialty{font-size:.75rem;color:var(--gray-400);margin-bottom:6px}
+.boutique-card-desc{font-size:.8rem;color:var(--gray-500);line-height:1.5;margin-bottom:10px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.boutique-card-footer{
+    display:flex;gap:12px;padding:12px 16px;border-top:1px solid var(--gray-100);
+    font-size:.75rem;color:var(--gray-400);align-items:center;flex-wrap:wrap
+}
+.boutique-card-stat{display:flex;align-items:center;gap:4px}
+.boutique-card-stat i{font-size:.7rem}
+.boutique-card-rating{display:flex;align-items:center;gap:3px}
+
+/* Badge */
+.mp-badge-certified{
+    display:inline-flex;align-items:center;gap:3px;font-size:.62rem;font-weight:700;
+    background:rgba(37,99,235,.1);color:#2563eb;padding:2px 8px;border-radius:10px
+}
+.mp-badge-top{
+    display:inline-flex;align-items:center;gap:3px;font-size:.62rem;font-weight:700;
+    background:rgba(245,158,11,.1);color:#d97706;padding:2px 8px;border-radius:10px
+}
+
+/* WhatsApp badge */
+.boutique-card-wa{
+    position:absolute;top:8px;right:8px;z-index:2;
+    background:#25D366;color:#fff;width:32px;height:32px;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;font-size:.9rem;
+    box-shadow:0 2px 8px rgba(37,211,102,.3);transition:all .2s
+}
+.boutique-card-wa:hover{transform:scale(1.12)}
+
+/* Empty */
+.mp-empty{text-align:center;padding:60px 20px}
+.mp-empty i{font-size:3rem;color:var(--gray-200);display:block;margin-bottom:12px}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .mp-hero{padding:24px 20px}
+    .mp-hero h1{font-size:1.3rem}
+    .mp-grid{grid-template-columns:1fr}
+    .mp-toolbar{flex-direction:column;padding:14px 16px;gap:10px}
+    .mp-toolbar .mp-search{min-width:unset;width:100%}
+    .mp-toolbar .mp-select{width:100%;min-width:unset}
+    .mp-toolbar .ef-btn{width:100%;justify-content:center;text-align:center}
+}
+@media (min-width:769px) and (max-width:1024px) {
+    .mp-toolbar .mp-search{min-width:180px}
+    .mp-toolbar .mp-select{min-width:120px;flex:1}
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="marketplace-page">
+
+    <!-- Hero -->
+    <div class="mp-hero">
+        <h1><i class="bi bi-shop-window me-2"></i>Marketplace Eye-Foncier</h1>
+        <p>Decouvrez les boutiques de nos vendeurs et promoteurs certifies. Trouvez votre terrain ideal en toute confiance.</p>
+        <div class="mp-stats">
+            <div class="mp-stat">
+                <span class="mp-stat-val">{{ total_boutiques }}</span>
+                <span class="mp-stat-lbl">Boutiques</span>
+            </div>
+            <div class="mp-stat">
+                <span class="mp-stat-val" style="color:#a7f3d0">{{ verified_count }}</span>
+                <span class="mp-stat-lbl">Verifiees</span>
+            </div>
+            <div class="mp-stat">
+                <span class="mp-stat-val" style="color:#fcd34d">{{ top_rated_count }}</span>
+                <span class="mp-stat-lbl">Top Vendeurs</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toolbar -->
+    <form method="get" class="mp-toolbar" id="mpForm">
+        <div class="mp-search">
+            <i class="bi bi-search"></i>
+            <input type="text" name="q" value="{{ current_search }}" placeholder="Rechercher une boutique, vendeur, ville...">
+        </div>
+        <select name="city" class="mp-select" onchange="this.form.submit()">
+            <option value="">Toutes les villes</option>
+            {% for c in cities %}
+            <option value="{{ c }}" {% if current_city == c %}selected{% endif %}>{{ c }}</option>
+            {% endfor %}
+        </select>
+        <select name="rating" class="mp-select" onchange="this.form.submit()">
+            <option value="">Toutes les notes</option>
+            <option value="4" {% if current_rating == "4" %}selected{% endif %}>4+ etoiles</option>
+            <option value="3" {% if current_rating == "3" %}selected{% endif %}>3+ etoiles</option>
+            <option value="2" {% if current_rating == "2" %}selected{% endif %}>2+ etoiles</option>
+        </select>
+        <select name="sort" class="mp-select" onchange="this.form.submit()">
+            <option value="popular" {% if current_sort == "popular" %}selected{% endif %}>Plus populaires</option>
+            <option value="rating" {% if current_sort == "rating" %}selected{% endif %}>Mieux notees</option>
+            <option value="recent" {% if current_sort == "recent" %}selected{% endif %}>Plus recentes</option>
+            <option value="name" {% if current_sort == "name" %}selected{% endif %}>Nom (A-Z)</option>
+        </select>
+        <button type="submit" class="ef-btn ef-btn-primary" style="font-size:.82rem;padding:10px 20px;white-space:nowrap">
+            <i class="bi bi-search me-1"></i> Rechercher
+        </button>
+    </form>
+
+    <!-- Grid -->
+    {% if boutiques %}
+    <div class="mp-grid">
+        {% for b in boutiques %}
+        <a href="{% url 'transactions:boutique_public' b.slug %}" class="boutique-card">
+            <!-- Banner -->
+            <div class="boutique-card-banner" {% if b.theme_color %}style="background:linear-gradient(135deg,{{ b.theme_color }},{{ b.theme_color }}88)"{% endif %}>
+                {% if b.banner %}
+                <img src="{{ b.banner.url }}" alt="" loading="lazy">
+                <div class="boutique-card-banner-overlay"></div>
+                {% endif %}
+            </div>
+            <!-- WhatsApp -->
+            {% if b.whatsapp or b.phone %}
+            <span class="boutique-card-wa" title="Contacter sur WhatsApp" onclick="event.preventDefault();event.stopPropagation();window.open('{{ b.whatsapp_link }}','_blank')">
+                <i class="bi bi-whatsapp"></i>
+            </span>
+            {% endif %}
+            <!-- Avatar -->
+            <div class="boutique-card-avatar">
+                {% if b.logo %}
+                <img src="{{ b.logo.url }}" alt="{{ b.name }}">
+                {% else %}
+                <i class="bi bi-shop"></i>
+                {% endif %}
+            </div>
+            <!-- Body -->
+            <div class="boutique-card-body">
+                <div class="boutique-card-name">
+                    {{ b.name }}
+                    {% if b.is_certified %}
+                    <span class="mp-badge-certified"><i class="bi bi-patch-check-fill"></i> Certifie</span>
+                    {% endif %}
+                    {% if b.rating >= 4 %}
+                    <span class="mp-badge-top"><i class="bi bi-award-fill"></i> Top</span>
+                    {% endif %}
+                </div>
+                {% if b.specialty %}
+                <div class="boutique-card-specialty"><i class="bi bi-tag me-1"></i>{{ b.specialty }}</div>
+                {% endif %}
+                {% if b.location_display %}
+                <div class="boutique-card-specialty"><i class="bi bi-geo-alt me-1"></i>{{ b.location_display }}</div>
+                {% endif %}
+                {% if b.description %}
+                <div class="boutique-card-desc">{{ b.description|truncatewords:20 }}</div>
+                {% endif %}
+            </div>
+            <!-- Footer -->
+            <div class="boutique-card-footer">
+                <span class="boutique-card-stat"><i class="bi bi-grid-3x3"></i> {{ b.total_parcelles }} parcelle{{ b.total_parcelles|pluralize }}</span>
+                <span class="boutique-card-stat"><i class="bi bi-bag-check"></i> {{ b.total_ventes }} vente{{ b.total_ventes|pluralize }}</span>
+                <span class="boutique-card-rating" style="margin-left:auto">
+                    {% for i in "12345" %}
+                    <i class="bi bi-star-fill" style="font-size:.68rem;color:{% if b.rating >= forloop.counter %}#f59e0b{% else %}var(--gray-200){% endif %}"></i>
+                    {% endfor %}
+                    {% if b.rating %}<span style="font-weight:700;font-size:.75rem;color:var(--dark);margin-left:3px">{{ b.rating|floatformat:1 }}</span>{% endif %}
+                </span>
+            </div>
+        </a>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="mp-empty">
+        <i class="bi bi-shop-window"></i>
+        <h5 style="font-weight:700;color:var(--green-900)">Aucune boutique trouvee</h5>
+        <p style="color:var(--gray-400);max-width:400px;margin:8px auto 0">
+            {% if current_search or current_city or current_rating %}
+            Modifiez vos criteres de recherche ou <a href="{% url 'transactions:boutiques_list' %}" style="color:var(--orange);font-weight:600">affichez toutes les boutiques</a>.
+            {% else %}
+            Les boutiques apparaitront ici lorsque les vendeurs publieront leurs parcelles.
+            {% endif %}
+        </p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+/* Animation entree des cartes */
+var observer = new IntersectionObserver(function(entries) {
+    entries.forEach(function(entry) {
+        if (entry.isIntersecting) {
+            entry.target.style.opacity = '1';
+            entry.target.style.transform = 'translateY(0)';
+        }
+    });
+}, { threshold: 0.05 });
+document.querySelectorAll('.boutique-card').forEach(function(card, i) {
+    card.style.opacity = '0';
+    card.style.transform = 'translateY(20px)';
+    card.style.transition = 'all 0.4s ease ' + (i * 0.06) + 's';
+    observer.observe(card);
+});
+</script>
+{% endblock %}

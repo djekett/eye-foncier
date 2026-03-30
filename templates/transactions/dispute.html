@@ -1,0 +1,64 @@
+{% extends "layouts/base.html" %}
+{% load humanize %}
+
+{% block title %}Ouvrir un litige — {{ SITE_NAME }}{% endblock %}
+
+{% block content %}
+<div class="container" style="padding-bottom:60px;max-width:700px">
+
+    <div class="d-flex align-items-center gap-2 mb-4">
+        <a href="{% url 'transactions:detail' transaction.pk %}" class="btn btn-sm btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i>
+        </a>
+        <h4 class="mb-0" style="font-weight:800;color:#ea580c">
+            <i class="bi bi-exclamation-triangle me-2"></i>Ouvrir un litige
+        </h4>
+    </div>
+
+    <div class="alert alert-info" style="border-radius:var(--radius-md);font-size:.9rem">
+        <i class="bi bi-info-circle me-1"></i>
+        L'ouverture d'un litige gèle la transaction et notifie l'équipe EYE-Foncier.
+        Un médiateur sera désigné pour résoudre le différend.
+    </div>
+
+    <div class="card" style="border:none;border-radius:var(--radius-lg);box-shadow:var(--shadow-sm)">
+        <div class="card-body p-4">
+            <div class="row mb-3">
+                <div class="col-6">
+                    <span class="text-muted" style="font-size:.85rem">Transaction</span>
+                    <p style="font-weight:700;color:var(--green-900)">{{ transaction.reference }}</p>
+                </div>
+                <div class="col-6">
+                    <span class="text-muted" style="font-size:.85rem">Montant</span>
+                    <p style="font-weight:700">{{ transaction.amount|intcomma }} FCFA</p>
+                </div>
+            </div>
+            <div class="mb-4">
+                <span class="text-muted" style="font-size:.85rem">Parcelle</span>
+                <p style="font-weight:600">{{ transaction.parcelle.title }} — Lot {{ transaction.parcelle.lot_number }}</p>
+            </div>
+
+            <form method="post">
+                {% csrf_token %}
+                <div class="mb-3">
+                    <label for="reason" class="form-label" style="font-weight:600">
+                        Description du litige <span class="text-danger">*</span>
+                    </label>
+                    <textarea name="reason" id="reason" class="form-control" rows="4" required
+                              placeholder="Décrivez en détail la nature du litige, les faits et vos attentes..."
+                              style="border-radius:var(--radius-md)"></textarea>
+                    <small class="text-muted">Soyez le plus précis possible pour faciliter la médiation.</small>
+                </div>
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn px-4" style="background:#ea580c;color:#fff;border:none;border-radius:var(--radius-md)">
+                        <i class="bi bi-exclamation-triangle me-1"></i> Ouvrir le litige
+                    </button>
+                    <a href="{% url 'transactions:detail' transaction.pk %}" class="btn btn-outline-secondary" style="border-radius:var(--radius-md)">
+                        Retour
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

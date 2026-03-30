@@ -1,0 +1,103 @@
+{% extends "layouts/base.html" %}
+{% load humanize %}
+
+{% block title %}{{ article.title }} — {{ SITE_NAME }}{% endblock %}
+
+{% block extra_css %}
+<style>
+.article-detail-hero-img{width:100%;height:clamp(200px,40vw,400px);object-fit:cover;border-radius:16px;box-shadow:0 8px 32px rgba(11,61,46,.1)}
+.article-detail-header{max-width:780px;margin:0 auto}
+.article-detail-header h1{font-weight:800;font-size:clamp(1.6rem,4vw,2.4rem);letter-spacing:-.03em;line-height:1.15;color:var(--green-900);font-family:var(--font-display)}
+.article-author-bar{display:flex;flex-wrap:wrap;gap:16px;align-items:center;padding:16px 0;border-top:1px solid #f1f5f9;border-bottom:1px solid #f1f5f9;font-size:.84rem;color:var(--gray-400);font-family:var(--font-body)}
+.article-author-bar .author-avatar{width:40px;height:40px;border-radius:50%;background:var(--green-50);display:flex;align-items:center;justify-content:center;font-weight:700;color:var(--green-900);font-size:.85rem}
+.article-detail-body{max-width:780px;margin:0 auto;line-height:1.85;font-size:1.02rem;color:var(--gray-600);font-family:var(--font-body)}
+.article-detail-body p{margin-bottom:1.2rem}
+.article-tags-wrap{display:flex;flex-wrap:wrap;gap:8px}
+.article-tags-wrap a{display:inline-flex;padding:5px 14px;border-radius:50px;font-size:.78rem;font-weight:600;background:var(--green-50);color:var(--green-700);text-decoration:none;transition:all .2s}
+.article-tags-wrap a:hover{background:var(--green-100);transform:translateY(-1px)}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="ef-page-header">
+    <div class="container" style="max-width:900px">
+        <nav class="ef-breadcrumb mb-3">
+            <a href="{% url 'content:articles' %}">Blog</a>
+            <span class="sep">/</span>
+            {% if article.category %}
+            <a href="{% url 'content:articles' %}?category={{ article.category.slug }}">{{ article.category.name }}</a>
+            <span class="sep">/</span>
+            {% endif %}
+            <span class="current">{{ article.title|truncatechars:40 }}</span>
+        </nav>
+    </div>
+</div>
+
+<div class="ef-page-content container" style="max-width:900px">
+    {% if article.cover_image %}
+    <img src="{{ article.cover_image.url }}" class="article-detail-hero-img mb-4" alt="{{ article.title }}">
+    {% endif %}
+
+    <div class="article-detail-header mb-4">
+        <div class="d-flex flex-wrap gap-2 mb-3">
+            {% if article.category %}
+            <span class="ef-badge ef-badge-success">{{ article.category.name }}</span>
+            {% endif %}
+            <span class="ef-badge ef-badge-info"><i class="bi bi-clock me-1"></i>{{ article.reading_time }} min de lecture</span>
+        </div>
+        <h1 class="mb-3">{{ article.title }}</h1>
+
+        <div class="article-author-bar">
+            {% if article.author %}
+            <div class="d-flex align-items-center gap-2">
+                <div class="author-avatar">{{ article.author.first_name|default:article.author.username|truncatechars:1|upper }}</div>
+                <div>
+                    <div style="font-weight:600;color:var(--green-900);font-size:.88rem">{{ article.author.get_full_name }}</div>
+                    <div style="font-size:.76rem">Publié le {{ article.published_at|date:"d F Y" }}</div>
+                </div>
+            </div>
+            {% endif %}
+            <div class="ms-auto d-flex gap-3 small">
+                <span><i class="bi bi-eye me-1"></i>{{ article.views_count|intcomma }} vue{{ article.views_count|pluralize }}</span>
+            </div>
+        </div>
+    </div>
+
+    {% if article.tag_list %}
+    <div class="article-tags-wrap mb-4">
+        {% for tag in article.tag_list %}
+        <a href="{% url 'content:articles' %}?tag={{ tag }}">#{{ tag }}</a>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="article-detail-body mb-5">
+        {{ article.content|linebreaksbr }}
+    </div>
+
+    <hr class="my-5" style="border-color:#f1f5f9">
+
+    {% if related_articles %}
+    <h4 style="font-family:var(--font-display);color:var(--green-900);font-weight:700" class="mb-3"><i class="bi bi-collection me-2" style="color:var(--orange)"></i>Articles similaires</h4>
+    <div class="row g-3">
+        {% for r in related_articles %}
+        <div class="col-md-6">
+            <div class="ef-card h-100">
+                <div class="ef-card-body p-3">
+                    <h6 class="mb-2"><a href="{% url 'content:article_detail' r.slug %}" style="text-decoration:none;color:var(--green-900);font-weight:700;font-family:var(--font-display);transition:color .2s">{{ r.title|truncatechars:60 }}</a></h6>
+                    <p style="color:var(--gray-400);font-size:.84rem;font-family:var(--font-body)" class="mb-2">{{ r.excerpt|truncatechars:100 }}</p>
+                    <small style="color:var(--gray-400)"><i class="bi bi-clock me-1"></i>{{ r.reading_time }} min</small>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="text-center mt-5">
+        <a href="{% url 'content:articles' %}" class="ef-btn ef-btn-outline-green" style="padding:10px 28px">
+            <i class="bi bi-arrow-left me-2"></i> Retour au blog
+        </a>
+    </div>
+</div>
+{% endblock %}

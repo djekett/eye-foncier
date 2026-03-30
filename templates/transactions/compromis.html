@@ -1,0 +1,74 @@
+{% extends "layouts/base.html" %}
+{% block title %}Compromis de Vente — {{ SITE_NAME }}{% endblock %}
+
+{% block content %}
+<div class="ef-page-header">
+    <nav class="ef-breadcrumb">
+        <a href="{% url 'transactions:detail' transaction.pk %}">{{ transaction.reference }}</a>
+        <span class="sep">/</span>
+        <span class="current">Compromis de vente</span>
+    </nav>
+</div>
+
+<div class="ef-page-content" style="max-width:800px; margin:0 auto">
+    <div class="ef-card">
+        <div class="ef-card-body" style="padding:2rem">
+            <!-- Header icon -->
+            <div style="text-align:center; margin-bottom:1.5rem">
+                <div style="width:72px; height:72px; border-radius:50%; background:rgba(11,61,46,0.08); display:inline-flex; align-items:center; justify-content:center; margin-bottom:1rem">
+                    <i class="bi bi-file-earmark-text" style="font-size:2.2rem; color:#0B3D2E"></i>
+                </div>
+                <h2 style="font-family:var(--font-display); color:#0B3D2E; margin:0 0 .25rem">Initier la Vente</h2>
+                <p style="color:#6b7280; margin:0">Génération automatique du compromis de vente</p>
+            </div>
+
+            <!-- Compromis preview -->
+            <div class="ef-card" style="background:#F7F4EE; margin-bottom:1.5rem">
+                <div class="ef-card-body" style="padding:1.5rem; font-family:Georgia, serif">
+                    <div style="text-align:center; margin-bottom:1rem">
+                        <h3 style="font-weight:700; text-transform:uppercase; font-size:1.1rem; color:#0B3D2E; margin:0 0 .25rem">Compromis de Vente</h3>
+                        <p style="font-size:.85rem; color:#6b7280; margin:0">Réf. {{ transaction.reference }} — EYE-Foncier</p>
+                    </div>
+                    <p style="font-size:.875rem; margin-bottom:.35rem"><strong>ENTRE :</strong></p>
+                    <p style="font-size:.875rem; margin-bottom:.2rem">Le vendeur : <strong>{{ transaction.seller.get_full_name }}</strong></p>
+                    <p style="font-size:.875rem; margin-bottom:1rem">L'acquéreur : <strong>{{ transaction.buyer.get_full_name }}</strong></p>
+                    <p style="font-size:.875rem; margin-bottom:.35rem"><strong>OBJET :</strong></p>
+                    <p style="font-size:.875rem; margin-bottom:.2rem">Parcelle : <strong>{{ transaction.parcelle.title }}</strong> (Lot {{ transaction.parcelle.lot_number }})</p>
+                    <p style="font-size:.875rem; margin-bottom:.2rem">Surface : <strong>{{ transaction.parcelle.surface_m2|floatformat:0 }} m²</strong></p>
+                    <p style="font-size:.875rem; margin-bottom:.2rem">Zone : <strong>{{ transaction.parcelle.zone|default:"—" }}</strong></p>
+                    <p style="font-size:.875rem; margin-bottom:1rem">Adresse : <strong>{{ transaction.parcelle.address|default:"—" }}</strong></p>
+                    <p style="font-size:.875rem; margin-bottom:.35rem"><strong>PRIX :</strong></p>
+                    <p style="font-size:.875rem; margin-bottom:1rem; font-family:var(--font-mono)"><strong>{{ transaction.amount|floatformat:0 }} FCFA</strong> ({{ transaction.amount|floatformat:0 }} francs CFA)</p>
+                    <p style="font-size:.8rem; color:#6b7280; font-style:italic; margin:0">Ce document est un pré-compromis. Le compromis définitif sera établi par un notaire.</p>
+                </div>
+            </div>
+
+            <!-- Notice -->
+            <div style="background:rgba(11,61,46,0.06); border-radius:.5rem; padding:.75rem; margin-bottom:1.5rem; font-size:.85rem; color:#0B3D2E">
+                <i class="bi bi-bell-fill" style="color:#E8793B"></i>
+                <strong>Notification prioritaire :</strong> En cliquant « Générer le compromis », EYE-Foncier reçoit une alerte immédiate. Notre équipe vous contactera sous 24h pour organiser la signature chez le notaire.
+            </div>
+
+            {% if transaction.compromis_generated %}
+            <div style="background:rgba(11,61,46,0.06); border-radius:.5rem; padding:.75rem; font-size:.85rem; color:#0B3D2E">
+                <i class="bi bi-check-circle" style="color:#0B3D2E"></i>
+                Le compromis a déjà été généré le {{ transaction.compromis_generated_at|date:"d/m/Y à H:i" }}.
+            </div>
+            {% else %}
+            <form method="post">
+                {% csrf_token %}
+                <div class="ef-form-group">
+                    <label style="display:flex; align-items:center; gap:.5rem; font-size:.875rem; cursor:pointer">
+                        <input type="checkbox" id="confirmCompromis" required>
+                        Je confirme vouloir initier la vente de cette parcelle
+                    </label>
+                </div>
+                <button type="submit" class="ef-btn ef-btn-primary ef-btn-block" style="font-size:1rem; padding:.75rem">
+                    <i class="bi bi-file-earmark-plus"></i> Générer le Compromis de Vente
+                </button>
+            </form>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

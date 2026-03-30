@@ -1,0 +1,360 @@
+{% extends "layouts/base.html" %}
+{% load static humanize %}
+
+{% block title %}{{ lot.name }} — {{ SITE_NAME }}{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css">
+<style>
+.lot-detail{max-width:1280px;margin:0 auto;padding:0 clamp(16px,4vw,48px) 60px}
+.lot-header{background:linear-gradient(135deg,#0B3D2E 0%,#145a3e 100%);border-radius:var(--radius-lg);padding:28px 32px;color:#fff;margin-bottom:1.5rem;position:relative;overflow:hidden}
+.lot-header::after{content:'';position:absolute;top:0;right:0;width:200px;height:100%;background:url("data:image/svg+xml,%3Csvg width='200' height='200' xmlns='http://www.w3.org/2000/svg'%3E%3Cpattern id='g' width='20' height='20' patternUnits='userSpaceOnUse'%3E%3Crect width='20' height='20' fill='none'/%3E%3Crect width='1' height='1' x='10' y='10' fill='rgba(255,255,255,.04)'/%3E%3C/pattern%3E%3Crect width='200' height='200' fill='url(%23g)'/%3E%3C/svg%3E") repeat;opacity:.5}
+.stat-card{background:var(--white);border-radius:var(--radius-lg);box-shadow:var(--shadow-sm);border:1px solid var(--gray-200);padding:20px;text-align:center}
+.stat-val{font-size:1.5rem;font-weight:900;font-family:var(--font-display)}
+.stat-lbl{font-size:.72rem;color:var(--gray-400);margin-top:2px}
+.progress-bar-lot{height:10px;border-radius:6px;background:var(--gray-100);overflow:hidden;margin-top:8px}
+.progress-bar-lot .fill{height:100%;border-radius:6px;transition:width .6s}
+.lot-card{background:var(--white);border-radius:var(--radius-lg);box-shadow:var(--shadow-sm);border:1px solid var(--gray-200);overflow:hidden}
+.lot-card-header{padding:14px 20px;border-bottom:1px solid var(--gray-100);display:flex;align-items:center;gap:8px}
+.lot-card-header h6{font-family:var(--font-display);font-weight:700;color:var(--green-900);margin:0;font-size:.92rem}
+.parcelle-row{display:flex;align-items:center;gap:12px;padding:12px 20px;border-bottom:1px solid var(--gray-50);transition:background .15s}
+.parcelle-row:hover{background:var(--sand)}
+.parcelle-row:last-child{border-bottom:none}
+.status-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.viab-badge{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:12px;font-size:.72rem;font-weight:600}
+#lotDetailMap{width:100%;height:350px;border-radius:var(--radius-md)}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="lot-detail">
+
+    <!-- Breadcrumb -->
+    <nav style="font-size:.85rem;margin-bottom:20px">
+        <a href="{% url 'parcelles:lotissement_list' %}" style="color:var(--green-700);text-decoration:none;font-weight:500">Lotissements</a>
+        <span style="color:var(--gray-300);margin:0 8px">/</span>
+        <span style="color:var(--gray-400)">{{ lot.name }}</span>
+    </nav>
+
+    <!-- Header -->
+    <div class="lot-header">
+        <div style="position:relative;z-index:1">
+            <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px">
+                <span style="padding:4px 14px;border-radius:20px;font-size:.72rem;font-weight:700;background:{% if lot.status == 'active' %}rgba(5,150,105,.3){% elif lot.status == 'approved' %}rgba(37,99,235,.3){% elif lot.status == 'draft' %}rgba(107,114,128,.3){% else %}rgba(245,158,11,.3){% endif %};color:#fff">
+                    {{ lot.get_status_display }}
+                </span>
+                <span style="font-size:.78rem;color:rgba(255,255,255,.5);font-family:var(--font-mono)">{{ lot.code }}</span>
+            </div>
+            <h2 style="font-family:var(--font-display);font-weight:800;margin:0 0 4px">{{ lot.name }}</h2>
+            <p style="color:rgba(255,255,255,.6);margin:0;font-size:.88rem">
+                <i class="bi bi-geo-alt"></i> {{ lot.zone|default:"Zone non spécifiée" }}
+                {% if lot.promoteur %} &middot; <i class="bi bi-person"></i> {{ lot.promoteur.get_full_name }}{% endif %}
+            </p>
+        </div>
+    </div>
+
+    <!-- Stats -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:1rem;margin-bottom:1.5rem">
+        <div class="stat-card">
+            <div class="stat-val" style="color:var(--green-900)">{{ stats.total }}</div>
+            <div class="stat-lbl">Lots total</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-val" style="color:#059669">{{ stats.disponible }}</div>
+            <div class="stat-lbl">Disponibles</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-val" style="color:#f59e0b">{{ stats.reserve }}</div>
+            <div class="stat-lbl">Réservés</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-val" style="color:#ef4444">{{ stats.vendu }}</div>
+            <div class="stat-lbl">Vendus</div>
+        </div>
+        {% if lot.total_surface_m2 %}
+        <div class="stat-card">
+            <div class="stat-val" style="color:var(--blue);font-size:1.2rem">{{ lot.total_surface_m2|floatformat:0|intcomma }}</div>
+            <div class="stat-lbl">Surface (m²)</div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Progress -->
+    {% if stats.total > 0 %}
+    <div style="background:var(--white);border-radius:var(--radius-lg);padding:16px 20px;border:1px solid var(--gray-200);margin-bottom:1.5rem;box-shadow:var(--shadow-sm)">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+            <span style="font-size:.88rem;font-weight:700;color:var(--green-900)">Progression des ventes</span>
+            <span style="font-size:1.1rem;font-weight:900;color:var(--orange);font-family:var(--font-display)">{{ lot.progress_pct }}%</span>
+        </div>
+        <div class="progress-bar-lot">
+            <div class="fill" style="width:{{ lot.progress_pct }}%;background:linear-gradient(90deg,#059669,#22c55e)"></div>
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="row g-4">
+        <!-- Colonne gauche : Parcelles -->
+        <div class="col-lg-7">
+            <div class="lot-card">
+                <div class="lot-card-header">
+                    <i class="bi bi-grid-3x3" style="color:var(--orange)"></i>
+                    <h6>Parcelles du lotissement ({{ stats.total }})</h6>
+                    {% if is_owner %}
+                    <a href="{% url 'parcelles:lotissement_add_parcelle' lot.pk %}" class="ef-btn ef-btn-sm ef-btn-primary" style="margin-left:auto;font-size:.78rem">
+                        <i class="bi bi-plus-lg"></i> Ajouter
+                    </a>
+                    {% endif %}
+                </div>
+
+                {% if parcelles %}
+                <div style="max-height:500px;overflow-y:auto">
+                    {% for p in parcelles %}
+                    <a href="{% url 'parcelles:detail' p.pk %}" class="parcelle-row" style="text-decoration:none;color:inherit">
+                        <span class="status-dot" style="background:{{ p.status_color }}"></span>
+                        <div style="flex:1;min-width:0">
+                            <div style="font-weight:700;font-size:.88rem;color:var(--dark);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
+                                Lot {{ p.lot_number }} — {{ p.title }}
+                            </div>
+                            <div style="font-size:.75rem;color:var(--gray-400)">
+                                {{ p.surface_m2|floatformat:0 }} m² &middot; {{ p.get_land_type_display }}
+                            </div>
+                        </div>
+                        <div style="text-align:right;flex-shrink:0">
+                            <div style="font-weight:800;font-size:.88rem;color:var(--green-900);font-family:var(--font-mono)">{{ p.price|floatformat:0|intcomma }} F</div>
+                            <div style="font-size:.72rem;color:var(--gray-400)">{{ p.get_status_display }}</div>
+                        </div>
+                    </a>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div style="text-align:center;padding:40px 20px">
+                    <i class="bi bi-grid" style="font-size:2.5rem;color:var(--gray-300)"></i>
+                    <p style="color:var(--gray-400);margin:12px 0 0;font-size:.88rem">Aucune parcelle dans ce lotissement</p>
+                    {% if is_owner %}
+                    <a href="{% url 'parcelles:lotissement_add_parcelle' lot.pk %}" class="ef-btn ef-btn-outline-primary" style="margin-top:12px;font-size:.82rem">
+                        <i class="bi bi-plus-lg"></i> Ajouter la première parcelle
+                    </a>
+                    {% endif %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Colonne droite : Carte + Infos -->
+        <div class="col-lg-5">
+            <!-- Carte -->
+            <div class="lot-card" style="margin-bottom:1.25rem">
+                <div class="lot-card-header">
+                    <i class="bi bi-map" style="color:#2563eb"></i>
+                    <h6>Plan du lotissement</h6>
+                </div>
+                <div style="padding:12px">
+                    <div id="lotDetailMap"></div>
+                </div>
+            </div>
+
+            <!-- Viabilisation -->
+            <div class="lot-card" style="margin-bottom:1.25rem">
+                <div class="lot-card-header">
+                    <i class="bi bi-gear" style="color:var(--orange)"></i>
+                    <h6>Viabilisation</h6>
+                </div>
+                <div style="padding:16px 20px;display:flex;flex-wrap:wrap;gap:8px">
+                    <span class="viab-badge" style="background:{% if lot.has_water %}rgba(59,130,246,.1);color:#2563eb{% else %}var(--gray-100);color:var(--gray-400){% endif %}">
+                        <i class="bi bi-droplet-fill"></i> Eau {% if lot.has_water %}✓{% else %}✗{% endif %}
+                    </span>
+                    <span class="viab-badge" style="background:{% if lot.has_electricity %}rgba(245,158,11,.1);color:#d97706{% else %}var(--gray-100);color:var(--gray-400){% endif %}">
+                        <i class="bi bi-lightning-fill"></i> Électricité {% if lot.has_electricity %}✓{% else %}✗{% endif %}
+                    </span>
+                    <span class="viab-badge" style="background:{% if lot.has_road %}rgba(5,150,105,.1);color:#059669{% else %}var(--gray-100);color:var(--gray-400){% endif %}">
+                        <i class="bi bi-signpost-2-fill"></i> Voirie {% if lot.has_road %}✓{% else %}✗{% endif %}
+                    </span>
+                    <span class="viab-badge" style="background:{% if lot.has_drainage %}rgba(8,145,178,.1);color:#0891b2{% else %}var(--gray-100);color:var(--gray-400){% endif %}">
+                        <i class="bi bi-water"></i> Assainissement {% if lot.has_drainage %}✓{% else %}✗{% endif %}
+                    </span>
+                    <span class="viab-badge" style="background:{% if lot.has_public_spaces %}rgba(22,163,74,.1);color:#16a34a{% else %}var(--gray-100);color:var(--gray-400){% endif %}">
+                        <i class="bi bi-tree-fill"></i> Espaces publics {% if lot.has_public_spaces %}✓{% else %}✗{% endif %}
+                    </span>
+                </div>
+            </div>
+
+            <!-- Statut juridique & Documents -->
+            <div class="lot-card" style="margin-bottom:1.25rem">
+                <div class="lot-card-header">
+                    <i class="bi bi-file-earmark-lock" style="color:#8b5cf6"></i>
+                    <h6>Documents juridiques</h6>
+                </div>
+                <div style="padding:16px 20px">
+                    {% if lot.is_approved %}
+                    <div style="display:flex;align-items:center;gap:8px;padding:10px 14px;border-radius:var(--radius-md);background:rgba(5,150,105,.08);margin-bottom:12px">
+                        <i class="bi bi-patch-check-fill" style="color:#059669;font-size:1.2rem"></i>
+                        <div>
+                            <div style="font-weight:700;font-size:.85rem;color:#059669">Lotissement approuvé</div>
+                            {% if lot.approval_reference %}<div style="font-size:.75rem;color:var(--gray-500)">{{ lot.approval_reference }}</div>{% endif %}
+                            {% if lot.validated_by %}<div style="font-size:.72rem;color:var(--gray-400)">Par {{ lot.validated_by.get_full_name }} {% if lot.validated_at %}le {{ lot.validated_at|date:"d/m/Y" }}{% endif %}</div>{% endif %}
+                        </div>
+                    </div>
+                    {% elif lot.approval_reference %}
+                    <div style="display:flex;align-items:center;gap:8px;padding:10px 14px;border-radius:var(--radius-md);background:rgba(245,158,11,.08);margin-bottom:12px">
+                        <i class="bi bi-hourglass-split" style="color:#d97706;font-size:1.1rem"></i>
+                        <div>
+                            <div style="font-weight:700;font-size:.85rem;color:#d97706">Référence arrêté</div>
+                            <div style="font-size:.75rem;color:var(--gray-500)">{{ lot.approval_reference }}</div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    {% if lot.validation_notes %}
+                    <div style="font-size:.82rem;color:var(--dark);padding:10px 14px;border-radius:var(--radius-md);background:var(--sand);margin-bottom:12px;line-height:1.5">
+                        <strong style="font-size:.75rem;color:var(--gray-400)">Notes de validation :</strong><br>
+                        {{ lot.validation_notes|linebreaksbr }}
+                    </div>
+                    {% endif %}
+
+                    <div style="display:flex;flex-direction:column;gap:8px">
+                        {% if lot.arrete_approbation %}
+                        <a href="{{ lot.arrete_approbation.url }}" target="_blank" style="display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:var(--radius-md);border:1px solid var(--gray-200);text-decoration:none;color:var(--dark);font-size:.82rem;transition:background .15s" onmouseover="this.style.background='var(--sand)'" onmouseout="this.style.background=''">
+                            <i class="bi bi-file-earmark-check" style="color:#059669;font-size:1rem"></i>
+                            <span style="font-weight:600">Arrêté d'approbation</span>
+                            <i class="bi bi-download" style="margin-left:auto;color:var(--gray-400)"></i>
+                        </a>
+                        {% endif %}
+                        {% if lot.attestation_villageoise %}
+                        <a href="{{ lot.attestation_villageoise.url }}" target="_blank" style="display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:var(--radius-md);border:1px solid var(--gray-200);text-decoration:none;color:var(--dark);font-size:.82rem;transition:background .15s" onmouseover="this.style.background='var(--sand)'" onmouseout="this.style.background=''">
+                            <i class="bi bi-file-earmark-text" style="color:#2563eb;font-size:1rem"></i>
+                            <span style="font-weight:600">Attestation villageoise</span>
+                            <i class="bi bi-download" style="margin-left:auto;color:var(--gray-400)"></i>
+                        </a>
+                        {% endif %}
+                        {% if lot.dossier_technique %}
+                        <a href="{{ lot.dossier_technique.url }}" target="_blank" style="display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:var(--radius-md);border:1px solid var(--gray-200);text-decoration:none;color:var(--dark);font-size:.82rem;transition:background .15s" onmouseover="this.style.background='var(--sand)'" onmouseout="this.style.background=''">
+                            <i class="bi bi-rulers" style="color:var(--orange);font-size:1rem"></i>
+                            <span style="font-weight:600">Dossier technique</span>
+                            <i class="bi bi-download" style="margin-left:auto;color:var(--gray-400)"></i>
+                        </a>
+                        {% endif %}
+                        {% if lot.certificat_propriete %}
+                        <a href="{{ lot.certificat_propriete.url }}" target="_blank" style="display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:var(--radius-md);border:1px solid var(--gray-200);text-decoration:none;color:var(--dark);font-size:.82rem;transition:background .15s" onmouseover="this.style.background='var(--sand)'" onmouseout="this.style.background=''">
+                            <i class="bi bi-shield-lock" style="color:#dc2626;font-size:1rem"></i>
+                            <span style="font-weight:600">Certificat de propriété</span>
+                            <i class="bi bi-download" style="margin-left:auto;color:var(--gray-400)"></i>
+                        </a>
+                        {% endif %}
+                        {% if not lot.arrete_approbation and not lot.attestation_villageoise and not lot.dossier_technique and not lot.certificat_propriete %}
+                        <div style="text-align:center;padding:12px;color:var(--gray-400);font-size:.82rem">
+                            <i class="bi bi-folder2-open"></i> Aucun document juridique ajouté
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Plan image -->
+            {% if lot.plan_image %}
+            <div class="lot-card">
+                <div class="lot-card-header">
+                    <i class="bi bi-image" style="color:#8b5cf6"></i>
+                    <h6>Plan de morcellement</h6>
+                </div>
+                <div style="padding:12px">
+                    <img src="{{ lot.plan_image.url }}" alt="Plan" style="width:100%;border-radius:var(--radius-md);cursor:zoom-in" onclick="window.open(this.src)">
+                </div>
+            </div>
+            {% endif %}
+
+            {% if lot.description %}
+            <div class="lot-card" style="margin-top:1.25rem">
+                <div class="lot-card-header">
+                    <i class="bi bi-journal-text" style="color:var(--green-700)"></i>
+                    <h6>Description</h6>
+                </div>
+                <div style="padding:16px 20px;font-size:.88rem;color:var(--dark);line-height:1.6">
+                    {{ lot.description|linebreaksbr }}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var mapEl = document.getElementById('lotDetailMap');
+    if (!mapEl) return;
+
+    var map = new maplibregl.Map({
+        container: 'lotDetailMap',
+        style: (typeof EyeFoncier !== 'undefined' && EyeFoncier.mapStyles)
+            ? EyeFoncier.mapStyles.streets
+            : { version: 8, sources: { osm: { type: 'raster', tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'], tileSize: 256 } }, layers: [{ id: 'osm', type: 'raster', source: 'osm' }] },
+        center: [-4.008, 5.36],
+        zoom: 13
+    });
+    map.addControl(new maplibregl.NavigationControl(), 'top-right');
+
+    map.on('load', function() {
+        // Périmètre du lotissement
+        var lotGeom = {{ lot.geometry.geojson|safe }};
+        map.addSource('lot-boundary', {
+            type: 'geojson',
+            data: { type: 'Feature', geometry: lotGeom }
+        });
+        map.addLayer({
+            id: 'lot-fill', type: 'fill', source: 'lot-boundary',
+            paint: { 'fill-color': '#E8793B', 'fill-opacity': 0.1 }
+        });
+        map.addLayer({
+            id: 'lot-line', type: 'line', source: 'lot-boundary',
+            paint: { 'line-color': '#E8793B', 'line-width': 3, 'line-dasharray': [4, 2] }
+        });
+
+        // Parcelles du lotissement
+        var parcelles = [
+            {% for p in parcelles %}
+            {% if p.geometry %}
+            { type: 'Feature', geometry: {{ p.geometry.geojson|safe }}, properties: { lot: '{{ p.lot_number }}', status: '{{ p.status }}', title: '{{ p.title|escapejs }}', price: '{{ p.price|floatformat:0 }}' } },
+            {% endif %}
+            {% endfor %}
+        ];
+
+        if (parcelles.length > 0) {
+            map.addSource('lot-parcelles', {
+                type: 'geojson',
+                data: { type: 'FeatureCollection', features: parcelles }
+            });
+            var statusColors = ['match', ['get', 'status'], 'disponible', '#059669', 'reserve', '#f59e0b', 'vendu', '#ef4444', '#6b7280'];
+            map.addLayer({
+                id: 'lot-parcelles-fill', type: 'fill', source: 'lot-parcelles',
+                paint: { 'fill-color': statusColors, 'fill-opacity': 0.3 }
+            });
+            map.addLayer({
+                id: 'lot-parcelles-line', type: 'line', source: 'lot-parcelles',
+                paint: { 'line-color': statusColors, 'line-width': 2 }
+            });
+
+            // Click popup
+            map.on('click', 'lot-parcelles-fill', function(e) {
+                var p = e.features[0].properties;
+                new maplibregl.Popup({ maxWidth: '200px' })
+                    .setLngLat(e.lngLat)
+                    .setHTML('<strong>Lot ' + p.lot + '</strong><br>' + p.title + '<br><span style="font-weight:700;color:#0B3D2E">' + Number(p.price).toLocaleString('fr-FR') + ' F</span>')
+                    .addTo(map);
+            });
+            map.on('mouseenter', 'lot-parcelles-fill', function() { map.getCanvas().style.cursor = 'pointer'; });
+            map.on('mouseleave', 'lot-parcelles-fill', function() { map.getCanvas().style.cursor = ''; });
+        }
+
+        // Fit bounds
+        var bounds = new maplibregl.LngLatBounds();
+        var coords = lotGeom.coordinates[0];
+        for (var i = 0; i < coords.length; i++) {
+            bounds.extend(coords[i]);
+        }
+        map.fitBounds(bounds, { padding: 40 });
+    });
+});
+</script>
+{% endblock %}

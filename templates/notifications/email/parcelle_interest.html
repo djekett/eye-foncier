@@ -1,0 +1,47 @@
+{% extends "notifications/email_base.html" %}
+{% block email_content %}
+<tr>
+    <td style="padding:32px">
+        <h2 style="color:#0B3D2E;margin:0 0 16px;font-size:18px;font-weight:700">
+            {{ title }}
+        </h2>
+
+        <p style="color:#374151;font-size:15px;line-height:1.6;margin:0 0 20px">
+            {{ message }}
+        </p>
+
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#eff6ff;border-radius:8px;margin:0 0 24px;border:1px solid #bfdbfe">
+            <tr>
+                <td style="padding:16px">
+                    {% if data.user_name %}
+                    <p style="color:#374151;font-size:13px;margin:0 0 6px">
+                        <strong style="color:#1e40af">Acheteur intéressé :</strong> {{ data.user_name }}
+                    </p>
+                    {% endif %}
+                    {% if data.parcelle_lot %}
+                    <p style="color:#374151;font-size:13px;margin:0">
+                        <strong style="color:#1e40af">Parcelle :</strong> Lot {{ data.parcelle_lot }}
+                    </p>
+                    {% endif %}
+                </td>
+            </tr>
+        </table>
+
+        <p style="color:#6b7280;font-size:13px;margin:0 0 20px">
+            Nous vous recommandons de contacter rapidement cet acheteur pour maximiser vos chances de vente.
+        </p>
+
+        {% if data.action_url %}
+        <table role="presentation" cellspacing="0" cellpadding="0" style="margin:0 auto">
+            <tr>
+                <td style="background:#2563eb;border-radius:8px;padding:12px 28px">
+                    <a href="{{ data.action_url }}" style="color:#ffffff;text-decoration:none;font-weight:700;font-size:14px">
+                        Voir le profil de l'acheteur
+                    </a>
+                </td>
+            </tr>
+        </table>
+        {% endif %}
+    </td>
+</tr>
+{% endblock %}

@@ -1,0 +1,71 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}Paiement — {{ SITE_NAME }}{% endblock %}
+
+{% block content %}
+<div class="ef-page-content" style="max-width:600px; margin:0 auto; padding-top:2.5rem">
+    <div class="ef-card">
+        <div class="ef-card-body" style="text-align:center; padding:2.5rem 2rem">
+            {% if result.status == "success" %}
+            <!-- Success -->
+            <div style="width:80px; height:80px; border-radius:50%; background:rgba(11,61,46,0.08); display:inline-flex; align-items:center; justify-content:center; margin-bottom:1rem">
+                <i class="bi bi-check-circle-fill" style="font-size:2.5rem; color:#0B3D2E"></i>
+            </div>
+            <h3 style="font-family:var(--font-display); color:#0B3D2E">Paiement confirmé !</h3>
+            <p style="color:#6b7280">Votre paiement de <strong style="font-family:var(--font-mono)">{{ pending.amount|floatformat:0 }} FCFA</strong> a été traité avec succès.</p>
+            <div style="background:#F7F4EE; border-radius:.5rem; padding:1rem; font-size:.85rem; text-align:left; margin-bottom:1.5rem">
+                <div class="ef-info-row">
+                    <span class="ef-info-label">Référence</span>
+                    <span class="ef-info-value" style="font-weight:700">{{ transaction_id }}</span>
+                </div>
+                {% if result.payment_method %}
+                <div class="ef-info-row">
+                    <span class="ef-info-label">Mode</span>
+                    <span class="ef-info-value">{{ result.payment_method }}</span>
+                </div>
+                {% endif %}
+                {% if result.operator %}
+                <div class="ef-info-row">
+                    <span class="ef-info-label">Opérateur</span>
+                    <span class="ef-info-value">{{ result.operator }}</span>
+                </div>
+                {% endif %}
+            </div>
+
+            {% elif result.status == "pending" %}
+            <!-- Pending -->
+            <div style="width:80px; height:80px; border-radius:50%; background:rgba(232,121,59,0.1); display:inline-flex; align-items:center; justify-content:center; margin-bottom:1rem">
+                <i class="bi bi-hourglass-split" style="font-size:2.5rem; color:#E8793B"></i>
+            </div>
+            <h3 style="font-family:var(--font-display); color:#E8793B">Paiement en cours</h3>
+            <p style="color:#6b7280">Votre paiement est en cours de traitement. Vous serez notifié dès confirmation.</p>
+            <div style="background:#F7F4EE; border-radius:.5rem; padding:1rem; font-size:.85rem; margin-bottom:1.5rem">
+                <div class="ef-info-row" style="justify-content:center">
+                    <span class="ef-info-label">Référence</span>
+                    <span class="ef-info-value" style="font-weight:700">{{ transaction_id }}</span>
+                </div>
+            </div>
+
+            {% else %}
+            <!-- Failed -->
+            <div style="width:80px; height:80px; border-radius:50%; background:#fee2e2; display:inline-flex; align-items:center; justify-content:center; margin-bottom:1rem">
+                <i class="bi bi-x-circle-fill" style="font-size:2.5rem; color:#dc2626"></i>
+            </div>
+            <h3 style="font-family:var(--font-display); color:#dc2626">Paiement échoué</h3>
+            <p style="color:#6b7280">Le paiement n'a pas abouti. Aucun montant n'a été débité.</p>
+            {% endif %}
+
+            <div style="display:flex; gap:.75rem; justify-content:center; margin-top:1.5rem">
+                <a href="{% url 'accounts:dashboard' %}" class="ef-btn ef-btn-outline-green">
+                    <i class="bi bi-speedometer2"></i> Tableau de bord
+                </a>
+                {% if result.status == "failed" %}
+                <button onclick="history.back()" class="ef-btn ef-btn-primary">
+                    <i class="bi bi-arrow-clockwise"></i> Réessayer
+                </button>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

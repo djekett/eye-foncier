@@ -1,0 +1,140 @@
+{% extends "layouts/base.html" %}
+{% load humanize %}
+
+{% block title %}Blog & Actualités — {{ SITE_NAME }}{% endblock %}
+
+{% block extra_css %}
+<style>
+.article-list-hero{background:linear-gradient(135deg,#0B3D2E 0%,#0F5132 60%,#1A6B4A 100%);padding:120px 0 4.5rem;margin-top:-100px;position:relative;overflow:hidden}
+.article-list-hero::before{content:'';position:absolute;top:-30%;right:-10%;width:50%;height:160%;background:radial-gradient(circle,rgba(232,121,59,.08) 0%,transparent 70%);pointer-events:none}
+.article-list-hero::after{content:'';position:absolute;bottom:0;left:0;right:0;height:4px;background:repeating-linear-gradient(90deg,#E8793B 0,#E8793B 20px,var(--gold) 20px,var(--gold) 40px,#0B3D2E 40px,#0B3D2E 60px)}
+.article-list-hero h1{font-size:clamp(1.8rem,4vw,2.8rem);font-weight:800;letter-spacing:-.03em;line-height:1.1;color:#fff;font-family:var(--font-display)}
+.article-list-hero p{color:rgba(255,255,255,.6);font-size:1.02rem;max-width:520px;line-height:1.7;font-family:var(--font-body)}
+.article-search-wrap{max-width:560px;position:relative}
+.article-search-wrap input{height:52px;border-radius:8px;border:1.5px solid rgba(255,255,255,.12);background:rgba(255,255,255,.06);color:#fff;padding-left:48px;padding-right:120px;font-size:.92rem;backdrop-filter:blur(12px);transition:all .2s;font-family:var(--font-body)}
+.article-search-wrap input::placeholder{color:rgba(255,255,255,.35)}
+.article-search-wrap input:focus{border-color:var(--orange);background:rgba(255,255,255,.1);box-shadow:0 0 0 3px rgba(232,121,59,.15)}
+.article-search-wrap .search-icon{position:absolute;left:18px;top:50%;transform:translateY(-50%);color:rgba(255,255,255,.4);font-size:1rem;pointer-events:none}
+.article-search-wrap .ef-btn-search{position:absolute;right:5px;top:50%;transform:translateY(-50%);border-radius:8px;padding:8px 22px;font-size:.85rem;font-weight:600;background:var(--orange);color:#fff;border:none;transition:all .2s;cursor:pointer}
+.article-search-wrap .ef-btn-search:hover{background:#d56a2f}
+.featured-img-wrap{position:relative;overflow:hidden;height:200px}
+.featured-img-wrap img{width:100%;height:100%;object-fit:cover;transition:transform .5s cubic-bezier(.4,0,.2,1)}
+.ef-card:hover .featured-img-wrap img{transform:scale(1.06)}
+.featured-img-wrap .overlay{position:absolute;inset:0;background:linear-gradient(180deg,transparent 30%,rgba(0,0,0,.5) 100%)}
+.featured-img-wrap .ef-badge-featured{position:absolute;top:12px;right:12px;z-index:2}
+.featured-img-wrap .ef-badge-cat{position:absolute;bottom:14px;left:14px;z-index:2}
+.article-title-link{font-weight:700;font-size:.95rem;color:var(--green-900);text-decoration:none;line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;transition:color .2s;font-family:var(--font-display)}
+.article-title-link:hover{color:var(--orange)}
+.article-excerpt{color:var(--gray-400);font-size:.84rem;line-height:1.6;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;margin-top:6px;font-family:var(--font-body)}
+.article-meta{display:flex;align-items:center;gap:12px;font-size:.75rem;color:var(--gray-400);margin-top:auto;padding-top:.75rem}
+@media(max-width:768px){.article-list-hero{padding:100px 0 3.5rem}.featured-img-wrap{height:160px}.article-search-wrap input{padding-right:50px}.article-search-wrap .ef-btn-search span{display:none}}
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="ef-section-hero article-list-hero">
+    <div class="container text-center">
+        <div class="d-inline-flex align-items-center gap-2 mb-3" style="backdrop-filter:blur(12px);background:rgba(232,121,59,.1);border:1px solid rgba(232,121,59,.15);border-radius:8px;padding:5px 14px">
+            <i class="bi bi-journal-richtext" style="font-size:.8rem;color:var(--orange)"></i>
+            <span style="font-size:.78rem;font-weight:600;color:var(--orange)">Blog & Actualités</span>
+        </div>
+        <h1 class="mb-3">Guides, Conseils &<br><span style="color:var(--orange)">Actualités Foncières</span></h1>
+        <p class="mx-auto mb-4">Restez informé sur le marché foncier ivoirien, nos guides pratiques et les dernières nouveautés de la plateforme.</p>
+        <div class="d-flex justify-content-center">
+            <form method="get" class="article-search-wrap w-100">
+                <i class="bi bi-search search-icon"></i>
+                <input type="text" name="q" value="{{ search_query }}" class="form-control" placeholder="Rechercher un article, un guide...">
+                <button type="submit" class="ef-btn-search"><i class="bi bi-search me-1"></i> <span>Rechercher</span></button>
+            </form>
+        </div>
+    </div>
+</section>
+
+{% if categories %}
+<div class="container">
+    <div class="ef-chips" style="justify-content:center;margin-top:-26px;position:relative;z-index:5">
+        <a href="{% url 'content:articles' %}" class="ef-chip {% if not current_category %}active{% endif %}"><i class="bi bi-grid-3x3-gap" style="font-size:.75rem"></i> Tous</a>
+        {% for cat in categories %}
+        <a href="{% url 'content:articles' %}?category={{ cat.slug }}" class="ef-chip {% if current_category.pk == cat.pk %}active{% endif %}"><i class="{{ cat.icon }}" style="font-size:.75rem"></i> {{ cat.name }}</a>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+<div class="ef-page-content container py-5">
+    {% if search_query %}
+    <div class="mb-4 d-flex align-items-center gap-2 flex-wrap">
+        <span style="color:var(--gray-400);font-size:.85rem">Résultats pour</span>
+        <span class="ef-badge ef-badge-warning">{{ search_query }}</span>
+        <a href="{% url 'content:articles' %}" class="ef-btn ef-btn-sm ef-btn-outline-green"><i class="bi bi-x me-1"></i> Réinitialiser</a>
+    </div>
+    {% endif %}
+
+    {% if featured and not search_query and not current_category %}
+    <h4 style="font-family:var(--font-display);color:var(--green-900);font-weight:700" class="mb-3"><i class="bi bi-star-fill me-2" style="font-size:.9rem;color:var(--orange)"></i>À la une</h4>
+    <div class="row g-4 mb-5">
+        {% for article in featured %}
+        <div class="col-md-4">
+            <div class="ef-card h-100" style="overflow:hidden">
+                <div class="featured-img-wrap">
+                    {% if article.cover_image %}
+                    <img src="{{ article.cover_image.url }}" alt="{{ article.title }}">
+                    {% else %}
+                    <div class="w-100 h-100 d-flex align-items-center justify-content-center" style="background:linear-gradient(135deg,var(--green-50),rgba(232,121,59,.08))"><i class="bi bi-journal-text" style="font-size:3rem;color:var(--green-700);opacity:.3"></i></div>
+                    {% endif %}
+                    <div class="overlay"></div>
+                    <span class="ef-badge ef-badge-warning ef-badge-featured"><i class="bi bi-star-fill me-1"></i> En vedette</span>
+                    {% if article.category %}<span class="ef-badge ef-badge-success ef-badge-cat">{{ article.category.name }}</span>{% endif %}
+                </div>
+                <div class="ef-card-body p-3">
+                    <a href="{% url 'content:article_detail' article.slug %}" class="article-title-link d-block mb-1">{{ article.title|truncatechars:60 }}</a>
+                    <p class="article-excerpt mb-2">{{ article.excerpt|truncatechars:100 }}</p>
+                    <div class="d-flex justify-content-between align-items-center mt-auto pt-2" style="font-size:.78rem;color:var(--gray-400)">
+                        <span><i class="bi bi-person-circle me-1"></i>{{ article.author.get_full_name|default:"EYE-Foncier" }}</span>
+                        <span><i class="bi bi-clock me-1"></i>{{ article.reading_time }} min</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if articles %}
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h4 class="mb-0" style="font-family:var(--font-display);color:var(--green-900);font-weight:700">{% if current_category %}<i class="{{ current_category.icon }} me-2" style="font-size:.9rem;color:var(--orange)"></i>{{ current_category.name }}{% elif search_query %}Résultats{% else %}Tous les articles{% endif %}</h4>
+        <span class="ef-badge ef-badge-success">{{ articles|length }} article{{ articles|length|pluralize }}</span>
+    </div>
+    <div class="row g-3">
+        {% for article in articles %}
+        <div class="col-md-6 col-xl-4">
+            <div class="ef-card h-100" style="display:flex;flex-direction:column">
+                <div class="ef-card-body" style="flex:1;display:flex;flex-direction:column;padding:1.25rem">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        {% if article.category %}<span class="ef-badge ef-badge-success">{{ article.category.name }}</span>{% else %}<span></span>{% endif %}
+                        <small class="ef-col-muted" style="font-size:.72rem">{{ article.published_at|date:"d/m/Y" }}</small>
+                    </div>
+                    <a href="{% url 'content:article_detail' article.slug %}" class="article-title-link">{{ article.title|truncatechars:70 }}</a>
+                    <p class="article-excerpt">{{ article.excerpt|truncatechars:140 }}</p>
+                    <div class="article-meta">
+                        <span><i class="bi bi-eye me-1"></i>{{ article.views_count|intcomma }}</span>
+                        <span><i class="bi bi-clock me-1"></i>{{ article.reading_time }} min</span>
+                        <a href="{% url 'content:article_detail' article.slug %}" class="ef-btn ef-btn-sm ef-btn-outline-green ms-auto">Lire <i class="bi bi-arrow-right"></i></a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="ef-empty-state">
+        <div style="width:80px;height:80px;border-radius:50%;background:var(--green-50);display:inline-flex;align-items:center;justify-content:center;margin-bottom:1rem">
+            <i class="bi bi-journal-text" style="font-size:2rem;color:var(--green-700)"></i>
+        </div>
+        <h5 style="font-family:var(--font-display);color:var(--green-900);font-weight:700;margin-bottom:.5rem">Aucun article pour le moment</h5>
+        <p style="color:var(--gray-400);max-width:360px;margin:0 auto;font-family:var(--font-body)">{% if search_query %}Aucun article ne correspond à votre recherche.{% else %}Revenez bientôt pour des guides et actualités foncières.{% endif %}</p>
+        {% if search_query %}<a href="{% url 'content:articles' %}" class="ef-btn ef-btn-primary" style="margin-top:16px"><i class="bi bi-arrow-left"></i> Tous les articles</a>{% endif %}
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

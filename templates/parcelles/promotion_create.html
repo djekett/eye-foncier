@@ -1,0 +1,189 @@
+{% extends "layouts/base.html" %}
+{% load parcelles_tags %}
+
+{% block title %}Promouvoir {{ parcelle.lot_number }} — {{ SITE_NAME }}{% endblock %}
+
+{% block content %}
+<div class="container py-4" style="max-width:900px">
+    <nav aria-label="breadcrumb" class="mb-3">
+        <ol class="breadcrumb small">
+            <li class="breadcrumb-item"><a href="{% url 'parcelles:list' %}" class="text-success">Parcelles</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'parcelles:detail' parcelle.pk %}" class="text-success">{{ parcelle.lot_number }}</a></li>
+            <li class="breadcrumb-item active">Promouvoir</li>
+        </ol>
+    </nav>
+
+    <div class="text-center mb-4">
+        <div class="d-inline-flex align-items-center justify-content-center rounded-circle mb-3"
+             style="width:70px;height:70px;background:linear-gradient(135deg,#f59e0b,#f97316)">
+            <i class="bi bi-megaphone-fill text-white" style="font-size:1.8rem"></i>
+        </div>
+        <h2 class="fw-bold">Promouvoir votre parcelle</h2>
+        <p class="text-muted">
+            Lot <strong>{{ parcelle.lot_number }}</strong> — {{ parcelle.title|truncatechars:50 }}
+            {% if parcelle.zone %}• {{ parcelle.zone.name }}{% endif %}
+        </p>
+        <p class="text-muted small">
+            Votre annonce sera affichée en priorité aux acheteurs dont le profil
+            correspond à votre parcelle grâce à notre <strong>Smart Matching Engine</strong>.
+        </p>
+    </div>
+
+    <form method="post">
+        {% csrf_token %}
+
+        <!-- Choix du plan -->
+        <h5 class="fw-bold mb-3"><i class="bi bi-stars me-2 text-warning"></i>Choisissez votre plan</h5>
+        <div class="row g-3 mb-4">
+            {% for value, label in campaign_types %}
+            <div class="col-md-4">
+                <div class="card border-0 shadow-sm h-100 plan-card" id="plan-{{ value }}"
+                     onclick="selectPlan('{{ value }}')"
+                     style="cursor:pointer;transition:all .2s;{% if value == 'premium' %}border:2px solid #f59e0b !important{% endif %}">
+
+                    {% if value == "premium" %}
+                    <div class="position-absolute top-0 end-0 m-2">
+                        <span class="badge bg-warning text-dark"><i class="bi bi-star-fill me-1"></i>Populaire</span>
+                    </div>
+                    {% endif %}
+
+                    <div class="card-body text-center py-4">
+                        <div class="mb-2">
+                            {% if value == "basic" %}
+                            <i class="bi bi-broadcast" style="font-size:2rem;color:#22c55e"></i>
+                            {% elif value == "premium" %}
+                            <i class="bi bi-rocket-takeoff" style="font-size:2rem;color:#f59e0b"></i>
+                            {% else %}
+                            <i class="bi bi-lightning-charge-fill" style="font-size:2rem;color:#8b5cf6"></i>
+                            {% endif %}
+                        </div>
+                        <h6 class="fw-bold">{{ label }}</h6>
+                        <div class="display-6 fw-bold my-2" style="color:#166534">
+                            {{ pricing|get_item:value|format_fcfa }}
+                            <span class="fs-6 fw-normal text-muted">FCFA/sem.</span>
+                        </div>
+                        <ul class="list-unstyled small text-muted text-start mt-3">
+                            {% if value == "basic" %}
+                            <li><i class="bi bi-check text-success me-1"></i> Visibilité standard</li>
+                            <li><i class="bi bi-check text-success me-1"></i> Smart Matching basique</li>
+                            <li><i class="bi bi-check text-success me-1"></i> Statistiques de vues</li>
+                            {% elif value == "premium" %}
+                            <li><i class="bi bi-check text-success me-1"></i> Priorité dans les résultats</li>
+                            <li><i class="bi bi-check text-success me-1"></i> Smart Matching avancé</li>
+                            <li><i class="bi bi-check text-success me-1"></i> Badge « Promu »</li>
+                            <li><i class="bi bi-check text-success me-1"></i> Statistiques complètes</li>
+                            {% else %}
+                            <li><i class="bi bi-check text-success me-1"></i> Top des résultats</li>
+                            <li><i class="bi bi-check text-success me-1"></i> Notification push acheteurs</li>
+                            <li><i class="bi bi-check text-success me-1"></i> Page de promotion dédiée</li>
+                            <li><i class="bi bi-check text-success me-1"></i> Rapport de performance</li>
+                            {% endif %}
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <input type="hidden" name="campaign_type" id="id_campaign_type" value="basic">
+
+        <!-- Durée et paiement -->
+        <div class="row g-3 mb-4">
+            <div class="col-md-4">
+                <label class="form-label fw-semibold">
+                    <i class="bi bi-calendar-week me-1"></i> Durée (semaines)
+                </label>
+                <select name="duration_weeks" class="form-select" id="id_duration_weeks" onchange="updateTotal()">
+                    <option value="1">1 semaine</option>
+                    <option value="2">2 semaines</option>
+                    <option value="4" selected>4 semaines (1 mois)</option>
+                    <option value="8">8 semaines (2 mois)</option>
+                    <option value="12">12 semaines (3 mois)</option>
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label fw-semibold">
+                    <i class="bi bi-credit-card me-1"></i> Mode de paiement
+                </label>
+                <select name="payment_method" class="form-select">
+                    <option value="mobile_money">Mobile Money (MTN/Orange/Moov)</option>
+                    <option value="virement">Virement bancaire</option>
+                    <option value="carte">Carte bancaire</option>
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label fw-semibold">Total à payer</label>
+                <div class="input-group">
+                    <span class="input-group-text bg-success text-white fw-bold" id="totalAmount">20 000</span>
+                    <span class="input-group-text">FCFA</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Accroche -->
+        <div class="mb-4">
+            <label class="form-label fw-semibold">
+                <i class="bi bi-chat-quote me-1"></i> Accroche promotionnelle <span class="text-muted fw-normal">(optionnel)</span>
+            </label>
+            <input type="text" name="highlight_text" class="form-control" maxlength="200"
+                   placeholder="Ex: Terrain idéal pour villa avec vue mer, titre foncier vérifié !">
+            <small class="text-muted">Ce texte sera mis en avant dans la promotion.</small>
+        </div>
+
+        <!-- Récapitulatif -->
+        <div class="card border-success mb-4">
+            <div class="card-body">
+                <h6 class="fw-bold"><i class="bi bi-info-circle me-1 text-success"></i> Comment ça marche</h6>
+                <ol class="small text-muted mb-0">
+                    <li>Vous choisissez un plan et une durée</li>
+                    <li>Après paiement, votre parcelle est promue immédiatement</li>
+                    <li>Notre <strong>Smart Matching Engine</strong> identifie les acheteurs compatibles</li>
+                    <li>Votre annonce apparaît en priorité dans leurs résultats et notifications</li>
+                    <li>Vous suivez les performances (impressions, clics, taux de conversion)</li>
+                </ol>
+            </div>
+        </div>
+
+        <div class="d-flex gap-2">
+            <a href="{% url 'parcelles:detail' parcelle.pk %}" class="btn btn-outline-secondary flex-fill">
+                <i class="bi bi-arrow-left me-1"></i> Annuler
+            </a>
+            <button type="submit" class="btn btn-warning flex-fill fw-bold">
+                <i class="bi bi-megaphone me-1"></i> Lancer la promotion — <span id="btnTotal">20 000</span> FCFA
+            </button>
+        </div>
+    </form>
+</div>
+
+<style>
+.plan-card { border: 2px solid transparent !important; }
+.plan-card:hover { transform: translateY(-3px); box-shadow: 0 8px 25px rgba(0,0,0,.1) !important; }
+.plan-card.selected { border-color: #22c55e !important; background: #f0fdf4; }
+</style>
+
+<script>
+const PRICING = { basic: 5000, premium: 15000, boost: 25000 };
+let selectedPlan = 'basic';
+
+function selectPlan(plan) {
+    selectedPlan = plan;
+    document.getElementById('id_campaign_type').value = plan;
+    document.querySelectorAll('.plan-card').forEach(c => c.classList.remove('selected'));
+    document.getElementById('plan-' + plan).classList.add('selected');
+    updateTotal();
+}
+
+function updateTotal() {
+    const weeks = parseInt(document.getElementById('id_duration_weeks').value) || 1;
+    const price = PRICING[selectedPlan] || 5000;
+    const total = (price * weeks).toLocaleString('fr-FR');
+    document.getElementById('totalAmount').textContent = total;
+    document.getElementById('btnTotal').textContent = total;
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    selectPlan('basic');
+    updateTotal();
+});
+</script>
+{% endblock %}

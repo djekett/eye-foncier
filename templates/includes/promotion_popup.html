@@ -1,0 +1,137 @@
+{% comment %}
+Pop-up de recommandation personnalisée — EYE-FONCIER
+S'affiche sur le dashboard et la liste parcelles pour les acheteurs connectés.
+Chargement AJAX depuis l'API /parcelles/api/recommendations/
+{% endcomment %}
+
+<!-- Popup Overlay -->
+<div id="promo-popup-overlay" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.4);z-index:9998;backdrop-filter:blur(2px)" onclick="closePromoPopup()"></div>
+
+<!-- Popup Container -->
+<div id="promo-popup" style="display:none;position:fixed;bottom:24px;right:24px;width:380px;max-height:500px;background:#fff;border-radius:16px;box-shadow:0 20px 60px rgba(0,0,0,.15);z-index:9999;overflow:hidden">
+    <!-- Header -->
+    <div style="background:linear-gradient(135deg,var(--green-900),#166534);padding:16px 20px;color:#fff">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h6 class="fw-bold mb-0" style="font-size:.9rem"><i class="bi bi-stars"></i> Pour vous</h6>
+                <p class="mb-0" style="font-size:.72rem;opacity:.8">Parcelles recommandees pour votre profil</p>
+            </div>
+            <button onclick="closePromoPopup()" style="background:rgba(255,255,255,.2);border:none;color:#fff;width:28px;height:28px;border-radius:50%;cursor:pointer;font-size:.85rem">
+                <i class="bi bi-x"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- Carousel -->
+    <div id="promo-carousel" style="padding:16px;max-height:380px;overflow-y:auto">
+        <div id="promo-loading" class="text-center py-4">
+            <div class="spinner-border spinner-border-sm" style="color:var(--green-700)"></div>
+            <p class="mt-2 mb-0" style="font-size:.82rem;color:var(--gray-400)">Chargement...</p>
+        </div>
+        <div id="promo-items"></div>
+    </div>
+
+    <!-- Footer -->
+    <div style="padding:8px 16px 12px;border-top:1px solid #f0f0f0;text-align:center">
+        <a href="{% url 'parcelles:list' %}" style="font-size:.78rem;color:var(--green-700);text-decoration:none;font-weight:600">
+            Voir toutes les parcelles <i class="bi bi-arrow-right"></i>
+        </a>
+    </div>
+</div>
+
+<style>
+#promo-popup .promo-card {
+    background: #f8faf9;
+    border-radius: 12px;
+    padding: 12px;
+    margin-bottom: 10px;
+    border: 1px solid #e5e7eb;
+    cursor: pointer;
+    transition: all .2s;
+}
+#promo-popup .promo-card:hover {
+    border-color: var(--green-700);
+    box-shadow: 0 4px 12px rgba(11,61,46,.1);
+    transform: translateY(-1px);
+}
+#promo-popup .promo-score {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    background: linear-gradient(135deg, #D4A853, #E8790A);
+    color: #fff;
+    font-size: .65rem;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 10px;
+}
+@media (max-width: 480px) {
+    #promo-popup {
+        width: calc(100% - 24px) !important;
+        right: 12px !important;
+        bottom: 12px !important;
+    }
+}
+</style>
+
+<script>
+(function() {
+    const POPUP_DELAY_MS = 5000;
+    const DISMISS_KEY = "eyf_promo_dismissed";
+    const DISMISS_HOURS = 4;
+
+    // Ne pas afficher si déjà fermé récemment
+    const dismissed = localStorage.getItem(DISMISS_KEY);
+    if (dismissed && (Date.now() - parseInt(dismissed)) < DISMISS_HOURS * 3600000) return;
+
+    setTimeout(loadRecommendations, POPUP_DELAY_MS);
+
+    function loadRecommendations() {
+        fetch("{% url 'parcelles:recommendations_api' %}?limit=5")
+            .then(r => r.json())
+            .then(data => {
+                if (!data.recommendations || data.recommendations.length === 0) return;
+                renderPopup(data.recommendations);
+            })
+            .catch(() => {});
+    }
+
+    function renderPopup(items) {
+        const container = document.getElementById("promo-items");
+        const loading = document.getElementById("promo-loading");
+        loading.style.display = "none";
+
+        let html = "";
+        items.forEach(item => {
+            const scoreHtml = item.match_score
+                ? `<span class="promo-score"><i class="bi bi-bullseye"></i> ${item.match_score}%</span>`
+                : "";
+            html += `
+                <div class="promo-card" onclick="window.location='/parcelles/${item.id}/'">
+                    <div class="d-flex justify-content-between align-items-start mb-1">
+                        <div>
+                            <strong style="color:var(--green-900);font-size:.85rem">${item.title}</strong>
+                            <span style="font-size:.72rem;color:var(--gray-400);margin-left:6px">Lot ${item.lot_number}</span>
+                        </div>
+                        ${scoreHtml}
+                    </div>
+                    <div class="d-flex gap-3" style="font-size:.78rem;color:var(--gray-400)">
+                        <span><i class="bi bi-rulers" style="color:var(--green-700)"></i> ${item.surface_m2} m²</span>
+                        <span><i class="bi bi-tag" style="color:#E8790A"></i> ${item.price_formatted} FCFA</span>
+                    </div>
+                    ${item.address ? `<div style="font-size:.72rem;color:var(--gray-300);margin-top:4px"><i class="bi bi-geo-alt"></i> ${item.address}</div>` : ""}
+                </div>
+            `;
+        });
+        container.innerHTML = html;
+
+        document.getElementById("promo-popup").style.display = "block";
+    }
+})();
+
+function closePromoPopup() {
+    document.getElementById("promo-popup").style.display = "none";
+    document.getElementById("promo-popup-overlay").style.display = "none";
+    localStorage.setItem("eyf_promo_dismissed", Date.now().toString());
+}
+</script>

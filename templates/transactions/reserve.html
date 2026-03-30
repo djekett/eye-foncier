@@ -1,0 +1,69 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}Réserver — {{ parcelle.title }} — {{ SITE_NAME }}{% endblock %}
+
+{% block content %}
+<div class="ef-page-header">
+    <h2 style="color:#0B3D2E; font-family:var(--font-display)">
+        <i class="bi bi-bookmark-check" style="color:#E8793B"></i> Réservation de parcelle
+    </h2>
+</div>
+
+<div class="ef-page-content" style="max-width:720px; margin:0 auto">
+    <div class="ef-card">
+        <div class="ef-card-body">
+            <!-- Parcelle summary -->
+            <div style="background:#F7F4EE; border-radius:.5rem; padding:1rem; margin-bottom:1.5rem; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem">
+                <div>
+                    <h3 style="font-family:var(--font-display); color:#0B3D2E; margin:0 0 .25rem; font-size:1.15rem">{{ parcelle.title }}</h3>
+                    <p style="color:#6b7280; font-size:.85rem; margin-bottom:.25rem">
+                        <i class="bi bi-pin-map" style="color:#E8793B"></i> {{ parcelle.address|default:"—" }} &middot; Lot {{ parcelle.lot_number }}
+                    </p>
+                    <span style="font-size:.85rem; color:#6b7280">
+                        <i class="bi bi-arrows-fullscreen"></i> {{ parcelle.surface_m2|floatformat:0 }} m² &middot; {{ parcelle.get_land_type_display }}
+                    </span>
+                </div>
+                <div style="text-align:right">
+                    <span style="font-family:var(--font-mono); font-size:1.35rem; font-weight:700; color:#0B3D2E">{{ parcelle.price|floatformat:0 }}</span>
+                    <br><span style="color:#6b7280; font-size:.8rem">FCFA</span>
+                </div>
+            </div>
+
+            {% if form.errors %}
+            <div style="background:#fee2e2; border:1px solid #fca5a5; border-radius:.5rem; padding:.75rem; margin-bottom:1rem; font-size:.85rem; color:#dc2626">
+                {% for field, errors in form.errors.items %}
+                    {% for error in errors %}{{ error }}<br>{% endfor %}
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            <form method="post">
+                {% csrf_token %}
+                <div class="ef-form-group">
+                    <label class="ef-form-label">Notes / Message au vendeur</label>
+                    {{ form.notes }}
+                </div>
+                <div class="ef-form-group">
+                    <label style="display:flex; align-items:center; gap:.5rem; font-size:.875rem; cursor:pointer">
+                        {{ form.confirm }}
+                        Je confirme vouloir réserver cette parcelle
+                    </label>
+                </div>
+
+                <div style="background:rgba(232,121,59,0.1); border-radius:.5rem; padding:.75rem; margin-bottom:1.5rem; font-size:.85rem; color:#92400e">
+                    <i class="bi bi-info-circle" style="color:#E8793B"></i>
+                    En confirmant la réservation, la parcelle sera temporairement bloquée pour vous.
+                    Le vendeur sera notifié et devra valider la transaction.
+                </div>
+
+                <div style="display:flex; gap:.75rem">
+                    <button type="submit" class="ef-btn ef-btn-primary" style="font-size:1rem; padding:.65rem 1.5rem">
+                        <i class="bi bi-bookmark-check"></i> Confirmer la réservation
+                    </button>
+                    <a href="{% url 'parcelles:detail' parcelle.pk %}" class="ef-btn ef-btn-outline-green" style="font-size:1rem; padding:.65rem 1.5rem">Annuler</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

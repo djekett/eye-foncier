@@ -1,0 +1,85 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}Ajouter un document — {{ SITE_NAME }}{% endblock %}
+
+{% block content %}
+<div class="ef-page-header ef-reveal">
+    <div class="container">
+        <nav class="ef-breadcrumb mb-3">
+            <a href="{% url 'parcelles:detail' parcelle.pk %}">{{ parcelle.lot_number }}</a>
+            <span class="sep">/</span>
+            <span class="current">Téléverser un document</span>
+        </nav>
+    </div>
+</div>
+
+<div class="ef-page-content container">
+    <div class="row justify-content-center">
+        <div class="col-md-7">
+            <div class="ef-card">
+                <div class="ef-card-header">
+                    <h6><i class="bi bi-cloud-upload me-2" style="color:var(--orange)"></i>Téléverser un document</h6>
+                    <small style="color:var(--gray-400)">Parcelle {{ parcelle.lot_number }} — {{ parcelle.title }}</small>
+                </div>
+                <div class="ef-card-body">
+                    {% if form.errors %}
+                    <div class="ef-card" style="border-left:4px solid var(--danger);margin-bottom:1.5rem">
+                        <div class="ef-card-body" style="font-size:.88rem">
+                            <i class="bi bi-exclamation-triangle me-1" style="color:var(--danger)"></i>
+                            {% for field, errors in form.errors.items %}
+                                {% for error in errors %}{{ error }}<br>{% endfor %}
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <form method="post" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        <div class="ef-form-group">
+                            <label class="ef-form-label">Type de document</label>
+                            {{ form.doc_type }}
+                        </div>
+                        <div class="ef-form-group">
+                            <label class="ef-form-label">Titre</label>
+                            {{ form.title }}
+                        </div>
+                        <div class="ef-form-group">
+                            <label class="ef-form-label">Description</label>
+                            {{ form.description }}
+                        </div>
+                        <div class="ef-form-group">
+                            <label class="ef-form-label">Fichier (PDF)</label>
+                            <div class="ef-upload-zone">
+                                {{ form.file }}
+                            </div>
+                            <small style="color:var(--gray-400);display:block;margin-top:.25rem">Format PDF uniquement. Taille max : 20 Mo.</small>
+                        </div>
+                        <div class="ef-form-group">
+                            <label class="ef-form-label">Niveau de confidentialité</label>
+                            {{ form.confidentiality }}
+                            <small style="color:var(--gray-400);display:block;margin-top:.25rem">
+                                <strong>Public</strong> : visible par tous &middot;
+                                <strong>Acheteurs</strong> : visible uniquement par les acheteurs intéressés &middot;
+                                <strong>Privé</strong> : visible uniquement par vous et les administrateurs
+                            </small>
+                        </div>
+
+                        <div class="ef-callout info">
+                            <i class="bi bi-shield-lock"></i>
+                            Chaque document est protégé par un hash SHA-256 et filigrane dynamique lors de la consultation.
+                            Aucun téléchargement direct n'est possible.
+                        </div>
+
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="ef-btn ef-btn-primary">
+                                <i class="bi bi-upload me-1"></i> Téléverser
+                            </button>
+                            <a href="{% url 'parcelles:detail' parcelle.pk %}" class="ef-btn ef-btn-outline-green">Annuler</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

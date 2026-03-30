@@ -1,0 +1,304 @@
+{% extends "layouts/base.html" %}
+{% load humanize %}
+
+{% block title %}Parcelles — {{ SITE_NAME }}{% endblock %}
+
+{% block content %}
+<div style="padding:0 clamp(16px,4vw,48px) 60px">
+    <div style="max-width:1200px;margin:0 auto">
+        <!-- Header -->
+        <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3 ef-reveal">
+            <div>
+                <h2 class="fw-bold mb-1" style="font-family:var(--font-display);color:var(--green-900)">
+                    <i class="bi bi-grid-3x3-gap me-2" style="color:var(--orange)"></i>Parcelles
+                </h2>
+                <p class="mb-0" style="color:var(--gray-400);font-size:.9rem">{{ parcelles.paginator.count }} parcelle{{ parcelles.paginator.count|pluralize }} trouvee{{ parcelles.paginator.count|pluralize }}</p>
+            </div>
+            <div class="d-flex gap-2">
+                <a href="{% url 'websig:map' %}" class="ef-btn-secondary" style="font-size:13px;padding:10px 18px">
+                    <i class="bi bi-map"></i> Carte
+                </a>
+                {% if user.is_superuser %}
+                <a href="{% url 'parcelles:create' %}" class="ef-btn-primary" style="font-size:13px;padding:10px 18px">
+                    <i class="bi bi-plus-lg"></i> Ajouter
+                </a>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Filtres -->
+        <div class="card border-0 mb-4 ef-reveal" style="box-shadow:var(--shadow-md);border-radius:var(--radius-lg)">
+            <div class="card-body p-3">
+                <form method="get" class="row g-3 align-items-end">
+                    <div class="col-md-3">
+                        <label class="form-label small fw-semibold" style="color:var(--gray-600);font-size:.78rem">Recherche</label>
+                        {{ form.q }}
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label small fw-semibold" style="color:var(--gray-600);font-size:.78rem">Ville</label>
+                        {{ form.zone }}
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label small fw-semibold" style="color:var(--gray-600);font-size:.78rem">Type</label>
+                        {{ form.land_type }}
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label small fw-semibold" style="color:var(--gray-600);font-size:.78rem">Statut</label>
+                        {{ form.status }}
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label small fw-semibold" style="color:var(--gray-600);font-size:.78rem">Prix max</label>
+                        {{ form.price_max }}
+                    </div>
+                    <div class="col-md-1">
+                        <button type="submit" class="ef-search-btn w-100" style="padding:10px"><i class="bi bi-search"></i> Filtrer</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Grille -->
+        <div class="ef-properties-grid ef-stagger">
+            {% for parcelle in parcelles %}
+            <div class="ef-property-card" data-card-id="{{ parcelle.pk }}">
+                <!-- Image Slider -->
+                <div class="ef-property-slider">
+                    <div class="ef-property-slider-track" data-slide="0">
+                        {% for media in parcelle.medias.all %}
+                        {% if media.media_type == 'image' %}
+                        <img src="{{ media.file.url }}" alt="{{ parcelle.title }}" loading="lazy">
+                        {% endif %}
+                        {% empty %}
+                        <div class="ef-slide-placeholder">
+                            <i class="bi bi-geo-alt"></i>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% if parcelle.medias.count > 1 %}
+                    <button class="ef-slider-nav prev" onclick="event.stopPropagation();slideCard(this,-1)"><i class="bi bi-chevron-left"></i></button>
+                    <button class="ef-slider-nav next" onclick="event.stopPropagation();slideCard(this,1)"><i class="bi bi-chevron-right"></i></button>
+                    <div class="ef-slider-dots">
+                        {% for media in parcelle.medias.all %}
+                        {% if media.media_type == 'image' %}
+                        <button class="ef-slider-dot{% if forloop.first %} active{% endif %}" onclick="event.stopPropagation();goSlide(this,{{ forloop.counter0 }})"></button>
+                        {% endif %}
+                        {% endfor %}
+                    </div>
+                    <span class="ef-property-img-count"><i class="bi bi-images"></i> {{ parcelle.medias.count }}</span>
+                    {% endif %}
+                    <div class="ef-property-badges">
+                        <span class="ef-badge" style="background:{% if parcelle.status == 'disponible' %}var(--success){% elif parcelle.status == 'reserve' %}var(--warning){% else %}var(--danger){% endif %}; color:white">
+                            {{ parcelle.get_status_display }}
+                        </span>
+                        {% if parcelle.pk in premium_ids %}
+                        <span class="ef-badge ef-badge-recommended">
+                            <i class="bi bi-star-fill"></i> Recommande
+                        </span>
+                        {% elif parcelle.pk in promoted_ids %}
+                        <span class="ef-badge ef-badge-promoted">
+                            <i class="bi bi-megaphone-fill"></i> Promu
+                        </span>
+                        {% endif %}
+                        {% if parcelle.trust_badge %}
+                        <span class="ef-badge ef-badge-certified">
+                            <i class="bi bi-patch-check-fill"></i> Certifie
+                        </span>
+                        {% endif %}
+                    </div>
+                    <button class="ef-property-share" onclick="event.stopPropagation();shareCard('{{ parcelle.pk }}')" title="Partager">
+                        <i class="bi bi-share"></i>
+                    </button>
+                    <button class="ef-property-fav" onclick="event.stopPropagation();toggleLike(this,'{{ parcelle.pk }}')" title="Favori" data-parcelle-id="{{ parcelle.pk }}">
+                        <i class="bi bi-heart{% if parcelle.pk in user_liked_ids %}-fill{% endif %}"></i>
+                    </button>
+                    <div class="ef-property-price">{{ parcelle.price|floatformat:0|intcomma }} FCFA</div>
+                    <!-- Quick-view overlay -->
+                    <div class="ef-property-quickview">
+                        <div class="ef-property-quickview-actions">
+                            <a href="{% url 'parcelles:detail' parcelle.pk %}" class="ef-quickview-btn primary" onclick="event.stopPropagation()">
+                                <i class="bi bi-eye"></i> Details
+                            </a>
+                            <a href="{% url 'websig:map' %}?focus={{ parcelle.pk }}" class="ef-quickview-btn secondary" onclick="event.stopPropagation()">
+                                <i class="bi bi-geo-alt-fill"></i> Carte
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                <a href="{% url 'parcelles:detail' parcelle.pk %}" class="ef-property-body" style="text-decoration:none;color:inherit;display:block">
+                    <h3>{{ parcelle.title }}</h3>
+                    <div class="ef-property-loc">
+                        <i class="bi bi-geo-alt-fill"></i>
+                        {{ parcelle.address|default:"Non renseignee" }} &middot; Lot {{ parcelle.lot_number }}
+                    </div>
+                    <div class="ef-property-tags">
+                        <span class="ef-property-tag"><i class="bi bi-aspect-ratio me-1"></i>{{ parcelle.surface_m2|floatformat:0 }} m&sup2;</span>
+                        <span class="ef-property-tag"><i class="bi bi-tag me-1"></i>{{ parcelle.get_land_type_display }}</span>
+                        {% if parcelle.trust_badge %}
+                        <span class="ef-property-certified"><i class="bi bi-patch-check-fill"></i> Certifie</span>
+                        {% endif %}
+                    </div>
+                    <div class="ef-property-meta">
+                        <span class="ef-property-meta-item"><i class="bi bi-eye"></i> {{ parcelle.views_count }}</span>
+                        <span class="ef-property-meta-item"><i class="bi bi-heart"></i> {{ parcelle.likes_count|default:"0" }}</span>
+                        {% if parcelle.pk in premium_ids %}
+                        <span class="ef-property-recommend-tip"><i class="bi bi-hand-thumbs-up-fill"></i> Recommande pour vous</span>
+                        {% elif parcelle.trust_badge %}
+                        <span class="ef-property-score"><i class="bi bi-patch-check-fill"></i> Certifie</span>
+                        {% endif %}
+                    </div>
+                </a>
+                <div class="ef-property-actions">
+                    <a href="{% url 'parcelles:detail' parcelle.pk %}" class="ef-property-action-btn details">
+                        <i class="bi bi-eye"></i> Details
+                    </a>
+                    <a href="{% url 'websig:map' %}?focus={{ parcelle.pk }}" class="ef-property-action-btn map">
+                        <i class="bi bi-geo-alt-fill"></i> Carte
+                    </a>
+                </div>
+            </div>
+            {% empty %}
+            <div style="grid-column:1/-1;text-align:center;padding:60px 20px">
+                <i class="bi bi-map" style="font-size:4rem;color:var(--gray-200)"></i>
+                <h5 class="fw-bold mt-3" style="font-family:var(--font-display);color:var(--green-900)">Aucune parcelle trouvee</h5>
+                <p style="color:var(--gray-400)">Essayez de modifier vos criteres de recherche.</p>
+                <div class="d-flex gap-2 justify-content-center">
+                    <a href="{% url 'parcelles:list' %}" class="ef-btn-secondary">
+                        <i class="bi bi-arrow-counterclockwise"></i> Reinitialiser
+                    </a>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- Pagination -->
+        {% if parcelles.has_other_pages %}
+        <nav class="mt-4">
+            <ul class="pagination justify-content-center">
+                {% if parcelles.has_previous %}
+                <li class="page-item"><a class="page-link" href="?page={{ parcelles.previous_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" style="border-radius:var(--radius-sm)">&laquo;</a></li>
+                {% endif %}
+                {% for num in parcelles.paginator.page_range %}
+                {% if parcelles.number == num %}
+                <li class="page-item active"><span class="page-link" style="background:var(--green-900);border-color:var(--green-900);border-radius:var(--radius-sm)">{{ num }}</span></li>
+                {% elif num > parcelles.number|add:'-3' and num < parcelles.number|add:'3' %}
+                <li class="page-item"><a class="page-link" href="?page={{ num }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" style="border-radius:var(--radius-sm)">{{ num }}</a></li>
+                {% endif %}
+                {% endfor %}
+                {% if parcelles.has_next %}
+                <li class="page-item"><a class="page-link" href="?page={{ parcelles.next_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}" style="border-radius:var(--radius-sm)">&raquo;</a></li>
+                {% endif %}
+            </ul>
+        </nav>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+/* ═══ Image Slider for Property Cards ═══ */
+function slideCard(btn, dir) {
+    var card = btn.closest('.ef-property-slider');
+    var track = card.querySelector('.ef-property-slider-track');
+    var imgs = track.querySelectorAll('img');
+    if (imgs.length <= 1) return;
+    var current = parseInt(track.dataset.slide || '0');
+    var next = current + dir;
+    if (next < 0) next = imgs.length - 1;
+    if (next >= imgs.length) next = 0;
+    track.style.transform = 'translateX(-' + (next * 100) + '%)';
+    track.dataset.slide = next;
+    var dots = card.querySelectorAll('.ef-slider-dot');
+    dots.forEach(function(d, i) { d.classList.toggle('active', i === next); });
+}
+
+function goSlide(dot, idx) {
+    var card = dot.closest('.ef-property-slider');
+    var track = card.querySelector('.ef-property-slider-track');
+    track.style.transform = 'translateX(-' + (idx * 100) + '%)';
+    track.dataset.slide = idx;
+    var dots = card.querySelectorAll('.ef-slider-dot');
+    dots.forEach(function(d, i) { d.classList.toggle('active', i === idx); });
+}
+
+function shareCard(pk) {
+    var url = window.location.origin + '/parcelles/' + pk + '/';
+    if (navigator.share) {
+        navigator.share({ title: 'Parcelle EYE-FONCIER', url: url });
+    } else if (navigator.clipboard) {
+        navigator.clipboard.writeText(url).then(function() {
+            var toast = document.createElement('div');
+            toast.innerHTML = '<i class="bi bi-check-circle-fill me-2"></i>Lien copie !';
+            toast.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--green-900);color:white;padding:10px 24px;border-radius:8px;font-size:.85rem;font-weight:600;z-index:9999;animation:fadeInUp .3s ease';
+            document.body.appendChild(toast);
+            setTimeout(function() { toast.remove(); }, 2500);
+        });
+    }
+}
+
+/* ═══ Like / Reaction Toggle (AJAX) ═══ */
+function toggleLike(btn, pk) {
+    {% if user.is_authenticated %}
+    var icon = btn.querySelector('i');
+    var csrfToken = '{{ csrf_token }}';
+    fetch('/parcelles/' + pk + '/reaction/', {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': csrfToken,
+            'X-Requested-With': 'XMLHttpRequest',
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: 'reaction_type=like',
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        if (data.active) {
+            icon.className = 'bi bi-heart-fill';
+            btn.style.color = '#ef4444';
+        } else {
+            icon.className = 'bi bi-heart';
+            btn.style.color = '';
+        }
+        // Mettre à jour le compteur dans la meta
+        var card = btn.closest('.ef-property-card');
+        if (card) {
+            var likeMeta = card.querySelector('.ef-property-meta-item i.bi-heart');
+            if (likeMeta && likeMeta.parentNode) {
+                likeMeta.parentNode.innerHTML = '<i class="bi bi-heart"></i> ' + (data.counts && data.counts.like || '');
+            }
+        }
+    })
+    .catch(function() {});
+    {% else %}
+    window.location.href = "{% url 'accounts:login' %}?next=" + window.location.pathname;
+    {% endif %}
+}
+
+/* Touch swipe support */
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.ef-property-slider').forEach(function(slider) {
+        var startX = 0, diffX = 0;
+        slider.addEventListener('touchstart', function(e) { startX = e.touches[0].clientX; }, { passive: true });
+        slider.addEventListener('touchmove', function(e) { diffX = e.touches[0].clientX - startX; }, { passive: true });
+        slider.addEventListener('touchend', function() {
+            if (Math.abs(diffX) > 50) {
+                var dir = diffX < 0 ? 1 : -1;
+                var track = slider.querySelector('.ef-property-slider-track');
+                var imgs = track.querySelectorAll('img');
+                if (imgs.length > 1) {
+                    var current = parseInt(track.dataset.slide || '0');
+                    var next = current + dir;
+                    if (next < 0) next = imgs.length - 1;
+                    if (next >= imgs.length) next = 0;
+                    track.style.transform = 'translateX(-' + (next * 100) + '%)';
+                    track.dataset.slide = next;
+                    var dots = slider.querySelectorAll('.ef-slider-dot');
+                    dots.forEach(function(d, i) { d.classList.toggle('active', i === next); });
+                }
+            }
+            diffX = 0;
+        });
+    });
+});
+</script>
+{% endblock %}

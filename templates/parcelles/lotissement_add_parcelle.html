@@ -1,0 +1,28 @@
+{% extends "layouts/base.html" %}
+{% load static %}
+
+{% block title %}Ajouter un lot — {{ lot.name }} — {{ SITE_NAME }}{% endblock %}
+
+{% block content %}
+<div style="max-width:1200px;margin:0 auto;padding:0 clamp(16px,4vw,48px) 60px">
+
+    <nav style="font-size:.85rem;margin-bottom:20px">
+        <a href="{% url 'parcelles:lotissement_list' %}" style="color:var(--green-700);text-decoration:none;font-weight:500">Lotissements</a>
+        <span style="color:var(--gray-300);margin:0 8px">/</span>
+        <a href="{% url 'parcelles:lotissement_detail' lot.pk %}" style="color:var(--green-700);text-decoration:none;font-weight:500">{{ lot.name }}</a>
+        <span style="color:var(--gray-300);margin:0 8px">/</span>
+        <span style="color:var(--gray-400)">Ajouter un lot</span>
+    </nav>
+
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:1.5rem;padding:16px 20px;background:linear-gradient(135deg,#0B3D2E,#145a3e);border-radius:var(--radius-lg);color:#fff">
+        <i class="bi bi-plus-circle" style="font-size:1.5rem;color:var(--orange)"></i>
+        <div>
+            <h4 style="margin:0;font-family:var(--font-display);font-weight:800">Ajouter un lot à « {{ lot.name }} »</h4>
+            <small style="color:rgba(255,255,255,.6)">{{ lot.code }} &middot; {{ lot.total_lots }} lots existants</small>
+        </div>
+    </div>
+
+    {% include "parcelles/parcelle_form_inner.html" with form=form parcelle=None submit_label="Ajouter au lotissement" %}
+
+</div>
+{% endblock %}

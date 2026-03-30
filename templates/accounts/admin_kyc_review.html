@@ -1,0 +1,73 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}KYC — {{ profile.user.get_full_name }} — EYE-FONCIER{% endblock %}
+
+{% block content %}
+<div class="container py-4" style="max-width:700px">
+    <div class="mb-4">
+        <a href="{% url 'accounts:admin_moderation' %}" style="color:var(--green-700);font-size:.85rem;text-decoration:none">
+            <i class="bi bi-arrow-left"></i> Retour a la moderation
+        </a>
+    </div>
+
+    <div class="card border-0 shadow-sm" style="border-radius:var(--radius-lg)">
+        <div class="card-body p-4">
+            <h4 class="fw-bold mb-4" style="font-family:var(--font-display);color:var(--green-900)">
+                <i class="bi bi-person-badge"></i> Verification KYC
+            </h4>
+
+            <!-- Infos utilisateur -->
+            <div class="p-3 mb-4" style="background:#f8faf9;border-radius:var(--radius-md);border:1px solid #e5e7eb">
+                <div class="row">
+                    <div class="col-md-6">
+                        <p class="mb-2" style="font-size:.85rem"><strong style="color:var(--green-900)">Nom :</strong> <span style="color:var(--gray-600)">{{ profile.user.get_full_name }}</span></p>
+                        <p class="mb-2" style="font-size:.85rem"><strong style="color:var(--green-900)">Email :</strong> <span style="color:var(--gray-600)">{{ profile.user.email }}</span></p>
+                        <p class="mb-0" style="font-size:.85rem"><strong style="color:var(--green-900)">Role :</strong> <span style="color:var(--gray-600)">{{ profile.user.get_role_display }}</span></p>
+                    </div>
+                    <div class="col-md-6">
+                        <p class="mb-2" style="font-size:.85rem"><strong style="color:var(--green-900)">Telephone :</strong> <span style="color:var(--gray-600)">{{ profile.user.phone|default:"—" }}</span></p>
+                        <p class="mb-2" style="font-size:.85rem"><strong style="color:var(--green-900)">Ville :</strong> <span style="color:var(--gray-600)">{{ profile.city|default:"—" }}</span></p>
+                        <p class="mb-0" style="font-size:.85rem"><strong style="color:var(--green-900)">Inscription :</strong> <span style="color:var(--gray-600)">{{ profile.user.created_at|date:"d/m/Y" }}</span></p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Document d'identite -->
+            <div class="mb-4">
+                <h6 class="fw-bold" style="color:var(--green-900);font-size:.9rem">
+                    <i class="bi bi-file-earmark-image"></i> Piece d'identite
+                </h6>
+                {% if profile.id_document %}
+                <div class="p-3 text-center" style="background:#fafafa;border-radius:var(--radius-md);border:1px dashed #d1d5db">
+                    {% if profile.id_document.name|lower|slice:"-4:" == ".pdf" %}
+                    <a href="{{ profile.id_document.url }}" target="_blank" class="btn" style="background:var(--green-900);color:#fff;border-radius:var(--radius-sm)">
+                        <i class="bi bi-file-earmark-pdf"></i> Ouvrir le PDF
+                    </a>
+                    {% else %}
+                    <img src="{{ profile.id_document.url }}" alt="Document" style="max-width:100%;max-height:400px;border-radius:8px">
+                    {% endif %}
+                </div>
+                {% else %}
+                <div class="text-center py-3" style="background:#fef2f2;border-radius:var(--radius-md)">
+                    <i class="bi bi-exclamation-triangle" style="color:#dc2626"></i>
+                    <p class="mb-0" style="color:#dc2626;font-size:.85rem">Aucun document soumis</p>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Actions -->
+            <form method="post">
+                {% csrf_token %}
+                <div class="d-flex gap-2">
+                    <button type="submit" name="action" value="approve" class="btn flex-fill" style="background:#16a34a;color:#fff;border-radius:var(--radius-sm);padding:12px">
+                        <i class="bi bi-check-circle"></i> Approuver
+                    </button>
+                    <button type="submit" name="action" value="reject" class="btn flex-fill" style="background:#dc2626;color:#fff;border-radius:var(--radius-sm);padding:12px">
+                        <i class="bi bi-x-circle"></i> Rejeter
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

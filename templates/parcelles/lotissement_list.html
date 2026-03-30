@@ -1,0 +1,86 @@
+{% extends "layouts/base.html" %}
+{% load static humanize %}
+
+{% block title %}Mes Lotissements — {{ SITE_NAME }}{% endblock %}
+
+{% block content %}
+<div style="max-width:1200px;margin:0 auto;padding:0 clamp(16px,4vw,48px) 60px">
+
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem;margin-bottom:1.5rem">
+        <div>
+            <h2 style="color:var(--green-900);font-family:var(--font-display);margin:0 0 4px">
+                <i class="bi bi-building" style="color:var(--orange)"></i> Lotissements
+            </h2>
+            <p style="color:var(--gray-400);margin:0;font-size:.88rem">Gérez vos plans de morcellement</p>
+        </div>
+        {% if user.is_promoteur or user.is_vendeur or user.is_staff %}
+        <a href="{% url 'parcelles:lotissement_create' %}" class="ef-btn ef-btn-primary">
+            <i class="bi bi-plus-lg"></i> Nouveau lotissement
+        </a>
+        {% endif %}
+    </div>
+
+    {% if lotissements %}
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:1.25rem">
+        {% for lot in lotissements %}
+        <a href="{% url 'parcelles:lotissement_detail' lot.pk %}" style="text-decoration:none;color:inherit">
+            <div class="ef-card" style="overflow:hidden;transition:transform .2s,box-shadow .2s;cursor:pointer" onmouseover="this.style.transform='translateY(-3px)';this.style.boxShadow='0 8px 24px rgba(0,0,0,.1)'" onmouseout="this.style.transform='';this.style.boxShadow=''">
+                {% if lot.plan_image %}
+                <div style="height:160px;background:url('{{ lot.plan_image.url }}') center/cover no-repeat;position:relative">
+                {% else %}
+                <div style="height:160px;background:linear-gradient(135deg,#0B3D2E 0%,#145a3e 100%);display:flex;align-items:center;justify-content:center;position:relative">
+                    <i class="bi bi-grid-3x3" style="font-size:3rem;color:rgba(255,255,255,.2)"></i>
+                {% endif %}
+                    <span style="position:absolute;top:12px;right:12px;padding:4px 12px;border-radius:20px;font-size:.72rem;font-weight:700;color:#fff;background:{% if lot.status == 'active' %}#059669{% elif lot.status == 'approved' %}#2563eb{% elif lot.status == 'draft' %}#6b7280{% else %}#f59e0b{% endif %}">
+                        {{ lot.get_status_display }}
+                    </span>
+                </div>
+
+                <div style="padding:16px 20px">
+                    <h5 style="font-family:var(--font-display);font-weight:800;color:var(--green-900);margin:0 0 4px;font-size:1rem">{{ lot.name }}</h5>
+                    <p style="color:var(--gray-400);font-size:.8rem;margin:0 0 12px">
+                        <i class="bi bi-geo-alt"></i> {{ lot.zone|default:"—" }} &middot; <span style="font-family:var(--font-mono)">{{ lot.code }}</span>
+                    </p>
+
+                    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;text-align:center">
+                        <div style="background:var(--sand);border-radius:8px;padding:8px">
+                            <div style="font-size:1.1rem;font-weight:900;color:var(--green-900);font-family:var(--font-display)">{{ lot.total_lots }}</div>
+                            <div style="font-size:.68rem;color:var(--gray-400)">Lots</div>
+                        </div>
+                        <div style="background:var(--sand);border-radius:8px;padding:8px">
+                            <div style="font-size:1.1rem;font-weight:900;color:#059669;font-family:var(--font-display)">{{ lot.lots_available }}</div>
+                            <div style="font-size:.68rem;color:var(--gray-400)">Disponibles</div>
+                        </div>
+                        <div style="background:var(--sand);border-radius:8px;padding:8px">
+                            <div style="font-size:1.1rem;font-weight:900;color:var(--orange);font-family:var(--font-display)">{{ lot.progress_pct }}%</div>
+                            <div style="font-size:.68rem;color:var(--gray-400)">Vendu</div>
+                        </div>
+                    </div>
+
+                    {% if lot.total_surface_m2 %}
+                    <div style="margin-top:10px;display:flex;justify-content:space-between;font-size:.8rem;color:var(--gray-400)">
+                        <span><i class="bi bi-arrows-fullscreen"></i> {{ lot.total_surface_m2|floatformat:0|intcomma }} m²</span>
+                        {% if lot.price_per_m2_min %}
+                        <span><i class="bi bi-cash"></i> {{ lot.price_per_m2_min|intcomma }}{% if lot.price_per_m2_max %} — {{ lot.price_per_m2_max|intcomma }}{% endif %} F/m²</span>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </a>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="ef-card" style="text-align:center;padding:60px 20px">
+        <i class="bi bi-building" style="font-size:3rem;color:var(--gray-300)"></i>
+        <h4 style="color:var(--green-900);margin:16px 0 8px">Aucun lotissement</h4>
+        <p style="color:var(--gray-400);max-width:400px;margin:0 auto 20px">Créez votre premier plan de morcellement pour vendre vos parcelles de manière organisée.</p>
+        {% if user.is_promoteur or user.is_vendeur or user.is_staff %}
+        <a href="{% url 'parcelles:lotissement_create' %}" class="ef-btn ef-btn-primary">
+            <i class="bi bi-plus-lg"></i> Créer un lotissement
+        </a>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

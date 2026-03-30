@@ -1,0 +1,1145 @@
+{% extends "layouts/base.html" %}
+{% load static %}
+
+{% block title %}{{ parcelle.title }} — {{ SITE_NAME }}{% endblock %}
+
+{% block extra_css %}
+<style>
+.detail-page { padding: 0 clamp(16px,4vw,48px) 60px; max-width: 1400px; margin: 0 auto; }
+#detail-map{height:350px;border-radius:var(--radius-md);border:1px solid var(--gray-200)}
+.auth-blur{filter:blur(4px);user-select:none;pointer-events:none}
+.auth-overlay{position:relative}
+.auth-overlay .auth-lock{
+    position:absolute;top:0;left:0;right:0;bottom:0;
+    background:rgba(247,244,238,.92);border-radius:var(--radius-lg);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:5;
+}
+.media-counter-badge{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:var(--radius-sm);font-size:.7rem;font-weight:700;background:var(--sand);color:var(--gray-400);}
+.detail-card{background:var(--white);border-radius:var(--radius-lg);box-shadow:var(--shadow-sm);border:1px solid var(--gray-200);overflow:hidden}
+.detail-card-header{padding:14px 20px;border-bottom:1px solid var(--gray-100);display:flex;justify-content:space-between;align-items:center}
+.detail-card-header h6{font-family:var(--font-display);font-weight:700;color:var(--green-900);margin:0;font-size:.95rem}
+.detail-card-body{padding:20px}
+.info-row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--gray-100);font-size:.88rem}
+.info-row:last-child{border-bottom:none}
+.info-label{color:var(--gray-400);font-weight:500}
+.info-value{font-weight:600;color:var(--dark)}
+.breadcrumb-v5{font-size:.85rem;margin-bottom:20px}
+.breadcrumb-v5 a{color:var(--green-700);text-decoration:none;font-weight:500}
+.breadcrumb-v5 a:hover{color:var(--orange)}
+.breadcrumb-v5 .active{color:var(--gray-400)}
+
+/* Sticky sidebar */
+@media (min-width: 992px) { .col-lg-4 { position: sticky; top: 90px; align-self: flex-start; } }
+
+/* Share toolbar */
+.detail-share-bar { display:flex; gap:6px; margin-top:12px; justify-content:center; }
+.detail-share-btn {
+    width:36px; height:36px; border-radius:50%; border:1.5px solid var(--gray-200);
+    background:var(--white); color:var(--gray-400); cursor:pointer;
+    display:flex; align-items:center; justify-content:center; font-size:.85rem;
+    transition:all var(--transition);
+}
+.detail-share-btn:hover { border-color:var(--green-700); color:var(--green-700); background:var(--green-50); transform:translateY(-2px); }
+.detail-share-btn.whatsapp:hover { border-color:#25D366; color:#25D366; background:rgba(37,211,102,.06); }
+.detail-share-btn.facebook:hover { border-color:#1877F2; color:#1877F2; background:rgba(24,119,242,.06); }
+.detail-share-btn.copy:hover { border-color:var(--orange); color:var(--orange); background:var(--orange-light); }
+
+/* Lightbox v5 */
+.media-lightbox .modal-content { background:rgba(0,0,0,.95); border:none; border-radius:var(--radius-lg); }
+.media-lightbox .modal-body { padding:0; display:flex; align-items:center; justify-content:center; min-height:70vh; }
+.media-lightbox-nav {
+    position:absolute; top:50%; transform:translateY(-50%);
+    width:44px; height:44px; border-radius:50%; border:none;
+    background:rgba(255,255,255,.15); backdrop-filter:blur(8px);
+    color:white; font-size:1.2rem; cursor:pointer; z-index:10;
+    display:flex; align-items:center; justify-content:center;
+    transition:all .2s;
+}
+.media-lightbox-nav:hover { background:rgba(255,255,255,.3); transform:translateY(-50%) scale(1.1); }
+.media-lightbox-nav.prev { left:16px; }
+.media-lightbox-nav.next { right:16px; }
+.media-lightbox-counter {
+    position:absolute; bottom:16px; left:50%; transform:translateX(-50%);
+    color:rgba(255,255,255,.7); font-size:.82rem; font-family:var(--font-mono);
+    font-weight:600; background:rgba(0,0,0,.4); padding:4px 14px;
+    border-radius:var(--radius-sm); backdrop-filter:blur(8px);
+}
+
+/* Map section enhancement */
+.detail-map-toolbar {
+    display:flex; gap:6px; padding:10px 16px; background:var(--sand);
+    border-top:1px solid var(--gray-100); justify-content:center;
+    overflow-x:auto; -webkit-overflow-scrolling:touch; flex-wrap:nowrap;
+}
+.detail-map-toolbar::-webkit-scrollbar { height:0; }
+.detail-map-btn {
+    padding:6px 14px; border-radius:var(--radius-sm); border:1px solid var(--gray-200);
+    background:var(--white); color:var(--gray-600); font-size:.76rem; font-weight:600;
+    cursor:pointer; transition:all var(--transition); display:flex; align-items:center; gap:4px;
+    white-space:nowrap; flex-shrink:0;
+}
+.detail-map-btn:hover { border-color:var(--green-700); color:var(--green-700); }
+.detail-map-btn.active { background:var(--green-900); color:var(--white); border-color:var(--green-900); }
+.detail-map-btn.active-3d { background:var(--orange); color:var(--white); border-color:var(--orange); }
+
+/* Nearby items v5 */
+.nearby-v5-item {
+    display:flex; align-items:center; text-decoration:none; color:var(--dark);
+    padding:10px 0; border-bottom:1px solid var(--gray-100); gap:10px;
+    transition:all var(--transition);
+}
+.nearby-v5-item:last-child { border-bottom:none; }
+.nearby-v5-item:hover { padding-left:4px; }
+.nearby-v5-icon {
+    width:36px; height:36px; border-radius:var(--radius-sm);
+    background:var(--green-50); display:flex; align-items:center; justify-content:center;
+    color:var(--green-700); font-size:.85rem; flex-shrink:0;
+}
+.nearby-v5-info { flex:1; min-width:0; }
+.nearby-v5-title { font-weight:600; font-size:.84rem; font-family:var(--font-display); }
+.nearby-v5-sub { font-size:.72rem; color:var(--gray-400); }
+.nearby-v5-right { text-align:right; flex-shrink:0; }
+.nearby-v5-price { font-weight:700; font-size:.82rem; color:var(--green-900); font-family:var(--font-mono); }
+.nearby-v5-dist { font-size:.7rem; color:var(--gray-400); display:flex; align-items:center; gap:3px; justify-content:flex-end; }
+
+/* ═══ Header Action Buttons ═══ */
+.detail-action-btn {
+    display:inline-flex;align-items:center;gap:6px;padding:8px 16px;
+    border-radius:var(--radius-sm);text-decoration:none;font-size:.82rem;
+    font-weight:600;transition:all var(--transition);white-space:nowrap;
+}
+.detail-action-primary { background:var(--orange);color:var(--white); }
+.detail-action-primary:hover { background:var(--green-900);color:var(--white);transform:translateY(-1px); }
+.detail-action-outline { border:1.5px solid var(--green-700);color:var(--green-700); }
+.detail-action-outline:hover { background:var(--green-700);color:var(--white);transform:translateY(-1px); }
+.detail-status-badge {
+    display:inline-flex;align-items:center;gap:5px;padding:8px 14px;
+    border-radius:var(--radius-sm);font-size:.82rem;font-weight:600;color:var(--white);
+}
+.detail-status-badge.status-disponible { background:var(--success); }
+.detail-status-badge.status-reserve { background:var(--warning);color:var(--dark); }
+.detail-status-badge.status-vendu { background:var(--danger); }
+
+/* ═══ Sidebar v5 card headers ═══ */
+.sidebar-card-header {
+    display:flex;align-items:center;gap:8px;padding-bottom:14px;
+    margin-bottom:14px;border-bottom:1px solid var(--gray-100);
+}
+.sidebar-card-header h6 {
+    font-family:var(--font-display);font-weight:700;color:var(--green-900);
+    margin:0;font-size:.92rem;
+}
+.sidebar-card-header i { font-size:1rem; }
+
+/* ═══ Gallery grid override for detail page ═══ */
+.detail-page .gallery-grid { grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px; }
+.detail-page .gallery-item { aspect-ratio: 4/3; border-radius: var(--radius-md); }
+
+/* ═══ Empty state ═══ */
+.detail-empty-state {
+    text-align:center;padding:24px 16px;
+}
+.detail-empty-state i {
+    font-size:2.2rem;color:var(--gray-200);display:block;margin-bottom:8px;
+}
+.detail-empty-state p {
+    font-size:.84rem;color:var(--gray-400);margin:0;
+}
+
+/* ═══ Mobile Responsive Fixes ═══ */
+@media (max-width: 991px) {
+    .detail-header-actions { flex-wrap: wrap; }
+}
+@media (max-width: 767px) {
+    .detail-page { padding: 85px 12px 40px; }
+
+    /* Header: stack title + actions vertically */
+    .detail-page .col-lg-8 > .d-flex.justify-content-between.align-items-start {
+        flex-direction: column; gap: 10px;
+    }
+    .detail-header-actions { width: 100%; flex-wrap: wrap; }
+    .detail-page .col-lg-8 > .d-flex.justify-content-between.align-items-start h2 { font-size: 1.25rem; }
+    .detail-action-btn { flex:1; text-align:center; justify-content:center; padding:8px 10px; font-size:.78rem; }
+    .detail-status-badge { flex:1; text-align:center; justify-content:center; padding:8px 10px; font-size:.78rem; }
+
+    /* Reaction bar: stack vertically on mobile */
+    .ef-reaction-bar {
+        flex-direction: column; align-items: stretch !important; gap: 10px; padding: 12px;
+    }
+    .ef-reaction-bar > .d-flex:first-child {
+        justify-content: center;
+    }
+    .ef-reaction-bar > .d-flex:last-child {
+        justify-content: center; flex-wrap: wrap;
+    }
+    .ef-reaction-btn { padding: 7px 12px; font-size: .78rem; }
+
+    /* Gallery header: stack on mobile */
+    .detail-card-header {
+        flex-wrap: wrap; gap: 8px; padding: 12px 14px;
+    }
+    .detail-card-header .d-flex.gap-2 { flex-wrap: wrap; }
+    .detail-card-header h6 { font-size: .88rem; }
+
+    /* Gallery tabs: scroll horizontally */
+    .gallery-tabs { flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch; gap: 4px; }
+    .gallery-tabs .nav-item { flex-shrink: 0; }
+    .gallery-tabs .nav-link { white-space: nowrap; padding: 5px 10px; font-size: .72rem; }
+
+    /* Gallery grid: 2 columns on mobile */
+    .gallery-grid { grid-template-columns: repeat(2, 1fr); gap: 6px; }
+
+    /* Map toolbar buttons smaller */
+    .detail-map-toolbar { gap: 4px; padding: 8px 10px; }
+    .detail-map-btn { padding: 5px 10px; font-size: .72rem; }
+
+    /* Info rows: tighter */
+    .info-row { padding: 6px 0; font-size: .82rem; }
+
+    /* Price card */
+    .detail-card-body h3 { font-size: 1.35rem; }
+
+    /* Share toolbar compact */
+    .detail-share-bar { gap: 8px; margin-top: 10px; }
+    .detail-share-btn { width: 34px; height: 34px; font-size: .8rem; }
+
+    /* Sidebar: remove sticky on mobile */
+    .col-lg-4 { position: static !important; }
+}
+
+@media (max-width: 420px) {
+    .detail-page { padding: 80px 8px 32px; }
+
+    /* Reaction buttons: smaller on very small screens */
+    .ef-reaction-btn { padding: 6px 10px; font-size: .74rem; gap: 4px; }
+    .ef-reaction-btn .count { font-size: .72rem; }
+
+    /* Gallery grid: single column on tiny screens */
+    .gallery-grid { grid-template-columns: 1fr; }
+
+    /* Header buttons: smaller on tiny screens */
+    .detail-action-btn { font-size: .72rem; padding: 6px 8px; gap: 4px; }
+    .detail-status-badge { font-size: .72rem; padding: 6px 8px; gap: 3px; }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="detail-page">
+    <!-- Breadcrumb -->
+    <nav class="breadcrumb-v5">
+        <a href="{% url 'parcelles:list' %}">Parcelles</a>
+        <span style="color:var(--gray-200);margin:0 8px">/</span>
+        <span class="active">{{ parcelle.lot_number }}</span>
+    </nav>
+
+    <div class="row g-4">
+        <!-- Colonne gauche -->
+        <div class="col-lg-8 ef-reveal">
+            <!-- Header -->
+            <div class="d-flex justify-content-between align-items-start mb-3 flex-wrap gap-2">
+                <div>
+                    <h2 class="fw-bold mb-1" style="font-family:var(--font-display);color:var(--green-900)">{{ parcelle.title }}</h2>
+                    <p style="color:var(--gray-400);font-size:.9rem" class="mb-1"><i class="bi bi-pin-map me-1"></i>{{ parcelle.address|default:"Adresse non renseignee" }} &middot; Lot {{ parcelle.lot_number }}</p>
+                    <!-- Trust & Certification Badges -->
+                    <div style="display:flex;gap:6px;flex-wrap:wrap">
+                        {% if parcelle.is_validated %}
+                        <span style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:20px;font-size:.7rem;font-weight:700;background:rgba(5,150,105,.1);color:#059669">
+                            <i class="bi bi-shield-check"></i> Parcelle verifiee
+                        </span>
+                        {% endif %}
+                        {% if parcelle.trust_badge %}
+                        <span style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:20px;font-size:.7rem;font-weight:700;background:rgba(37,99,235,.1);color:#2563eb">
+                            <i class="bi bi-patch-check-fill"></i> Titre verifie
+                        </span>
+                        {% endif %}
+                        {% if seller_certified %}
+                        <span style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:20px;font-size:.7rem;font-weight:700;background:rgba(139,92,246,.1);color:#8b5cf6">
+                            <i class="bi bi-award-fill"></i> Vendeur certifie
+                        </span>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="d-flex gap-2 align-items-center flex-shrink-0 detail-header-actions">
+                    <a href="{% url 'websig:map' %}?focus={{ parcelle.pk }}" class="detail-action-btn detail-action-primary" title="Voir sur la carte interactive">
+                        <i class="bi bi-geo-alt-fill"></i> Carte
+                    </a>
+                    <a href="{% url 'parcelles:analysis' parcelle.pk %}" class="detail-action-btn detail-action-outline" title="Analyse foncière">
+                        <i class="bi bi-shield-check"></i> Analyse
+                    </a>
+                    <span class="detail-status-badge status-{{ parcelle.status }}">
+                        {{ parcelle.get_status_display }}
+                    </span>
+                </div>
+            </div>
+
+            <!-- ═══ Barre de réactions + Actions ═══ -->
+            {% if user.is_authenticated %}
+            <div class="detail-card mb-4">
+                <div class="ef-reaction-bar">
+                    <div class="d-flex gap-2" id="reactionBar">
+                        <button type="button" class="ef-reaction-btn like reaction-btn" data-type="like" title="J'aime">
+                            <i class="bi bi-heart-fill"></i><span class="count">0</span>
+                        </button>
+                        <button type="button" class="ef-reaction-btn favorite reaction-btn" data-type="favorite" title="Favori">
+                            <i class="bi bi-star-fill"></i><span class="count">0</span>
+                        </button>
+                        <button type="button" class="ef-reaction-btn interest reaction-btn" data-type="interested" title="Intéressé">
+                            <i class="bi bi-eye-fill"></i><span class="count">0</span>
+                        </button>
+                    </div>
+                    <div class="d-flex gap-2 align-items-center flex-wrap justify-content-center">
+                        <span style="font-size:.78rem;color:var(--gray-400);display:inline-flex;align-items:center;gap:4px;white-space:nowrap">
+                            <i class="bi bi-eye"></i>{{ parcelle.views_count }} vue{{ parcelle.views_count|pluralize }}
+                        </span>
+                        {% if is_owner %}
+                        <a href="{% url 'parcelles:promote' parcelle.pk %}" style="display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:var(--radius-sm);background:var(--gold);color:var(--white);text-decoration:none;font-size:.78rem;font-weight:600;transition:all var(--transition);white-space:nowrap">
+                            <i class="bi bi-megaphone-fill"></i> Promouvoir
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- ═══ Galerie Immersive ═══ -->
+            <div class="detail-card mb-4">
+                <div class="detail-card-header py-3">
+                    <h6 class="fw-bold mb-0"><i class="bi bi-images me-2 text-success"></i>Galerie multimédia
+                        {% if medias %}<span class="media-counter-badge ms-2"><i class="bi bi-collection"></i> {{ medias.count }}</span>{% endif %}
+                    </h6>
+                    <div class="d-flex gap-2 align-items-center">
+                        {% if is_owner or user.is_staff %}
+                        <a href="{% url 'parcelles:media_upload' parcelle.pk %}" class="btn btn-sm btn-outline-success" style="white-space:nowrap;font-size:.76rem">
+                            <i class="bi bi-plus-circle me-1"></i>Ajouter
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="card-body p-3">
+                    {% if medias %}
+                    <!-- Tabs -->
+                    <ul class="nav nav-pills gallery-tabs mb-3" role="tablist">
+                        <li class="nav-item"><a class="nav-link active small" data-bs-toggle="pill" href="#tab-all"><i class="bi bi-grid-3x3 me-1"></i>Tout <span class="media-counter-badge ms-1">{{ medias.count }}</span></a></li>
+                        <li class="nav-item"><a class="nav-link small" data-bs-toggle="pill" href="#tab-photos"><i class="bi bi-image me-1"></i>Photos</a></li>
+                        <li class="nav-item"><a class="nav-link small" data-bs-toggle="pill" href="#tab-drone"><i class="bi bi-camera-video me-1"></i>Vidéo/Drone</a></li>
+                        <li class="nav-item"><a class="nav-link small" data-bs-toggle="pill" href="#tab-plans"><i class="bi bi-map me-1"></i>Plans</a></li>
+                    </ul>
+
+                    <div class="tab-content">
+                        <!-- ALL -->
+                        <div class="tab-pane fade show active" id="tab-all">
+                            <div class="gallery-grid">
+                                {% for media in medias %}
+                                <div class="gallery-item" data-media-idx="{{ forloop.counter0 }}" data-media-type="{{ media.media_type }}" data-media-url="{{ media.file.url }}" data-media-title="{{ media.title|default:media.get_media_type_display }}">
+                                    {% if media.media_type == 'image' or media.media_type == 'plan' %}
+                                    <img src="{{ media.file.url }}" alt="{{ media.title }}" loading="lazy">
+                                    {% elif media.media_type == 'video' or media.media_type == 'drone' %}
+                                    <video src="{{ media.file.url }}" preload="metadata" muted></video>
+                                    <div class="gallery-video-play"><i class="bi bi-play-circle-fill"></i></div>
+                                    {% endif %}
+
+                                    <span class="gallery-item-type type-{{ media.media_type }}">
+                                        {% if media.media_type == 'image' %}Photo{% elif media.media_type == 'video' %}Vidéo{% elif media.media_type == 'drone' %}Drone{% elif media.media_type == 'plan' %}Plan{% endif %}
+                                    </span>
+
+                                    {% if parcelle.is_validated %}
+                                    <span class="gallery-item-verified"><i class="bi bi-patch-check-fill"></i></span>
+                                    {% endif %}
+
+                                    {% if is_owner or user.is_staff %}
+                                    <div class="gallery-item-actions">
+                                        <form method="post" action="{% url 'parcelles:media_delete' parcelle.pk media.pk %}" class="d-inline" onsubmit="return confirm('Supprimer ce média ?')">
+                                            {% csrf_token %}
+                                            <button type="submit" class="gallery-item-action-btn btn-delete" title="Supprimer">
+                                                <i class="bi bi-trash-fill"></i>
+                                            </button>
+                                        </form>
+                                    </div>
+                                    {% endif %}
+
+                                    <div class="gallery-item-overlay">
+                                        <span class="gallery-item-label">{{ media.title|default:media.get_media_type_display }}</span>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+
+                        <!-- PHOTOS -->
+                        <div class="tab-pane fade" id="tab-photos">
+                            <div class="gallery-grid">
+                                {% for media in medias %}
+                                {% if media.media_type == 'image' %}
+                                <div class="gallery-item" data-media-idx="{{ forloop.counter0 }}" data-media-type="image" data-media-url="{{ media.file.url }}" data-media-title="{{ media.title|default:'Photo' }}">
+                                    <img src="{{ media.file.url }}" alt="{{ media.title }}" loading="lazy">
+                                    {% if is_owner or user.is_staff %}
+                                    <div class="gallery-item-actions">
+                                        <form method="post" action="{% url 'parcelles:media_delete' parcelle.pk media.pk %}" class="d-inline" onsubmit="return confirm('Supprimer ce média ?')">
+                                            {% csrf_token %}
+                                            <button type="submit" class="gallery-item-action-btn btn-delete" title="Supprimer"><i class="bi bi-trash-fill"></i></button>
+                                        </form>
+                                    </div>
+                                    {% endif %}
+                                    <div class="gallery-item-overlay">
+                                        <span class="gallery-item-label">{{ media.title|default:"Photo" }}</span>
+                                    </div>
+                                </div>
+                                {% endif %}
+                                {% endfor %}
+                            </div>
+                        </div>
+
+                        <!-- DRONE / VIDEO -->
+                        <div class="tab-pane fade" id="tab-drone">
+                            {% for media in medias %}
+                            {% if media.media_type == 'video' or media.media_type == 'drone' %}
+                            <div class="mb-3">
+                                <div class="position-relative rounded overflow-hidden" style="background:#000">
+                                    <video src="{{ media.file.url }}" class="w-100" style="max-height:450px;display:block"
+                                           controls preload="metadata"></video>
+                                    <span class="position-absolute top-0 start-0 m-2 badge" style="background:{% if media.media_type == 'drone' %}rgba(139,92,246,.85){% else %}rgba(239,68,68,.85){% endif %}">
+                                        <i class="bi bi-{% if media.media_type == 'drone' %}airplane{% else %}camera-video{% endif %} me-1"></i>
+                                        {{ media.get_media_type_display }}
+                                    </span>
+                                    {% if is_owner or user.is_staff %}
+                                    <form method="post" action="{% url 'parcelles:media_delete' parcelle.pk media.pk %}" class="position-absolute top-0 end-0 m-2" onsubmit="return confirm('Supprimer ce média ?')">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-sm btn-danger" style="border-radius:50%;width:32px;height:32px;padding:0"><i class="bi bi-trash-fill"></i></button>
+                                    </form>
+                                    {% endif %}
+                                </div>
+                                {% if media.title %}<p class="small text-muted mt-1 mb-0">{{ media.title }}</p>{% endif %}
+                            </div>
+                            {% endif %}
+                            {% endfor %}
+                            {% if not has_video %}
+                            <div class="text-center py-4 text-muted">
+                                <i class="bi bi-camera-video" style="font-size:2.5rem;opacity:.4"></i>
+                                <p class="small mt-2 mb-0">Aucune vidéo disponible pour cette parcelle.</p>
+                                {% if is_owner or user.is_staff %}
+                                <a href="{% url 'parcelles:media_upload' parcelle.pk %}" class="btn btn-sm btn-outline-success mt-2"><i class="bi bi-plus-circle me-1"></i>Ajouter une vidéo</a>
+                                {% endif %}
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- PLANS -->
+                        <div class="tab-pane fade" id="tab-plans">
+                            {% for media in medias %}
+                            {% if media.media_type == 'plan' %}
+                            <div class="mb-3">
+                                <div class="gallery-item" style="aspect-ratio:auto;height:auto;max-height:500px" data-media-type="image" data-media-url="{{ media.file.url }}" data-media-title="{{ media.title|default:'Plan' }}">
+                                    <img src="{{ media.file.url }}" class="w-100" style="height:auto;object-fit:contain" alt="{{ media.title }}">
+                                    {% if is_owner or user.is_staff %}
+                                    <div class="gallery-item-actions">
+                                        <form method="post" action="{% url 'parcelles:media_delete' parcelle.pk media.pk %}" class="d-inline" onsubmit="return confirm('Supprimer ?')">
+                                            {% csrf_token %}
+                                            <button type="submit" class="gallery-item-action-btn btn-delete"><i class="bi bi-trash-fill"></i></button>
+                                        </form>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                {% if media.title %}<p class="small text-muted mt-1">{{ media.title }}</p>{% endif %}
+                            </div>
+                            {% endif %}
+                            {% endfor %}
+                            {% if not has_plan %}
+                            <div class="text-center py-3 text-muted">
+                                <i class="bi bi-map" style="font-size:2.5rem;opacity:.4"></i>
+                                <p class="small mt-2 mb-1">Aucun plan disponible.</p>
+                            </div>
+                            {% endif %}
+                            <div class="text-center py-2">
+                                <p class="small mb-0 text-muted"><i class="bi bi-info-circle me-1"></i>Le plan cadastral peut être superposé à la vue satellite sur la <a href="{% url 'websig:map' %}?focus={{ parcelle.pk }}">carte interactive</a>.</p>
+                            </div>
+                        </div>
+                    </div>
+                    {% else %}
+                    <!-- No media -->
+                    <div class="text-center py-5">
+                        <i class="bi bi-images" style="font-size:3rem;color:#d1d5db"></i>
+                        <p class="fw-bold mt-2 mb-1">Aucun média</p>
+                        <p class="text-muted small">Aucune photo, vidéo ou plan n'a été ajouté pour cette parcelle.</p>
+                        {% if is_owner or user.is_staff %}
+                        <a href="{% url 'parcelles:media_upload' parcelle.pk %}" class="btn-ef-primary btn-sm mt-1"><i class="bi bi-plus-circle me-1"></i>Ajouter des médias</a>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Carte -->
+            <div class="detail-card mb-4">
+                <div class="detail-card-header d-flex justify-content-between align-items-center">
+                    <h6 class="fw-bold mb-0"><i class="bi bi-map me-2" style="color:var(--orange)"></i>Localisation</h6>
+                    <a href="{% url 'websig:map' %}?focus={{ parcelle.pk }}" class="ef-btn ef-btn-outline-green ef-btn-sm">
+                        <i class="bi bi-arrows-fullscreen me-1"></i>Carte complete
+                    </a>
+                </div>
+                <div class="card-body p-0">
+                    <div id="detail-map"></div>
+                </div>
+                <div class="detail-map-toolbar">
+                    <button class="detail-map-btn" onclick="switchDetailMap('streets')" id="mapBtnStreets"><i class="bi bi-map"></i> Rues</button>
+                    <button class="detail-map-btn active" onclick="switchDetailMap('satellite')" id="mapBtnSatellite"><i class="bi bi-globe-americas"></i> Satellite</button>
+                    <button class="detail-map-btn" onclick="switchDetailMap('topo')" id="mapBtnTopo"><i class="bi bi-layers"></i> Topo</button>
+                    <button class="detail-map-btn" onclick="switchDetailMap('dark')" id="mapBtnDark"><i class="bi bi-moon-stars"></i> Sombre</button>
+                    <button class="detail-map-btn" onclick="switchDetailMap('positron')" id="mapBtnPositron"><i class="bi bi-brightness-high"></i> Clair</button>
+                    <button class="detail-map-btn" onclick="switchDetailMap('watercolor')" id="mapBtnWatercolor"><i class="bi bi-palette"></i> Aquarelle</button>
+                    <span style="width:1px;background:var(--gray-200);margin:0 2px;"></span>
+                    <button class="detail-map-btn" id="detail3DToggle" onclick="toggleDetail3D()"><i class="bi bi-badge-3d"></i> 3D</button>
+                </div>
+            </div>
+
+            <!-- Description -->
+            <div class="detail-card mb-4">
+                <div class="detail-card-header">
+                    <h6><i class="bi bi-text-paragraph me-2" style="color:var(--green-700)"></i>Description</h6>
+                </div>
+                <div class="detail-card-body">
+                    <p class="mb-0" style="font-size:.9rem;line-height:1.7;color:var(--gray-600)">{{ parcelle.description|default:"Aucune description disponible pour cette parcelle." }}</p>
+                </div>
+            </div>
+
+            <!-- Documents — Auth Guard -->
+            {% if user.is_authenticated %}
+            <div class="detail-card mb-4">
+                <div class="detail-card-header">
+                    <h6><i class="bi bi-folder-fill me-2" style="color:var(--orange)"></i>Documents</h6>
+                    {% if is_owner or user.is_staff %}
+                    <a href="{% url 'documents:upload' parcelle.pk %}" class="ef-btn ef-btn-outline-green ef-btn-sm">
+                        <i class="bi bi-upload me-1"></i> Ajouter
+                    </a>
+                    {% endif %}
+                </div>
+                <div class="detail-card-body">
+                    {% if documents %}
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0">
+                            <thead class="table-light">
+                                <tr><th>Document</th><th>Type</th><th>Accès</th><th></th></tr>
+                            </thead>
+                            <tbody>
+                                {% for doc in documents %}
+                                <tr>
+                                    <td><i class="bi bi-file-earmark-pdf me-1 text-danger"></i>{{ doc.title }}</td>
+                                    <td><span class="badge bg-light text-dark">{{ doc.get_doc_type_display }}</span></td>
+                                    <td><span class="badge {% if doc.confidentiality == 'public' %}bg-success{% elif doc.confidentiality == 'buyer_only' %}bg-warning text-dark{% else %}bg-danger{% endif %}">{{ doc.get_confidentiality_display }}</span></td>
+                                    <td>
+                                        <a href="{% url 'documents:view_watermarked' doc.pk %}" class="btn btn-sm btn-outline-secondary" title="Consulter">
+                                            <i class="bi bi-eye"></i>
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="detail-empty-state">
+                        <i class="bi bi-folder2-open"></i>
+                        {% if user.is_acheteur and not has_cotation %}
+                        <p class="mb-2">Les documents filigranés sont accessibles après paiement de la cotation.</p>
+                        <a href="{% url 'transactions:cotation_create' parcelle_pk=parcelle.pk %}" class="ef-btn ef-btn-primary ef-btn-sm">
+                            <i class="bi bi-lock me-1"></i> Payer la cotation pour accéder
+                        </a>
+                        {% else %}
+                        <p>Aucun document disponible pour cette parcelle.</p>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% else %}
+            <!-- Visiteur non connecté : teaser documents -->
+            <div class="detail-card mb-4 auth-overlay">
+                <div class="detail-card-header">
+                    <h6 class="fw-bold mb-0"><i class="bi bi-folder-fill me-2"></i>Documents</h6>
+                </div>
+                <div class="card-body auth-blur">
+                    <div class="table-responsive">
+                        <table class="table table-sm mb-0">
+                            <thead class="table-light"><tr><th>Document</th><th>Type</th><th>Accès</th></tr></thead>
+                            <tbody>
+                                <tr><td>Titre foncier</td><td>Officiel</td><td>Privé</td></tr>
+                                <tr><td>Plan cadastral</td><td>Technique</td><td>Acheteur</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="auth-lock">
+                    <i class="bi bi-lock-fill text-success" style="font-size:2.5rem"></i>
+                    <h6 class="fw-bold mt-2">Contenu réservé</h6>
+                    <p class="text-muted small mb-3">Connectez-vous pour consulter les documents</p>
+                    <div class="d-flex gap-2">
+                        <a href="/compte/connexion/?next={{ request.path }}" class="btn-ef-primary btn-sm"><i class="bi bi-box-arrow-in-right me-1"></i>Connexion</a>
+                        <a href="/compte/inscription/?next={{ request.path }}" class="btn-ef-secondary btn-sm"><i class="bi bi-person-plus me-1"></i>Inscription</a>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Colonne droite -->
+        <div class="col-lg-4 ef-reveal-right">
+            <!-- Prix -->
+            <div class="detail-card mb-3">
+                <div class="detail-card-body text-center" style="padding:24px 20px">
+                    <p style="color:var(--gray-400);font-size:.82rem;margin-bottom:4px">Prix du terrain</p>
+                    <h3 style="font-family:var(--font-mono);font-weight:800;color:var(--green-900);margin-bottom:4px;font-size:1.6rem"><span class="detail-price-value">{{ parcelle.price|floatformat:0 }}</span> <span style="font-size:.85rem;font-weight:600">FCFA</span></h3>
+                    <p style="font-size:.78rem;color:var(--gray-400);font-family:var(--font-mono)"><span class="detail-price-value">{{ parcelle.price_per_m2|floatformat:0 }}</span> FCFA/m²</p>
+                    {% if parcelle.status == 'disponible' and user.is_authenticated and user.role == 'acheteur' %}
+                        {% if has_cotation %}
+                        <!-- Cotation payée → boutons réservation + visite -->
+                        <div class="alert alert-success border-0 py-2 px-3 mb-2 mt-2" style="font-size:.82rem">
+                            <i class="bi bi-shield-check"></i> Cotation validée — Droits actifs
+                        </div>
+                        <a href="{% url 'transactions:reserve' parcelle.pk %}" class="ef-btn ef-btn-primary ef-btn-block" style="margin-top:8px">
+                            <i class="bi bi-bookmark-check me-1"></i> Réserver cette parcelle
+                        </a>
+                        <a href="{% url 'transactions:request_visit' parcelle.pk %}" class="ef-btn ef-btn-outline-orange ef-btn-block" style="margin-top:8px">
+                            <i class="bi bi-ticket-perforated me-1"></i> Demander une visite
+                        </a>
+                        {% if cotation %}
+                        <a href="{% url 'transactions:cotation_detail' pk=cotation.pk %}" class="ef-btn ef-btn-outline-green ef-btn-block" style="margin-top:8px">
+                            <i class="bi bi-receipt me-1"></i> Voir ma cotation
+                        </a>
+                        {% endif %}
+                        {% else %}
+                        <!-- Pas de cotation → bouton de cotation avec montant -->
+                        <div class="alert alert-info border-0 py-2 px-3 mb-2 mt-2" style="font-size:.8rem">
+                            <i class="bi bi-info-circle"></i>
+                            Payez la cotation (10 %) pour débloquer la visite, les documents et la réservation.
+                        </div>
+                        <a href="{% url 'transactions:cotation_create' parcelle_pk=parcelle.pk %}" class="ef-btn ef-btn-primary ef-btn-block" style="margin-top:8px">
+                            <i class="bi bi-lock me-1"></i> Payer la cotation — <span class="detail-price-value">{{ cotation_amount|floatformat:0 }}</span> FCFA
+                        </a>
+                        {% endif %}
+                    {% elif parcelle.status == 'disponible' and user.is_authenticated and not user.is_acheteur %}
+                    <div class="alert alert-secondary border-0 py-2 px-3 mb-2 mt-2" style="font-size:.82rem">
+                        <i class="bi bi-person"></i> Passez en mode acheteur pour réserver.
+                    </div>
+                    {% endif %}
+                    {% if can_visit and not has_cotation %}
+                    <!-- Visite accessible même sans le bloc acheteur ci-dessus -->
+                    {% endif %}
+                    <a href="{% url 'websig:map' %}?focus={{ parcelle.pk }}" class="ef-btn ef-btn-outline-green ef-btn-block" style="margin-top:8px">
+                        <i class="bi bi-geo-alt-fill me-1"></i> Localiser sur la carte
+                    </a>
+                    <!-- Share toolbar -->
+                    <div class="detail-share-bar">
+                        <button class="detail-share-btn whatsapp" onclick="window.open('https://wa.me/?text='+encodeURIComponent('Decouvrez cette parcelle: '+location.href),'_blank')" title="WhatsApp">
+                            <i class="bi bi-whatsapp"></i>
+                        </button>
+                        <button class="detail-share-btn facebook" onclick="window.open('https://www.facebook.com/sharer/sharer.php?u='+encodeURIComponent(location.href),'_blank')" title="Facebook">
+                            <i class="bi bi-facebook"></i>
+                        </button>
+                        <button class="detail-share-btn copy" onclick="navigator.clipboard.writeText(location.href);this.innerHTML='<i class=\'bi bi-check-lg\'></i>';setTimeout(()=>{this.innerHTML='<i class=\'bi bi-link-45deg\'></i>'},1500)" title="Copier le lien">
+                            <i class="bi bi-link-45deg"></i>
+                        </button>
+                    </div>
+                    {% if user_visits %}
+                    <div class="mt-3 pt-3 border-top">
+                        <p class="small fw-bold mb-2"><i class="bi bi-ticket-perforated me-1"></i>Mes bons de visite</p>
+                        {% for bv in user_visits %}
+                        <a href="{% url 'transactions:visit_detail' bv.pk %}" class="d-block small text-decoration-none mb-1">
+                            <span class="badge bg-{% if bv.status == 'approved' %}success{% elif bv.status == 'used' %}primary{% else %}secondary{% endif %} me-1">{{ bv.get_status_display }}</span>
+                            {{ bv.reference }} — {{ bv.visit_date|date:"d/m" }}
+                        </a>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Infos -->
+            <div class="detail-card mb-3">
+                <div class="detail-card-body">
+                    <div class="sidebar-card-header">
+                        <i class="bi bi-list-check" style="color:var(--green-700)"></i>
+                        <h6>Caractéristiques</h6>
+                    </div>
+                    <div class="info-row"><span class="info-label">Lot</span><span class="info-value">{{ parcelle.lot_number }}</span></div>
+                    <div class="info-row"><span class="info-label">Surface</span><span class="info-value">{{ parcelle.surface_m2|floatformat:0 }} m²</span></div>
+                    <div class="info-row"><span class="info-label">Type</span><span class="info-value">{{ parcelle.get_land_type_display }}</span></div>
+                    <div class="info-row"><span class="info-label">Zone</span><span class="info-value">{{ parcelle.zone|default:"—" }}</span></div>
+                    <div class="info-row"><span class="info-label">Îlot</span><span class="info-value">{{ parcelle.ilot|default:"—" }}</span></div>
+                    <div class="info-row">
+                        <span class="info-label">Validée</span>
+                        <span class="info-value">
+                            {% if parcelle.is_validated %}
+                            <i class="bi bi-check-circle-fill text-success"></i> Oui
+                            {% else %}
+                            <i class="bi bi-clock text-warning"></i> En attente
+                            {% endif %}
+                        </span>
+                    </div>
+                    {% if parcelle.trust_badge %}
+                    <div class="info-row">
+                        <span class="info-label">Certification</span>
+                        <span class="info-value text-primary"><i class="bi bi-patch-check-fill"></i> Titre vérifié</span>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Propriétaire — Auth Guard -->
+            {% if user.is_authenticated and user.role != 'visiteur' %}
+            <div class="detail-card mb-3">
+                <div class="detail-card-body">
+                    <div class="sidebar-card-header">
+                        <i class="bi bi-person-badge" style="color:var(--green-700)"></i>
+                        <h6>Propriétaire</h6>
+                    </div>
+                    <div class="d-flex align-items-center">
+                        {% if parcelle.owner.profile.avatar %}
+                        <img src="{{ parcelle.owner.profile.avatar.url }}" class="rounded-circle me-3" width="48" height="48" style="object-fit:cover;">
+                        {% else %}
+                        <div class="bg-success bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center me-3" style="width:48px;height:48px;">
+                            <i class="bi bi-person-fill text-success"></i>
+                        </div>
+                        {% endif %}
+                        <div>
+                            <p class="fw-semibold mb-0">{{ parcelle.owner.get_full_name }}
+                                {% if seller_certified %}<i class="bi bi-patch-check-fill text-primary" title="Vendeur certifié EYE-Foncier"></i>{% endif %}
+                            </p>
+                            <small class="text-muted">{{ parcelle.owner.phone }}</small>
+                        </div>
+                    </div>
+                    <a href="{% url 'accounts:seller_profile' parcelle.owner.pk %}" class="btn-ef-secondary btn-sm w-100 mt-3">Voir le profil</a>
+                </div>
+            </div>
+            {% elif not user.is_authenticated %}
+            <div class="detail-card mb-3">
+                <div class="detail-card-body text-center">
+                    <div style="width:56px;height:56px;border-radius:50%;background:var(--green-50);display:inline-flex;align-items:center;justify-content:center;margin-bottom:10px">
+                        <i class="bi bi-person-lock" style="font-size:1.4rem;color:var(--green-700)"></i>
+                    </div>
+                    <h6 class="fw-bold" style="font-family:var(--font-display);color:var(--green-900)">Propriétaire</h6>
+                    <p class="text-muted small mb-3">Connectez-vous pour voir les coordonnées du propriétaire</p>
+                    <a href="/compte/connexion/?next={{ request.path }}" class="btn-ef-primary btn-sm w-100"><i class="bi bi-box-arrow-in-right me-1"></i>Se connecter</a>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Notation vendeur -->
+            {% if seller_rating or seller_boutique %}
+            <div class="detail-card mb-3">
+                <div class="detail-card-body">
+                    <div class="sidebar-card-header">
+                        <i class="bi bi-star-fill" style="color:#f59e0b"></i>
+                        <h6>Reputation du vendeur</h6>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px">
+                        <div style="text-align:center">
+                            <div style="font-family:var(--font-display);font-weight:900;font-size:1.6rem;color:var(--green-900);line-height:1">
+                                {% if seller_rating %}{{ seller_rating|floatformat:1 }}{% else %}—{% endif %}
+                            </div>
+                            <div style="display:flex;gap:2px;margin-top:4px;justify-content:center">
+                                {% for i in "12345" %}
+                                <i class="bi bi-star-fill" style="font-size:.72rem;color:{% if seller_rating >= forloop.counter %}#f59e0b{% else %}var(--gray-200){% endif %}"></i>
+                                {% endfor %}
+                            </div>
+                            <div style="font-size:.72rem;color:var(--gray-400);margin-top:2px">{{ seller_review_count }} avis</div>
+                        </div>
+                        <div style="flex:1">
+                            {% if seller_certified %}
+                            <div style="display:flex;align-items:center;gap:5px;font-size:.75rem;color:#2563eb;font-weight:600;margin-bottom:4px">
+                                <i class="bi bi-patch-check-fill"></i> Vendeur certifie
+                            </div>
+                            {% endif %}
+                            {% if seller_boutique %}
+                            <a href="{% url 'transactions:boutique_public' seller_boutique.slug %}"
+                               style="display:flex;align-items:center;gap:6px;padding:6px 12px;border-radius:var(--radius-sm);background:var(--green-50);text-decoration:none;color:var(--green-900);font-size:.78rem;font-weight:600;transition:all .2s"
+                               onmouseover="this.style.background='var(--green-100)'" onmouseout="this.style.background='var(--green-50)'">
+                                <i class="bi bi-shop"></i> Voir la boutique
+                            </a>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- GPS -->
+            {% if user.is_authenticated %}
+            <div class="detail-card mb-3">
+                <div class="detail-card-body">
+                    <div class="sidebar-card-header">
+                        <i class="bi bi-crosshair" style="color:var(--orange)"></i>
+                        <h6>Coordonnées GPS</h6>
+                    </div>
+                    {% if parcelle.centroid %}
+                    <div class="info-row"><span class="info-label">Latitude</span><span class="info-value">{{ parcelle.centroid.y|floatformat:6 }}</span></div>
+                    <div class="info-row"><span class="info-label">Longitude</span><span class="info-value">{{ parcelle.centroid.x|floatformat:6 }}</span></div>
+                    {% else %}
+                    <p class="text-muted small mb-0">Non disponible</p>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Gestion -->
+            {% if is_owner or user.is_staff %}
+            <div class="detail-card">
+                <div class="detail-card-header">
+                    <h6><i class="bi bi-gear-fill me-2" style="color:var(--orange)"></i>Gestion</h6>
+                </div>
+                <div class="detail-card-body" style="display:flex;flex-direction:column;gap:10px">
+                    <a href="{% url 'parcelles:edit' parcelle.pk %}" class="ef-btn ef-btn-outline-orange ef-btn-sm ef-btn-block"><i class="bi bi-pencil me-1"></i> Modifier</a>
+                    <a href="{% url 'parcelles:media_upload' parcelle.pk %}" class="ef-btn ef-btn-outline-green ef-btn-sm ef-btn-block"><i class="bi bi-image me-1"></i> Ajouter des medias</a>
+                    <a href="{% url 'parcelles:delete' parcelle.pk %}" class="ef-btn ef-btn-danger ef-btn-sm ef-btn-block"><i class="bi bi-trash me-1"></i> Supprimer</a>
+                </div>
+            </div>
+            {% endif %}
+
+            {% if user.is_authenticated and not parcelle.is_validated %}
+                {% if user == parcelle.owner %}
+                <div class="detail-card mt-3" style="border-left:4px solid var(--orange)">
+                    <div class="detail-card-body" style="text-align:center;padding:16px">
+                        <p style="font-size:.85rem;color:var(--dark);margin:0 0 10px">
+                            <i class="bi bi-shield-exclamation" style="color:var(--orange)"></i>
+                            Cette parcelle n'est pas encore validée par un géomètre.
+                        </p>
+                        <a href="{% url 'parcelles:submit_validation' parcelle.pk %}" class="ef-btn ef-btn-primary w-100">
+                            <i class="bi bi-send me-1"></i> Soumettre pour validation
+                        </a>
+                    </div>
+                </div>
+                {% elif user.role == 'geometre' or user.is_admin_role %}
+                <div class="card border-success mt-3">
+                    <div class="card-body text-center">
+                        <a href="{% url 'parcelles:validate' parcelle.pk %}" class="btn-ef-primary w-100"><i class="bi bi-check2-all me-1"></i> Valider cette parcelle</a>
+                    </div>
+                </div>
+                {% endif %}
+            {% endif %}
+
+            <!-- Parcelles à proximité -->
+            {% if parcelle.centroid %}
+            <div class="detail-card mt-3">
+                <div class="detail-card-body">
+                    <div class="sidebar-card-header">
+                        <i class="bi bi-pin-map-fill" style="color:var(--success)"></i>
+                        <h6>À proximité</h6>
+                    </div>
+                    <div id="nearbyList">
+                        <div class="text-center py-3">
+                            <div class="spinner-border spinner-border-sm" style="color:var(--green-700)" role="status"></div>
+                            <small class="d-block mt-1" style="color:var(--gray-400);font-size:.78rem">Recherche des parcelles voisines...</small>
+                        </div>
+                    </div>
+                    <button type="button" class="ef-btn ef-btn-outline-green ef-btn-sm ef-btn-block mt-2" id="btnLocateMe" style="display:none">
+                        <i class="bi bi-crosshair me-1"></i> Parcelles autour de moi
+                    </button>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block modals %}
+<!-- ═══ Lightbox Modal (outside <main> to avoid stacking context issues) ═══ -->
+<div class="modal fade media-lightbox" id="mediaLightbox" tabindex="-1" aria-hidden="true" style="z-index:1200">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header border-0 position-absolute w-100" style="z-index:10;justify-content:flex-end">
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Fermer" style="opacity:1;margin:0;padding:12px;filter:drop-shadow(0 0 4px rgba(0,0,0,.5))"></button>
+            </div>
+            <div class="modal-body position-relative">
+                <button class="media-lightbox-nav prev" id="lightboxPrev"><i class="bi bi-chevron-left"></i></button>
+                <div id="lightboxContent" class="text-center w-100"></div>
+                <button class="media-lightbox-nav next" id="lightboxNext"><i class="bi bi-chevron-right"></i></button>
+                <div class="media-lightbox-counter" id="lightboxCounter"></div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function(){
+    // ═══ Format price numbers with spaces ═══
+    document.querySelectorAll('.detail-price-value').forEach(function(el) {
+        var n = el.textContent.trim();
+        el.textContent = n.replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+    });
+
+    // ═══ Map with basemap switching (MapLibre GL JS) ═══
+    var map = new maplibregl.Map({
+        container: 'detail-map',
+        style: EyeFoncier.mapStyles.satellite,
+        center: [-4.008, 5.36],
+        zoom: 10,
+        maxZoom: 17,
+    });
+    map.addControl(new maplibregl.NavigationControl(), 'top-right');
+
+    function addDetailLayers() {
+        {% if parcelle.geometry %}
+        var geojson = JSON.parse('{{ parcelle.geometry.geojson|escapejs }}');
+        // Remove old layers if style was switched
+        ['parcelle-fill','parcelle-line'].forEach(function(lid) { if (map.getLayer(lid)) map.removeLayer(lid); });
+        if (map.getSource('parcelle')) map.removeSource('parcelle');
+        EyeFoncier.map.addParcelleGeoJSON(map, geojson, { fillColor: '#22c55e', lineColor: '#E8793B' });
+        {% endif %}
+    }
+
+    map.on('load', addDetailLayers);
+
+    window.switchDetailMap = function(layer) {
+        map.setStyle(EyeFoncier.mapStyles[layer]);
+        map.once('idle', function() {
+            addDetailLayers();
+            if (_detail3D) _applyDetailExtrusion();
+        });
+        document.querySelectorAll('.detail-map-btn:not(#detail3DToggle)').forEach(function(b) { b.classList.remove('active'); });
+        document.getElementById('mapBtn' + layer.charAt(0).toUpperCase() + layer.slice(1)).classList.add('active');
+    };
+
+    // ═══ 3D Toggle ═══
+    var _detail3D = false;
+    function _applyDetailExtrusion() {
+        if (map.getSource('parcelle') && !map.getLayer('parcelle-extrusion')) {
+            if (map.getLayer('parcelle-fill')) map.setLayoutProperty('parcelle-fill', 'visibility', 'none');
+            map.addLayer({
+                id: 'parcelle-extrusion', type: 'fill-extrusion', source: 'parcelle',
+                paint: {
+                    'fill-extrusion-color': '#22c55e',
+                    'fill-extrusion-height': 80,
+                    'fill-extrusion-base': 0,
+                    'fill-extrusion-opacity': 0.7
+                }
+            }, 'parcelle-line');
+        }
+    }
+    window.toggleDetail3D = function() {
+        _detail3D = !_detail3D;
+        var btn = document.getElementById('detail3DToggle');
+        btn.classList.toggle('active-3d', _detail3D);
+
+        if (_detail3D) {
+            EyeFoncier.map.enable3D(map);
+            _applyDetailExtrusion();
+        } else {
+            EyeFoncier.map.disable3D(map);
+            if (map.getLayer('parcelle-extrusion')) map.removeLayer('parcelle-extrusion');
+            if (map.getLayer('parcelle-fill')) map.setLayoutProperty('parcelle-fill', 'visibility', 'visible');
+        }
+    };
+
+    // ═══ Lightbox ═══
+    const allItems = document.querySelectorAll('.gallery-item[data-media-url]');
+    const mediaList = [];
+    allItems.forEach(function(item){
+        mediaList.push({
+            type: item.dataset.mediaType,
+            url: item.dataset.mediaUrl,
+            title: item.dataset.mediaTitle || ''
+        });
+    });
+
+    let currentIdx = 0;
+    const lightboxModal = document.getElementById('mediaLightbox');
+    const lightboxContent = document.getElementById('lightboxContent');
+    const lightboxCounter = document.getElementById('lightboxCounter');
+    let bsModal = null;
+
+    function showMedia(idx) {
+        if (idx < 0 || idx >= mediaList.length) return;
+        currentIdx = idx;
+        const m = mediaList[idx];
+        lightboxCounter.textContent = (idx + 1) + ' / ' + mediaList.length;
+
+        if (m.type === 'video' || m.type === 'drone') {
+            lightboxContent.innerHTML = '<video src="' + m.url + '" controls autoplay style="max-width:100%;max-height:85vh;border-radius:.75rem"></video>';
+        } else {
+            lightboxContent.innerHTML = '<img src="' + m.url + '" alt="' + m.title + '" style="max-width:100%;max-height:85vh;object-fit:contain;border-radius:.75rem">';
+        }
+    }
+
+    // Click on gallery items
+    allItems.forEach(function(item, idx) {
+        item.addEventListener('click', function(e) {
+            if (e.target.closest('form') || e.target.closest('button')) return;
+            if (!bsModal) bsModal = new bootstrap.Modal(lightboxModal);
+            showMedia(idx);
+            bsModal.show();
+        });
+    });
+
+    // Navigation
+    document.getElementById('lightboxPrev').addEventListener('click', function(){
+        showMedia((currentIdx - 1 + mediaList.length) % mediaList.length);
+    });
+    document.getElementById('lightboxNext').addEventListener('click', function(){
+        showMedia((currentIdx + 1) % mediaList.length);
+    });
+
+    // Keyboard nav
+    lightboxModal.addEventListener('keydown', function(e){
+        if (e.key === 'ArrowLeft') showMedia((currentIdx - 1 + mediaList.length) % mediaList.length);
+        if (e.key === 'ArrowRight') showMedia((currentIdx + 1) % mediaList.length);
+    });
+
+    // Forcer le z-index du backdrop au-dessus de la navbar (z:1100)
+    lightboxModal.addEventListener('shown.bs.modal', function(){
+        document.querySelectorAll('.modal-backdrop').forEach(function(el) {
+            el.style.zIndex = '1150';
+        });
+    });
+
+    // Nettoyage complet quand le modal se ferme
+    lightboxModal.addEventListener('hidden.bs.modal', function(){
+        // Pause video
+        const v = lightboxContent.querySelector('video');
+        if (v) { v.pause(); v.src = ''; }
+        // Vider le contenu pour éviter la lecture en arrière-plan
+        lightboxContent.innerHTML = '';
+        // Nettoyage forcé du backdrop si Bootstrap le laisse traîner
+        document.querySelectorAll('.modal-backdrop').forEach(function(el) { el.remove(); });
+        document.body.classList.remove('modal-open');
+        document.body.style.overflow = '';
+        document.body.style.paddingRight = '';
+    });
+});
+</script>
+
+<!-- Réactions & Nearby -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const parcelleId = '{{ parcelle.pk }}';
+    const csrfToken = '{{ csrf_token }}';
+
+    // ═══ RÉACTIONS ═══
+    const reactionBar = document.getElementById('reactionBar');
+    if (reactionBar) {
+        // Charger les réactions existantes
+        fetch('/parcelles/api/' + parcelleId + '/reactions/')
+            .then(r => r.json())
+            .then(data => {
+                const counts = data.counts || {};
+                const userReactions = data.user_reactions || [];
+                reactionBar.querySelectorAll('.reaction-btn').forEach(btn => {
+                    const type = btn.dataset.type;
+                    btn.querySelector('.count').textContent = counts[type] || 0;
+                    if (userReactions.includes(type)) {
+                        btn.classList.add('active');
+                    }
+                });
+            })
+            .catch(() => {});
+
+        // Toggle réaction
+        reactionBar.querySelectorAll('.reaction-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const clickedBtn = this;
+                const type = clickedBtn.dataset.type;
+
+                // Feedback immédiat (optimistic UI)
+                clickedBtn.classList.toggle('active');
+                clickedBtn.style.pointerEvents = 'none';
+
+                const formData = new FormData();
+                formData.append('reaction_type', type);
+                formData.append('csrfmiddlewaretoken', csrfToken);
+
+                fetch('/parcelles/' + parcelleId + '/reaction/', {
+                    method: 'POST',
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                    body: formData,
+                })
+                .then(r => r.json())
+                .then(data => {
+                    // Mettre à jour tous les compteurs
+                    const counts = data.counts || {};
+                    reactionBar.querySelectorAll('.reaction-btn').forEach(b => {
+                        b.querySelector('.count').textContent = counts[b.dataset.type] || 0;
+                    });
+                    // Synchroniser l'état réel
+                    if (data.active) {
+                        clickedBtn.classList.add('active');
+                    } else {
+                        clickedBtn.classList.remove('active');
+                    }
+                })
+                .catch(() => {
+                    // Rollback en cas d'erreur
+                    clickedBtn.classList.toggle('active');
+                })
+                .finally(() => {
+                    clickedBtn.style.pointerEvents = '';
+                });
+            });
+        });
+    }
+
+    // ═══ PARCELLES À PROXIMITÉ ═══
+    const nearbyList = document.getElementById('nearbyList');
+    const btnLocateMe = document.getElementById('btnLocateMe');
+
+    function loadNearby(lat, lng, radius) {
+        radius = radius || 5000;
+        fetch('/parcelles/api/nearby/?lat=' + lat + '&lng=' + lng + '&radius=' + radius + '&limit=5')
+            .then(r => r.json())
+            .then(data => {
+                if (!data.parcelles || data.parcelles.length === 0) {
+                    nearbyList.innerHTML = '<p class="text-muted small text-center mb-0">Aucune parcelle à proximité.</p>';
+                    return;
+                }
+                let html = '';
+                data.parcelles.forEach(p => {
+                    if (p.id === parcelleId) return;
+                    const dist = p.distance_m ? Math.round(p.distance_m) : 0;
+                    const distLabel = dist >= 1000 ? (dist/1000).toFixed(1) + ' km' : dist + ' m';
+                    html += '<a href="/parcelles/' + p.id + '/" class="nearby-v5-item">';
+                    html += '<div class="nearby-v5-icon"><i class="bi bi-geo-alt-fill"></i></div>';
+                    html += '<div class="nearby-v5-info">';
+                    html += '<div class="nearby-v5-title">' + p.title.substring(0, 25) + '</div>';
+                    html += '<div class="nearby-v5-sub">Lot ' + p.lot_number + '</div>';
+                    html += '</div>';
+                    html += '<div class="nearby-v5-right">';
+                    html += '<div class="nearby-v5-price">' + (p.price > 0 ? Number(p.price).toLocaleString("fr-FR") + ' F' : '—') + '</div>';
+                    html += '<div class="nearby-v5-dist"><i class="bi bi-pin-map"></i> ' + distLabel + '</div>';
+                    html += '</div></a>';
+                });
+                nearbyList.innerHTML = html || '<p class="text-muted small text-center mb-0">Aucune autre parcelle à proximité.</p>';
+            })
+            .catch(() => {
+                nearbyList.innerHTML = '<p class="text-muted small text-center mb-0">Erreur de chargement.</p>';
+            });
+    }
+
+    // Charger les parcelles proches du centroid de la parcelle actuelle
+    {% if parcelle.centroid %}
+    loadNearby({{ parcelle.centroid.y }}, {{ parcelle.centroid.x }}, 5000);
+    {% endif %}
+
+    // Géolocalisation utilisateur
+    if (btnLocateMe && navigator.geolocation) {
+        btnLocateMe.style.display = 'block';
+        btnLocateMe.addEventListener('click', function() {
+            this.disabled = true;
+            this.innerHTML = '<div class="spinner-border spinner-border-sm me-1"></div> Localisation...';
+            navigator.geolocation.getCurrentPosition(
+                pos => {
+                    loadNearby(pos.coords.latitude, pos.coords.longitude, 10000);
+                    this.innerHTML = '<i class="bi bi-check me-1"></i> Autour de moi';
+                    this.disabled = false;
+                },
+                () => {
+                    this.innerHTML = '<i class="bi bi-crosshair me-1"></i> Localisation refusée';
+                    this.disabled = false;
+                },
+                { enableHighAccuracy: true, timeout: 10000 }
+            );
+        });
+    }
+});
+</script>
+{% endblock %}

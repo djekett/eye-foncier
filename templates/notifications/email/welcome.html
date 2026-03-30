@@ -1,0 +1,54 @@
+{% extends "notifications/email_base.html" %}
+{% block email_content %}
+<tr>
+    <td style="padding:32px">
+        <h2 style="color:#0B3D2E;margin:0 0 16px;font-size:20px;font-weight:700">
+            Bienvenue sur EYE-FONCIER, {{ recipient.first_name|default:"cher utilisateur" }} !
+        </h2>
+
+        <p style="color:#374151;font-size:15px;line-height:1.6;margin:0 0 20px">
+            {{ message }}
+        </p>
+
+        <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f0fdf4;border-radius:12px;margin:0 0 24px;border:1px solid #bbf7d0">
+            <tr>
+                <td style="padding:20px">
+                    <h3 style="color:#0B3D2E;margin:0 0 12px;font-size:15px;font-weight:700">
+                        Pour bien démarrer :
+                    </h3>
+                    <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+                        <tr>
+                            <td style="padding:6px 0;color:#374151;font-size:14px">
+                                <span style="color:#16a34a;font-weight:bold;margin-right:8px">1.</span>
+                                Complétez votre profil et vérification KYC
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="padding:6px 0;color:#374151;font-size:14px">
+                                <span style="color:#16a34a;font-weight:bold;margin-right:8px">2.</span>
+                                Explorez la carte interactive des parcelles
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="padding:6px 0;color:#374151;font-size:14px">
+                                <span style="color:#16a34a;font-weight:bold;margin-right:8px">3.</span>
+                                Configurez vos alertes et notifications
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+        </table>
+
+        <table role="presentation" cellspacing="0" cellpadding="0" style="margin:0 auto">
+            <tr>
+                <td style="background:#16a34a;border-radius:8px;padding:14px 32px">
+                    <a href="{{ data.action_url }}" style="color:#ffffff;text-decoration:none;font-weight:700;font-size:15px">
+                        Accéder à mon tableau de bord
+                    </a>
+                </td>
+            </tr>
+        </table>
+    </td>
+</tr>
+{% endblock %}

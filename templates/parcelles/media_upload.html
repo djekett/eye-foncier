@@ -1,0 +1,205 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}Médias — {{ parcelle.title }} — {{ SITE_NAME }}{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <nav aria-label="breadcrumb" class="mb-3">
+        <ol class="breadcrumb small">
+            <li class="breadcrumb-item"><a href="{% url 'parcelles:list' %}" class="text-success">Parcelles</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'parcelles:detail' parcelle.pk %}" class="text-success">{{ parcelle.lot_number }}</a></li>
+            <li class="breadcrumb-item active">Médias</li>
+        </ol>
+    </nav>
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h4 class="fw-bold mb-1"><i class="bi bi-images me-2 text-success"></i>Gestion des médias</h4>
+            <p class="text-muted small mb-0">{{ parcelle.title }} — Lot {{ parcelle.lot_number }}</p>
+        </div>
+        <a href="{% url 'parcelles:detail' parcelle.pk %}" class="btn btn-outline-success btn-sm">
+            <i class="bi bi-arrow-left me-1"></i> Retour à la fiche
+        </a>
+    </div>
+
+    <div class="row g-4">
+        <!-- Upload -->
+        <div class="col-lg-5">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-transparent py-3">
+                    <h6 class="fw-bold mb-0"><i class="bi bi-cloud-upload me-2 text-success"></i>Ajouter un média</h6>
+                </div>
+                <div class="card-body">
+                    <form method="post" enctype="multipart/form-data" id="uploadForm">
+                        {% csrf_token %}
+
+                        {% if form.errors %}
+                        <div class="alert alert-danger small py-2 mb-3">
+                            {% for field, errors in form.errors.items %}
+                                {% for error in errors %}<div>{{ error }}</div>{% endfor %}
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold small">Type de média</label>
+                            {{ form.media_type }}
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold small">Titre (optionnel)</label>
+                            {{ form.title }}
+                        </div>
+
+                        <!-- Drag & Drop Zone -->
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold small">Fichier</label>
+                            <div class="upload-dropzone" id="dropZone">
+                                <i class="bi bi-cloud-arrow-up upload-icon d-block"></i>
+                                <p class="fw-bold mt-2 mb-1">Glissez votre fichier ici</p>
+                                <p class="text-muted small mb-2">ou cliquez pour sélectionner</p>
+                                <div style="opacity:0;height:0;overflow:hidden">{{ form.file }}</div>
+                                <p class="text-muted small mb-0" id="selectedFileName"></p>
+                            </div>
+                            <!-- Preview -->
+                            <div id="filePreview" class="mt-2" style="display:none">
+                                <div class="position-relative d-inline-block">
+                                    <img id="previewImg" src="" class="rounded" style="max-height:120px;max-width:100%;object-fit:cover" alt="">
+                                    <video id="previewVideo" src="" class="rounded" style="max-height:120px;max-width:100%;display:none" muted></video>
+                                    <button type="button" id="clearPreview" class="btn btn-sm btn-danger position-absolute top-0 end-0 m-1" style="border-radius:50%;width:24px;height:24px;padding:0;font-size:.7rem">
+                                        <i class="bi bi-x"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="btn btn-success w-100">
+                            <i class="bi bi-upload me-1"></i> Téléverser
+                        </button>
+                    </form>
+
+                    <div class="mt-3 pt-3 border-top">
+                        <p class="small text-muted mb-1"><i class="bi bi-info-circle me-1"></i>Formats acceptés :</p>
+                        <div class="d-flex flex-wrap gap-1">
+                            <span class="badge bg-light text-dark">JPG/PNG</span>
+                            <span class="badge bg-light text-dark">MP4/WebM</span>
+                            <span class="badge bg-light text-dark">PDF</span>
+                            <span class="badge bg-light text-dark">Max 50 Mo</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Existing Media Grid -->
+        <div class="col-lg-7">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-transparent py-3 d-flex justify-content-between align-items-center">
+                    <h6 class="fw-bold mb-0">Médias existants</h6>
+                    <span class="badge bg-success">{{ medias.count }}</span>
+                </div>
+                <div class="card-body">
+                    {% if medias %}
+                    <div class="media-grid-manage">
+                        {% for media in medias %}
+                        <div class="media-manage-card">
+                            {% if media.media_type == 'image' or media.media_type == 'plan' %}
+                            <img src="{{ media.file.url }}" alt="{{ media.title }}" loading="lazy">
+                            {% elif media.media_type == 'video' or media.media_type == 'drone' %}
+                            <div class="w-100 h-100 d-flex align-items-center justify-content-center" style="background:linear-gradient(135deg,#1e293b,#0f172a)">
+                                <i class="bi bi-{% if media.media_type == 'drone' %}airplane{% else %}play-circle{% endif %} text-white" style="font-size:2rem"></i>
+                            </div>
+                            {% endif %}
+
+                            <!-- Delete button -->
+                            <form method="post" action="{% url 'parcelles:media_delete' parcelle.pk media.pk %}" class="d-inline" onsubmit="return confirm('Êtes-vous sûr de vouloir supprimer ce média ?')">
+                                {% csrf_token %}
+                                <button type="submit" class="media-manage-delete" title="Supprimer">
+                                    <i class="bi bi-trash-fill"></i>
+                                </button>
+                            </form>
+
+                            <div class="media-manage-info">
+                                <span class="badge mb-1" style="font-size:.6rem;{% if media.media_type == 'image' %}background:rgba(59,130,246,.8){% elif media.media_type == 'video' %}background:rgba(239,68,68,.8){% elif media.media_type == 'drone' %}background:rgba(139,92,246,.8){% else %}background:rgba(245,158,11,.8){% endif %}">{{ media.get_media_type_display }}</span>
+                                <div>{{ media.title|truncatechars:22|default:"Sans titre" }}</div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="text-center py-5">
+                        <i class="bi bi-images" style="font-size:3rem;color:#d1d5db"></i>
+                        <p class="fw-bold mt-2 mb-1">Aucun média</p>
+                        <p class="text-muted small mb-0">Ajoutez des photos, vidéos ou plans pour mettre en valeur cette parcelle.</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function(){
+    const dropZone = document.getElementById('dropZone');
+    const fileInput = document.getElementById('id_file');
+    const fileNameEl = document.getElementById('selectedFileName');
+    const previewDiv = document.getElementById('filePreview');
+    const previewImg = document.getElementById('previewImg');
+    const previewVideo = document.getElementById('previewVideo');
+
+    // Click to browse
+    dropZone.addEventListener('click', function(e){
+        if (e.target.closest('input')) return;
+        fileInput.click();
+    });
+
+    // Drag events
+    ['dragenter','dragover'].forEach(function(evt){
+        dropZone.addEventListener(evt, function(e){ e.preventDefault(); dropZone.classList.add('dragover'); });
+    });
+    ['dragleave','drop'].forEach(function(evt){
+        dropZone.addEventListener(evt, function(e){ e.preventDefault(); dropZone.classList.remove('dragover'); });
+    });
+    dropZone.addEventListener('drop', function(e){
+        if (e.dataTransfer.files.length) {
+            fileInput.files = e.dataTransfer.files;
+            showPreview(e.dataTransfer.files[0]);
+        }
+    });
+
+    fileInput.addEventListener('change', function(){
+        if (this.files.length) showPreview(this.files[0]);
+    });
+
+    function showPreview(file) {
+        fileNameEl.innerHTML = '<i class="bi bi-check-circle text-success me-1"></i><strong>' + file.name + '</strong> (' + (file.size/1024/1024).toFixed(1) + ' Mo)';
+
+        if (file.type.startsWith('image/')) {
+            const reader = new FileReader();
+            reader.onload = function(e){
+                previewImg.src = e.target.result;
+                previewImg.style.display = 'block';
+                previewVideo.style.display = 'none';
+                previewDiv.style.display = 'block';
+            };
+            reader.readAsDataURL(file);
+        } else if (file.type.startsWith('video/')) {
+            previewVideo.src = URL.createObjectURL(file);
+            previewVideo.style.display = 'block';
+            previewImg.style.display = 'none';
+            previewDiv.style.display = 'block';
+        } else {
+            previewDiv.style.display = 'none';
+        }
+    }
+
+    document.getElementById('clearPreview').addEventListener('click', function(){
+        fileInput.value = '';
+        previewDiv.style.display = 'none';
+        fileNameEl.textContent = '';
+    });
+});
+</script>
+{% endblock %}

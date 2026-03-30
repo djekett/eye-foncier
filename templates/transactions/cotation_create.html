@@ -1,0 +1,136 @@
+{% extends "layouts/base.html" %}
+{% load humanize %}
+
+{% block title %}Cotation — {{ parcelle.lot_number }} | Eye-Foncier{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <nav aria-label="fil d'ariane">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'parcelles:list' %}">Parcelles</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'parcelles:detail' pk=parcelle.pk %}">{{ parcelle.lot_number }}</a></li>
+            <li class="breadcrumb-item active">Cotation</li>
+        </ol>
+    </nav>
+
+    <div class="row">
+        <!-- Informations parcelle -->
+        <div class="col-lg-5 mb-4">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <h5 class="card-title fw-bold text-success">
+                        <i class="bi bi-geo-alt"></i> {{ parcelle.title }}
+                    </h5>
+                    <p class="text-muted">Lot {{ parcelle.lot_number }}</p>
+                    <hr>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Prix du bien :</span>
+                        <strong>{{ parcelle.price|intcomma }} FCFA</strong>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Surface :</span>
+                        <strong>{{ parcelle.surface_m2 }} m²</strong>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Type :</span>
+                        <strong>{{ parcelle.get_land_type_display }}</strong>
+                    </div>
+                    {% if parcelle.zone %}
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Zone :</span>
+                        <strong>{{ parcelle.zone.name }}</strong>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Formulaire de cotation -->
+        <div class="col-lg-7">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-shield-check"></i>
+                        Paiement de la Cotation — 10 %
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <!-- Explication -->
+                    <div class="alert alert-info border-0">
+                        <h6 class="alert-heading fw-bold">
+                            <i class="bi bi-info-circle"></i> Pourquoi payer une cotation ?
+                        </h6>
+                        <p class="mb-2">
+                            La cotation de <strong>10 % du prix du bien</strong> vous garantit
+                            un accès privilégié et sécurisé à cette parcelle :
+                        </p>
+                        <ul class="mb-0">
+                            <li>Visite physique de la parcelle</li>
+                            <li>Accès aux documents officiels filigranés par Eye-Africa</li>
+                            <li>Vérification et analyse par le responsable Eye-Foncier</li>
+                            <li>Rendez-vous personnalisé dans nos locaux pour l'achat définitif</li>
+                        </ul>
+                        <hr>
+                        <small class="text-muted">
+                            <i class="bi bi-arrow-return-right"></i>
+                            La cotation est <strong>déduite du prix total</strong> lors de l'achat définitif.
+                        </small>
+                    </div>
+
+                    <!-- Récapitulatif financier -->
+                    <div class="card bg-light border-0 mb-4">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between mb-2">
+                                <span>Prix du bien :</span>
+                                <span>{{ parcelle.price|intcomma }} FCFA</span>
+                            </div>
+                            <div class="d-flex justify-content-between mb-2 text-success fw-bold">
+                                <span>Cotation (10 %) :</span>
+                                <span>{{ cotation_amount|intcomma }} FCFA</span>
+                            </div>
+                            <hr>
+                            <div class="d-flex justify-content-between">
+                                <span>Solde restant (à l'achat définitif) :</span>
+                                <strong>{{ remaining_amount|intcomma }} FCFA</strong>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Choix du mode de paiement -->
+                    <form method="post" id="cotation-form">
+                        {% csrf_token %}
+                        <h6 class="fw-bold mb-3">
+                            <i class="bi bi-credit-card"></i> Mode de paiement
+                        </h6>
+                        <div class="row g-3 mb-4">
+                            {% for method in payment_methods %}
+                            <div class="col-6">
+                                <div class="form-check card p-3 border">
+                                    <input class="form-check-input" type="radio"
+                                           name="payment_method" id="pm_{{ method.id }}"
+                                           value="{{ method.id }}"
+                                           {% if forloop.first %}checked{% endif %}>
+                                    <label class="form-check-label w-100" for="pm_{{ method.id }}">
+                                        <i class="bi {{ method.icon }}" style="color: {{ method.color }}"></i>
+                                        <span class="ms-1">{{ method.name }}</span>
+                                    </label>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+
+                        <button type="submit" class="btn btn-success btn-lg w-100">
+                            <i class="bi bi-lock"></i>
+                            Payer {{ cotation_amount|intcomma }} FCFA
+                        </button>
+                        <p class="text-muted text-center mt-2 small">
+                            <i class="bi bi-shield-lock"></i>
+                            Paiement sécurisé via CinetPay
+                        </p>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

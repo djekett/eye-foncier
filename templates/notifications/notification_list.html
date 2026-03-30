@@ -1,0 +1,94 @@
+{% extends "layouts/base.html" %}
+{% load humanize %}
+
+{% block title %}Notifications — {{ SITE_NAME }}{% endblock %}
+
+{% block content %}
+<div class="container" style="padding-bottom:60px;max-width:800px">
+
+    <!-- Header -->
+    <div class="d-flex align-items-center justify-content-between mb-4">
+        <div>
+            <h4 class="mb-0" style="font-weight:800;color:var(--green-900)">
+                <i class="bi bi-bell me-2"></i>Notifications
+            </h4>
+            <p class="text-muted mb-0" style="font-size:.85rem">
+                {% if unread_count %}{{ unread_count }} non lue{{ unread_count|pluralize }}{% else %}Tout est à jour{% endif %}
+            </p>
+        </div>
+        <div class="d-flex gap-2">
+            {% if unread_count %}
+            <form method="post" action="{% url 'notifications:mark_all_read' %}">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-sm btn-outline-success">
+                    <i class="bi bi-check-all me-1"></i>Tout marquer lu
+                </button>
+            </form>
+            {% endif %}
+            <a href="{% url 'notifications:preferences' %}" class="btn btn-sm btn-outline-secondary">
+                <i class="bi bi-gear me-1"></i>Préférences
+            </a>
+        </div>
+    </div>
+
+    <!-- Filtres -->
+    <div class="d-flex gap-2 mb-3 flex-wrap">
+        <a href="{% url 'notifications:list' %}" class="btn btn-sm {% if not filter_read and not filter_type %}btn-success{% else %}btn-outline-secondary{% endif %}">
+            Toutes
+        </a>
+        <a href="{% url 'notifications:list' %}?read=0" class="btn btn-sm {% if filter_read == '0' %}btn-success{% else %}btn-outline-secondary{% endif %}">
+            Non lues
+        </a>
+        <a href="{% url 'notifications:list' %}?read=1" class="btn btn-sm {% if filter_read == '1' %}btn-success{% else %}btn-outline-secondary{% endif %}">
+            Lues
+        </a>
+    </div>
+
+    <!-- Liste -->
+    {% if notifications %}
+    <div class="list-group">
+        {% for notif in notifications %}
+        <div class="list-group-item list-group-item-action d-flex align-items-start gap-3 {% if not notif.is_read %}border-start border-3 border-success{% endif %}"
+             style="border-radius:var(--radius-md);margin-bottom:6px;{% if not notif.is_read %}background:rgba(22,163,74,0.04){% endif %}">
+
+            <!-- Icône type -->
+            <div style="width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;
+                {% if notif.notification_type == 'transaction_status' %}background:#dbeafe;color:#2563eb
+                {% elif notif.notification_type == 'payment_confirmed' %}background:#dcfce7;color:#16a34a
+                {% elif notif.notification_type == 'payment_reminder' %}background:#fef3c7;color:#f59e0b
+                {% elif notif.notification_type == 'match_found' %}background:#ede9fe;color:#8b5cf6
+                {% elif notif.notification_type == 'visit_request' %}background:#cffafe;color:#0891b2
+                {% elif notif.notification_type == 'escrow_update' %}background:#fed7aa;color:#ea580c
+                {% else %}background:#f1f5f9;color:#64748b{% endif %}">
+                <i class="bi bi-{% if notif.notification_type == 'transaction_status' %}arrow-left-right{% elif notif.notification_type == 'payment_confirmed' %}check-circle{% elif notif.notification_type == 'payment_reminder' %}clock-history{% elif notif.notification_type == 'match_found' %}lightning{% elif notif.notification_type == 'visit_request' %}calendar-event{% elif notif.notification_type == 'escrow_update' %}safe{% else %}info-circle{% endif %}"></i>
+            </div>
+
+            <!-- Contenu -->
+            <div class="flex-grow-1">
+                <div class="d-flex justify-content-between align-items-center">
+                    <strong style="font-size:.9rem;color:var(--green-900)">{{ notif.title }}</strong>
+                    <small class="text-muted" style="font-size:.75rem;white-space:nowrap">
+                        {{ notif.created_at|naturaltime }}
+                    </small>
+                </div>
+                <p class="mb-1" style="font-size:.85rem;color:var(--gray-600)">{{ notif.message|truncatewords:30 }}</p>
+                {% if not notif.is_read %}
+                <form method="post" action="{% url 'notifications:mark_read' notif.pk %}" class="d-inline">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-sm btn-link p-0" style="font-size:.78rem;text-decoration:none">
+                        Marquer comme lu
+                    </button>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="text-center py-5">
+        <i class="bi bi-bell-slash" style="font-size:3rem;color:var(--gray-300)"></i>
+        <p class="text-muted mt-3">Aucune notification pour le moment.</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

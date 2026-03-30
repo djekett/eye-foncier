@@ -1,0 +1,66 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}Rapport d'Analyse — {{ parcelle.lot_number }} — {{ SITE_NAME }}{% endblock %}
+
+{% block content %}
+<div class="ef-page-header ef-reveal">
+    <div class="container">
+        <nav class="ef-breadcrumb mb-3">
+            <a href="{% url 'analysis:dashboard' %}">Analyses</a>
+            <span class="sep">/</span>
+            <a href="{% url 'analysis:parcelle_analysis' parcelle.pk %}">{{ parcelle.lot_number }}</a>
+            <span class="sep">/</span>
+            <span class="current">Rapport</span>
+        </nav>
+    </div>
+</div>
+
+<div class="ef-page-content container">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="ef-card" style="border-top:4px solid var(--green-700)">
+                <div class="ef-card-body text-center py-5">
+                    {% if report.status == 'ready' %}
+                        <i class="bi bi-file-earmark-check" style="font-size:4rem;color:var(--success)"></i>
+                        <h3 style="font-family:var(--font-display);font-weight:800;color:var(--green-900);margin-top:1rem">Certificat d'Analyse EYE-FONCIER</h3>
+                        <p style="color:var(--gray-400)">Lot {{ parcelle.lot_number }} — {{ parcelle.title }}</p>
+
+                        {% if report.snapshot_data.overall_score %}
+                        <div class="ef-score-circle my-3 {% if report.snapshot_data.overall_score >= 70 %}ef-score-high{% elif report.snapshot_data.overall_score >= 45 %}ef-score-medium{% else %}ef-score-low{% endif %}" style="width:100px;height:100px;margin:1rem auto;box-shadow:0 4px 16px rgba(0,0,0,.1)">
+                            <div style="text-align:center">
+                                <div style="font-size:2.5rem;line-height:1">{{ report.snapshot_data.overall_score|floatformat:0 }}</div>
+                                <div style="font-size:.84rem">/ 100</div>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        <div class="mb-4">
+                            <span class="ef-badge ef-badge-dark" style="padding:.5rem 1rem;font-size:.88rem">
+                                <i class="bi bi-qr-code me-1"></i>Réf : <span style="font-family:var(--font-mono)">{{ report.qr_verification_code }}</span>
+                            </span>
+                            <br>
+                            <small class="ef-col-muted" style="margin-top:.5rem;display:inline-block">Généré le {{ report.generated_at|date:"d/m/Y à H:i" }}</small>
+                        </div>
+
+                        <a href="{% url 'analysis:report_download' report.pk %}" class="ef-btn ef-btn-primary ef-btn-lg" style="padding:.75rem 2.5rem">
+                            <i class="bi bi-download me-2"></i>Télécharger le rapport PDF
+                        </a>
+
+                    {% elif report.status == 'pending' %}
+                        <i class="bi bi-hourglass-split" style="font-size:4rem;color:var(--warning)"></i>
+                        <h3 style="font-family:var(--font-display);font-weight:800;color:var(--green-900);margin-top:1rem">Rapport en cours de génération...</h3>
+                        <p style="color:var(--gray-400)">Veuillez patienter quelques instants.</p>
+                    {% else %}
+                        <i class="bi bi-exclamation-triangle" style="font-size:4rem;color:var(--danger)"></i>
+                        <h3 style="font-family:var(--font-display);font-weight:800;color:var(--green-900);margin-top:1rem">Erreur de génération</h3>
+                        <p style="color:var(--gray-400)">Une erreur s'est produite. Veuillez réessayer.</p>
+                        <a href="{% url 'analysis:generate_report' parcelle.pk %}" class="ef-btn ef-btn-outline-green">
+                            <i class="bi bi-arrow-clockwise me-1"></i>Réessayer
+                        </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

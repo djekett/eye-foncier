@@ -1,0 +1,142 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}Import en lot — EYE-FONCIER{% endblock %}
+
+{% block content %}
+<div class="container py-4" style="max-width:800px">
+    <div class="mb-4">
+        <a href="{% url 'parcelles:seller_dashboard_pro' %}" style="color:var(--green-700);font-size:.85rem;text-decoration:none">
+            <i class="bi bi-arrow-left"></i> Retour au dashboard pro
+        </a>
+    </div>
+
+    <div class="card border-0 shadow-sm" style="border-radius:var(--radius-lg)">
+        <div class="card-body p-4">
+            <h3 class="fw-bold mb-2" style="font-family:var(--font-display);color:var(--green-900)">
+                <i class="bi bi-cloud-upload"></i> Import en lot
+            </h3>
+            <p style="color:var(--gray-400);font-size:.9rem">
+                Ajoutez plusieurs parcelles en une seule operation a partir d'un fichier CSV ou Excel.
+            </p>
+
+            <!-- Format attendu -->
+            <div class="mb-4 p-3" style="background:#f8faf9;border-radius:var(--radius-md);border:1px solid #e5e7eb">
+                <h6 class="fw-bold mb-2" style="color:var(--green-900);font-size:.85rem">
+                    <i class="bi bi-info-circle"></i> Format du fichier
+                </h6>
+                <p class="mb-2" style="font-size:.82rem;color:var(--gray-400)">
+                    Le fichier doit contenir les colonnes suivantes (separateur : <code>;</code> ou <code>,</code>) :
+                </p>
+                <div class="table-responsive">
+                    <table class="table table-sm mb-0" style="font-size:.78rem">
+                        <thead>
+                            <tr style="color:var(--gray-400)">
+                                <th>Colonne</th><th>Obligatoire</th><th>Description</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr><td><code>lot_number</code></td><td><span class="badge bg-danger">Oui</span></td><td>Numero de lot unique</td></tr>
+                            <tr><td><code>title</code></td><td>Non</td><td>Titre de la parcelle</td></tr>
+                            <tr><td><code>description</code></td><td>Non</td><td>Description</td></tr>
+                            <tr><td><code>land_type</code></td><td>Non</td><td>residential, commercial, agricultural, industrial, mixed</td></tr>
+                            <tr><td><code>surface_m2</code></td><td>Non</td><td>Surface en m²</td></tr>
+                            <tr><td><code>price</code></td><td>Non</td><td>Prix en FCFA</td></tr>
+                            <tr><td><code>address</code></td><td>Non</td><td>Adresse</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Exemple CSV -->
+            <div class="mb-4">
+                <h6 class="fw-bold" style="color:var(--green-900);font-size:.85rem">Exemple CSV</h6>
+                <pre style="background:#1e293b;color:#e2e8f0;padding:12px;border-radius:var(--radius-md);font-size:.75rem;overflow-x:auto;font-family:var(--font-mono)">lot_number;title;description;land_type;surface_m2;price;address
+LOT-001;Terrain Cocody;Belle parcelle;residential;500;15000000;Cocody, Abidjan
+LOT-002;Terrain Yopougon;Terrain commercial;commercial;800;25000000;Yopougon, Abidjan
+LOT-003;Terrain Bingerville;Parcelle agricole;agricultural;2000;5000000;Bingerville</pre>
+            </div>
+
+            <!-- Formulaire -->
+            <form method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+                <div class="mb-4">
+                    <label class="form-label fw-bold" style="font-size:.85rem;color:var(--green-900)">
+                        <i class="bi bi-file-earmark-spreadsheet"></i> Fichier CSV ou Excel
+                    </label>
+                    <div id="drop-zone" class="text-center p-4" style="border:2px dashed #d1d5db;border-radius:var(--radius-md);cursor:pointer;transition:all .2s" onclick="document.getElementById('id_file').click()">
+                        <i class="bi bi-cloud-arrow-up" style="font-size:2rem;color:var(--gray-300)"></i>
+                        <p class="mt-2 mb-1" style="font-size:.9rem;color:var(--gray-400)">Glissez votre fichier ici ou cliquez pour parcourir</p>
+                        <p class="mb-0" style="font-size:.75rem;color:var(--gray-300)">CSV ou Excel (.xlsx) — 5 Mo max</p>
+                    </div>
+                    {{ form.file }}
+                    {% for error in form.file.errors %}
+                    <div class="text-danger mt-1" style="font-size:.82rem">{{ error }}</div>
+                    {% endfor %}
+                </div>
+                <button type="submit" class="btn w-100" style="background:var(--green-900);color:#fff;border-radius:var(--radius-sm);padding:12px;font-weight:700">
+                    <i class="bi bi-upload"></i> Importer les parcelles
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Resultats -->
+    {% if results %}
+    <div class="card border-0 shadow-sm mt-4" style="border-radius:var(--radius-lg)">
+        <div class="card-body p-4">
+            <h5 class="fw-bold mb-3" style="color:var(--green-900)">
+                <i class="bi bi-clipboard-data"></i> Rapport d'import
+            </h5>
+            <div class="row g-3 mb-3">
+                <div class="col-4">
+                    <div class="text-center p-2" style="background:#f0fdf4;border-radius:var(--radius-md)">
+                        <div style="font-size:1.5rem;font-weight:800;color:#16a34a">{{ results.created }}</div>
+                        <div style="font-size:.75rem;color:#16a34a">Creees</div>
+                    </div>
+                </div>
+                <div class="col-4">
+                    <div class="text-center p-2" style="background:#fef2f2;border-radius:var(--radius-md)">
+                        <div style="font-size:1.5rem;font-weight:800;color:#dc2626">{{ results.errors|length }}</div>
+                        <div style="font-size:.75rem;color:#dc2626">Erreurs</div>
+                    </div>
+                </div>
+                <div class="col-4">
+                    <div class="text-center p-2" style="background:#f8faf9;border-radius:var(--radius-md)">
+                        <div style="font-size:1.5rem;font-weight:800;color:var(--green-900)">{{ results.total }}</div>
+                        <div style="font-size:.75rem;color:var(--gray-400)">Total</div>
+                    </div>
+                </div>
+            </div>
+            {% if results.errors %}
+            <div class="mt-3">
+                <h6 class="fw-bold" style="font-size:.85rem;color:#dc2626"><i class="bi bi-exclamation-triangle"></i> Erreurs</h6>
+                <div style="max-height:200px;overflow-y:auto">
+                    {% for err in results.errors %}
+                    <div class="mb-1" style="font-size:.8rem;color:#991b1b">
+                        <strong>Ligne {{ err.line }} :</strong> {{ err.error }}
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<style>
+#id_file { display: none; }
+#drop-zone.dragover { border-color: var(--green-700); background: #f0fdf4; }
+</style>
+<script>
+const dz = document.getElementById("drop-zone");
+const fi = document.getElementById("id_file");
+dz.addEventListener("dragover", e => { e.preventDefault(); dz.classList.add("dragover"); });
+dz.addEventListener("dragleave", () => dz.classList.remove("dragover"));
+dz.addEventListener("drop", e => {
+    e.preventDefault(); dz.classList.remove("dragover");
+    if (e.dataTransfer.files.length) { fi.files = e.dataTransfer.files; dz.querySelector("p").textContent = fi.files[0].name; }
+});
+fi.addEventListener("change", () => { if (fi.files.length) dz.querySelector("p").textContent = fi.files[0].name; });
+</script>
+{% endblock %}

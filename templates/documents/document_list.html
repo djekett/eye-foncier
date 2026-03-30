@@ -1,0 +1,86 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}Documents — {{ parcelle.title }} — {{ SITE_NAME }}{% endblock %}
+
+{% block content %}
+<div class="ef-page-header ef-reveal">
+    <div class="container">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h2 style="font-family:var(--font-display);color:var(--green-900);font-weight:800;margin-bottom:.25rem">
+                    <i class="bi bi-folder-fill me-2" style="color:var(--orange)"></i>Coffre-fort documentaire
+                </h2>
+                <p style="color:var(--gray-400);margin-bottom:0">Parcelle {{ parcelle.lot_number }} — {{ parcelle.title }}</p>
+            </div>
+            {% if is_owner or user.is_staff %}
+            <a href="{% url 'documents:upload' parcelle.pk %}" class="ef-btn ef-btn-primary">
+                <i class="bi bi-upload me-1"></i> Ajouter un document
+            </a>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<div class="ef-page-content container">
+    {% if documents %}
+    <div class="ef-card">
+        <div class="table-responsive">
+            <table class="ef-table">
+                <thead>
+                    <tr>
+                        <th>Document</th>
+                        <th>Type</th>
+                        <th>Confidentialité</th>
+                        <th>Vérifié</th>
+                        <th>Date</th>
+                        <th class="text-end">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for doc in documents %}
+                    <tr>
+                        <td>
+                            <i class="bi bi-file-earmark-pdf me-2" style="color:var(--danger)"></i>
+                            <span style="font-weight:600">{{ doc.title }}</span>
+                            {% if doc.description %}
+                            <br><small class="ef-col-muted">{{ doc.description|truncatechars:60 }}</small>
+                            {% endif %}
+                        </td>
+                        <td><span class="ef-badge ef-badge-dark">{{ doc.get_doc_type_display }}</span></td>
+                        <td>
+                            <span class="ef-badge {% if doc.confidentiality == 'public' %}ef-badge-success{% elif doc.confidentiality == 'buyer_only' %}ef-badge-warning{% else %}ef-badge-danger{% endif %}">
+                                {{ doc.get_confidentiality_display }}
+                            </span>
+                        </td>
+                        <td>
+                            {% if doc.is_verified %}
+                            <i class="bi bi-check-circle-fill" style="color:var(--success)"></i>
+                            {% else %}
+                            <i class="bi bi-clock" style="color:var(--warning)"></i>
+                            {% endif %}
+                        </td>
+                        <td class="ef-col-muted">{{ doc.uploaded_at|date:"d/m/Y" }}</td>
+                        <td class="text-end">
+                            <a href="{% url 'documents:view_watermarked' doc.pk %}" class="ef-btn ef-btn-sm ef-btn-outline-green" title="Consulter avec filigrane">
+                                <i class="bi bi-eye me-1"></i> Consulter
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% else %}
+    <div class="ef-empty-state">
+        <i class="bi bi-folder2-open" style="font-size:3rem;color:var(--gray-400)"></i>
+        <h5 style="font-family:var(--font-display);color:var(--green-900);font-weight:700">Aucun document disponible</h5>
+        <p style="color:var(--gray-400)">Aucun document disponible pour cette parcelle.</p>
+    </div>
+    {% endif %}
+
+    <a href="{% url 'parcelles:detail' parcelle.pk %}" class="ef-btn ef-btn-outline-green mt-3">
+        <i class="bi bi-arrow-left me-1"></i> Retour à la parcelle
+    </a>
+</div>
+{% endblock %}

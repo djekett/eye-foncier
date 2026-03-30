@@ -1,0 +1,27 @@
+{% extends "notifications/email/base_email.html" %}
+
+{% block title %}Boutique activée{% endblock %}
+
+{% block content %}
+<h2 style="color:#16a34a;margin-bottom:16px;">Votre boutique est active !</h2>
+
+<p>Bonjour {{ recipient.first_name|default:recipient.email }},</p>
+
+<p>{{ message }}</p>
+
+<div style="background:#f0fdf4;border-radius:8px;padding:20px;margin:20px 0;border-left:4px solid #22c55e;">
+    <h4 style="margin-top:0;color:#16a34a;">Ce que vous pouvez faire</h4>
+    <ul style="padding-left:20px;margin-bottom:0;">
+        <li>Publier vos parcelles en vente</li>
+        <li>Gérer vos annonces depuis votre dashboard</li>
+        <li>Recevoir les demandes d'acheteurs qualifiés</li>
+        <li>Suivre vos transactions en temps réel</li>
+    </ul>
+</div>
+
+<div style="text-align:center;margin:24px 0;">
+    <a href="{{ site_url }}/transactions/boutique/" style="display:inline-block;background:#16a34a;color:#fff;padding:12px 32px;border-radius:8px;text-decoration:none;font-weight:bold;">
+        Accéder à ma boutique
+    </a>
+</div>
+{% endblock %}

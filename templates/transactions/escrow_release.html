@@ -1,0 +1,77 @@
+{% extends "layouts/base.html" %}
+{% block title %}Libération Séquestre — {{ SITE_NAME }}{% endblock %}
+
+{% block content %}
+<div class="ef-page-header">
+    <h2 style="color:#0B3D2E; font-family:var(--font-display)">
+        <i class="bi bi-shield-lock-fill" style="color:#E8793B"></i> Libération du Séquestre — Admin
+    </h2>
+</div>
+
+<div class="ef-page-content" style="max-width:720px; margin:0 auto">
+    <div class="ef-card" style="border-left:3px solid #E8793B">
+        <div class="ef-card-header" style="background:rgba(232,121,59,0.06)">
+            <h3 style="font-family:var(--font-display); color:#0B3D2E; margin:0; font-size:1.1rem">
+                <i class="bi bi-shield-lock-fill" style="color:#E8793B"></i> Libération des fonds
+            </h3>
+        </div>
+        <div class="ef-card-body" style="padding:1.5rem">
+            <!-- Transaction info -->
+            <div style="background:#F7F4EE; border-radius:.5rem; padding:1rem; margin-bottom:1.25rem">
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:.75rem">
+                    <div>
+                        <div class="ef-info-row">
+                            <span class="ef-info-label">Transaction</span>
+                            <span class="ef-info-value" style="font-weight:700">{{ transaction.reference }}</span>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="ef-info-row">
+                            <span class="ef-info-label">Montant séquestre</span>
+                            <span class="ef-info-value" style="font-family:var(--font-mono); font-weight:700; color:#0B3D2E">{{ transaction.escrow_amount|floatformat:0 }} FCFA</span>
+                        </div>
+                    </div>
+                </div>
+                <hr style="border-color:#e5e7eb; margin:.75rem 0">
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:.75rem">
+                    <div>
+                        <div class="ef-info-row">
+                            <span class="ef-info-label">Acheteur</span>
+                            <span class="ef-info-value" style="font-weight:600">{{ transaction.buyer.get_full_name }}</span>
+                        </div>
+                        <span class="ef-badge {% if transaction.buyer_docs_confirmed %}ef-badge-success{% else %}ef-badge-warning{% endif %}" style="margin-top:.25rem">
+                            {% if transaction.buyer_docs_confirmed %}Docs confirmés{% else %}Docs non confirmés{% endif %}
+                        </span>
+                    </div>
+                    <div>
+                        <div class="ef-info-row">
+                            <span class="ef-info-label">Vendeur (bénéficiaire)</span>
+                            <span class="ef-info-value" style="font-weight:600">{{ transaction.seller.get_full_name }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {% if not transaction.buyer_docs_confirmed %}
+            <div style="background:#fee2e2; border:1px solid #fca5a5; border-radius:.5rem; padding:.75rem; margin-bottom:1.25rem; font-size:.85rem; color:#dc2626">
+                <i class="bi bi-exclamation-octagon"></i>
+                L'acheteur n'a pas encore confirmé la réception des documents. La libération est déconseillée.
+            </div>
+            {% endif %}
+
+            <form method="post">
+                {% csrf_token %}
+                <div class="ef-form-group">
+                    <label style="display:flex; align-items:center; gap:.5rem; font-size:.875rem; cursor:pointer">
+                        <input type="checkbox" id="confirmRelease" required>
+                        Je confirme la libération de <strong style="font-family:var(--font-mono)">{{ transaction.escrow_amount|floatformat:0 }} FCFA</strong> vers le vendeur
+                    </label>
+                </div>
+                <button type="submit" class="ef-btn ef-btn-primary ef-btn-block" style="background:#E8793B; border-color:#E8793B">
+                    <i class="bi bi-unlock-fill"></i> Libérer les fonds
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

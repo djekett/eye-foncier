@@ -1,0 +1,189 @@
+{% extends "layouts/base.html" %}
+{% load crispy_forms_tags %}
+
+{% block title %}Préférences de notification — {{ SITE_NAME }}{% endblock %}
+
+{% block content %}
+<div class="container" style="padding-bottom:60px;max-width:700px">
+
+    <div class="d-flex align-items-center gap-2 mb-4">
+        <a href="{% url 'notifications:list' %}" class="btn btn-sm btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i>
+        </a>
+        <h4 class="mb-0" style="font-weight:800;color:var(--green-900)">
+            <i class="bi bi-gear me-2"></i>Préférences de notification
+        </h4>
+    </div>
+
+    <form method="post">
+        {% csrf_token %}
+
+        <!-- Canaux de notification -->
+        <div class="card mb-4" style="border:none;border-radius:var(--radius-lg);box-shadow:var(--shadow-sm)">
+            <div class="card-body p-4">
+                <h6 class="mb-3" style="font-weight:700;color:var(--green-800)">
+                    <i class="bi bi-toggles me-1"></i> Canaux de notification
+                </h6>
+
+                <div class="mb-3">
+                    <div class="form-check form-switch mb-2">
+                        <input class="form-check-input" type="checkbox" name="inapp_enabled"
+                               id="id_inapp_enabled" {% if form.instance.inapp_enabled %}checked{% endif %}>
+                        <label class="form-check-label" for="id_inapp_enabled">
+                            <i class="bi bi-bell me-1"></i> Notifications in-app
+                        </label>
+                    </div>
+                    <div class="form-check form-switch mb-2">
+                        <input class="form-check-input" type="checkbox" name="email_enabled"
+                               id="id_email_enabled" {% if form.instance.email_enabled %}checked{% endif %}>
+                        <label class="form-check-label" for="id_email_enabled">
+                            <i class="bi bi-envelope me-1"></i> Notifications par email
+                        </label>
+                    </div>
+                    <div class="form-check form-switch mb-2">
+                        <input class="form-check-input" type="checkbox" name="sms_enabled"
+                               id="id_sms_enabled" {% if form.instance.sms_enabled %}checked{% endif %}>
+                        <label class="form-check-label" for="id_sms_enabled">
+                            <i class="bi bi-phone me-1"></i> Notifications SMS
+                        </label>
+                    </div>
+                    <div class="form-check form-switch mb-2">
+                        <input class="form-check-input" type="checkbox" name="push_enabled"
+                               id="id_push_enabled" {% if form.instance.push_enabled %}checked{% endif %}>
+                        <label class="form-check-label" for="id_push_enabled">
+                            <i class="bi bi-broadcast me-1"></i> Notifications push
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- WhatsApp -->
+        <div class="card mb-4" style="border:none;border-radius:var(--radius-lg);box-shadow:var(--shadow-sm)">
+            <div class="card-body p-4">
+                <h6 class="mb-3" style="font-weight:700;color:var(--green-800)">
+                    <i class="bi bi-whatsapp me-1" style="color:#25D366"></i> Notifications WhatsApp
+                </h6>
+
+                <div class="form-check form-switch mb-3">
+                    <input class="form-check-input" type="checkbox" name="whatsapp_enabled"
+                           id="id_whatsapp_enabled" {% if form.instance.whatsapp_enabled %}checked{% endif %}
+                           onchange="toggleWhatsAppFields(this)">
+                    <label class="form-check-label" for="id_whatsapp_enabled">
+                        <strong>Activer les notifications WhatsApp</strong>
+                    </label>
+                </div>
+
+                <div id="whatsapp-fields" {% if not form.instance.whatsapp_enabled %}style="display:none"{% endif %}>
+                    <div class="mb-3">
+                        <label for="id_whatsapp_number" class="form-label" style="font-size:.85rem">
+                            Numéro WhatsApp
+                        </label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="bi bi-whatsapp" style="color:#25D366"></i></span>
+                            <input type="tel" class="form-control" name="whatsapp_number"
+                                   id="id_whatsapp_number" placeholder="+225XXXXXXXXXX"
+                                   value="{{ form.instance.whatsapp_number }}">
+                        </div>
+                        {% if form.errors.whatsapp_number %}
+                        <div class="text-danger mt-1" style="font-size:.85rem">
+                            {{ form.errors.whatsapp_number.0 }}
+                        </div>
+                        {% endif %}
+                        <small class="text-muted">Format international avec indicatif pays</small>
+                    </div>
+
+                    {% if form.instance.whatsapp_verified %}
+                    <div class="alert alert-success py-2 px-3 mb-3" style="font-size:.85rem">
+                        <i class="bi bi-check-circle-fill me-1"></i> Numéro vérifié
+                    </div>
+                    {% elif form.instance.whatsapp_number %}
+                    <div class="alert alert-warning py-2 px-3 mb-3" style="font-size:.85rem">
+                        <i class="bi bi-exclamation-triangle me-1"></i> Numéro non vérifié —
+                        <a href="{% url 'notifications:verify_whatsapp' %}" class="alert-link">Vérifier maintenant</a>
+                    </div>
+                    {% endif %}
+
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox" name="whatsapp_consent"
+                               id="id_whatsapp_consent" {% if form.instance.whatsapp_consent %}checked{% endif %}>
+                        <label class="form-check-label" for="id_whatsapp_consent" style="font-size:.85rem">
+                            J'autorise EYE-FONCIER à m'envoyer des messages WhatsApp pour les notifications
+                            de la plateforme. Je peux retirer mon consentement à tout moment.
+                        </label>
+                    </div>
+                    {% if form.errors.whatsapp_consent %}
+                    <div class="text-danger mb-2" style="font-size:.85rem">
+                        {{ form.errors.whatsapp_consent.0 }}
+                    </div>
+                    {% endif %}
+                </div>
+
+                <div class="mt-2" style="font-size:.8rem;color:#6b7280">
+                    <i class="bi bi-info-circle me-1"></i>
+                    Recevez des notifications instantanées sur WhatsApp : nouvelles demandes clients,
+                    validation de parcelles, alertes urgentes.
+                </div>
+            </div>
+        </div>
+
+        <!-- Types de notifications -->
+        <div class="card mb-4" style="border:none;border-radius:var(--radius-lg);box-shadow:var(--shadow-sm)">
+            <div class="card-body p-4">
+                <h6 class="mb-3" style="font-weight:700;color:var(--green-800)">
+                    <i class="bi bi-funnel me-1"></i> Types d'alertes
+                </h6>
+                <p class="text-muted mb-3" style="font-size:.85rem">
+                    Décochez les types de notifications que vous ne souhaitez pas recevoir.
+                </p>
+
+                {% for value, label in form.notification_type_choices %}
+                <div class="form-check mb-2">
+                    <input class="form-check-input" type="checkbox"
+                           name="enabled_types" value="{{ value }}"
+                           id="type_{{ value }}"
+                           {% if value not in form.instance.disabled_types %}checked{% endif %}>
+                    <label class="form-check-label" for="type_{{ value }}" style="font-size:.9rem">
+                        {{ label }}
+                    </label>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Heures calmes -->
+        <div class="card mb-4" style="border:none;border-radius:var(--radius-lg);box-shadow:var(--shadow-sm)">
+            <div class="card-body p-4">
+                <h6 class="mb-3" style="font-weight:700;color:var(--green-800)">
+                    <i class="bi bi-moon me-1"></i> Heures calmes
+                </h6>
+                <p class="text-muted mb-3" style="font-size:.85rem">
+                    Pas de SMS, WhatsApp ou push pendant cette période.
+                </p>
+
+                <div class="row g-3 mb-3">
+                    <div class="col-6">
+                        <label for="id_quiet_hours_start" class="form-label" style="font-size:.85rem">Début</label>
+                        {{ form.quiet_hours_start }}
+                    </div>
+                    <div class="col-6">
+                        <label for="id_quiet_hours_end" class="form-label" style="font-size:.85rem">Fin</label>
+                        {{ form.quiet_hours_end }}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <button type="submit" class="btn btn-success w-100" style="padding:12px">
+            <i class="bi bi-check-lg me-1"></i> Enregistrer les préférences
+        </button>
+    </form>
+</div>
+
+<script>
+function toggleWhatsAppFields(checkbox) {
+    const fields = document.getElementById('whatsapp-fields');
+    fields.style.display = checkbox.checked ? 'block' : 'none';
+}
+</script>
+{% endblock %}

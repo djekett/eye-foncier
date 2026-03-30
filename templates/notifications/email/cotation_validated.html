@@ -1,0 +1,42 @@
+{% extends "notifications/email/base_email.html" %}
+{% load humanize %}
+
+{% block title %}Cotation validée — Droits débloqués{% endblock %}
+
+{% block content %}
+<h2 style="color:#16a34a;margin-bottom:16px;">Cotation validée</h2>
+
+<p>Bonjour {{ recipient.first_name|default:recipient.email }},</p>
+
+<p>{{ message }}</p>
+
+<div style="background:#f0fdf4;border-radius:8px;padding:20px;margin:20px 0;border-left:4px solid #22c55e;">
+    <h3 style="margin-top:0;color:#16a34a;">Vos droits débloqués</h3>
+    <ul style="padding-left:20px;margin-bottom:0;">
+        <li>Visite physique de la parcelle</li>
+        <li>Consultation des documents officiels filigranés</li>
+        <li>Vérification par le responsable Eye-Foncier</li>
+        <li>Réservation définitive de la parcelle</li>
+    </ul>
+</div>
+
+{% if data.parcelle_lot %}
+<table style="width:100%;border-collapse:collapse;margin:16px 0;">
+    <tr>
+        <td style="padding:8px;border-bottom:1px solid #e5e7eb;color:#6b7280;">Parcelle</td>
+        <td style="padding:8px;border-bottom:1px solid #e5e7eb;font-weight:bold;">{{ data.parcelle_lot }}</td>
+    </tr>
+</table>
+{% endif %}
+
+<div style="text-align:center;margin:24px 0;">
+    <a href="{{ site_url }}{{ data.action_url }}" style="display:inline-block;background:#16a34a;color:#fff;padding:12px 32px;border-radius:8px;text-decoration:none;font-weight:bold;">
+        Voir ma cotation
+    </a>
+</div>
+
+<p style="color:#6b7280;font-size:13px;">
+    Un vérificateur Eye-Foncier contactera bientôt le vendeur pour collecter les documents physiques.
+    Vous serez notifié à chaque étape.
+</p>
+{% endblock %}

@@ -1,0 +1,80 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}{{ partner.name }} — EYE-FONCIER{% endblock %}
+
+{% block content %}
+<div class="container py-4" style="max-width:800px">
+    <div class="mb-4">
+        <a href="{% url 'accounts:partner_list' %}" style="color:var(--green-700);font-size:.85rem;text-decoration:none">
+            <i class="bi bi-arrow-left"></i> Retour aux partenaires
+        </a>
+    </div>
+
+    <div class="card border-0 shadow-sm" style="border-radius:var(--radius-lg)">
+        <div class="card-body p-4">
+            <div class="d-flex align-items-center mb-4">
+                {% if partner.logo %}
+                <img src="{{ partner.logo.url }}" alt="{{ partner.name }}" style="width:64px;height:64px;object-fit:contain;border-radius:12px;margin-right:16px">
+                {% else %}
+                <div style="width:64px;height:64px;background:#f0fdf4;border-radius:12px;display:flex;align-items:center;justify-content:center;margin-right:16px">
+                    <i class="bi bi-{% if partner.partner_type == 'bank' %}bank{% elif partner.partner_type == 'insurance' %}shield-check{% elif partner.partner_type == 'notary' %}file-earmark-ruled{% else %}house{% endif %}" style="font-size:1.6rem;color:var(--green-700)"></i>
+                </div>
+                {% endif %}
+                <div>
+                    <h3 class="fw-bold mb-1" style="font-family:var(--font-display);color:var(--green-900)">{{ partner.name }}</h3>
+                    <span class="badge" style="background:#f0fdf4;color:var(--green-700)">{{ partner.get_partner_type_display }}</span>
+                </div>
+            </div>
+
+            {% if partner.description %}
+            <p style="color:var(--gray-600);line-height:1.7;margin-bottom:20px">{{ partner.description }}</p>
+            {% endif %}
+
+            {% if partner.services %}
+            <div class="mb-4">
+                <h6 class="fw-bold" style="color:var(--green-900);font-size:.85rem">Services proposes</h6>
+                <div class="d-flex flex-wrap gap-2">
+                    {% for service in partner.services %}
+                    <span class="badge" style="background:#fef3c7;color:#92400e;font-size:.75rem;padding:6px 12px">{{ service }}</span>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Coordonnees -->
+            <div class="p-3 mb-4" style="background:#f8faf9;border-radius:var(--radius-md);border:1px solid #e5e7eb">
+                <h6 class="fw-bold mb-3" style="color:var(--green-900);font-size:.85rem">
+                    <i class="bi bi-info-circle"></i> Coordonnees
+                </h6>
+                {% if partner.contact_email %}
+                <p class="mb-2" style="font-size:.85rem;color:var(--gray-600)">
+                    <i class="bi bi-envelope" style="color:var(--green-700)"></i> {{ partner.contact_email }}
+                </p>
+                {% endif %}
+                {% if partner.contact_phone %}
+                <p class="mb-2" style="font-size:.85rem;color:var(--gray-600)">
+                    <i class="bi bi-telephone" style="color:var(--green-700)"></i> {{ partner.contact_phone }}
+                </p>
+                {% endif %}
+                {% if partner.website %}
+                <p class="mb-0" style="font-size:.85rem;color:var(--gray-600)">
+                    <i class="bi bi-globe" style="color:var(--green-700)"></i>
+                    <a href="{{ partner.website }}" target="_blank" style="color:var(--green-700)">{{ partner.website }}</a>
+                </p>
+                {% endif %}
+            </div>
+
+            <!-- CTA -->
+            {% if user.is_authenticated %}
+            <a href="{% url 'accounts:partner_referral' pk=partner.pk %}" class="btn w-100" style="background:var(--green-900);color:#fff;border-radius:var(--radius-sm);padding:12px">
+                <i class="bi bi-send"></i> Demander une mise en relation
+            </a>
+            {% else %}
+            <a href="{% url 'accounts:login' %}?next={% url 'accounts:partner_detail' pk=partner.pk %}" class="btn w-100" style="background:var(--green-900);color:#fff;border-radius:var(--radius-sm);padding:12px">
+                <i class="bi bi-box-arrow-in-right"></i> Connectez-vous pour contacter ce partenaire
+            </a>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

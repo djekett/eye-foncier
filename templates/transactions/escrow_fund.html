@@ -1,0 +1,95 @@
+{% extends "layouts/base.html" %}
+{% block title %}Séquestre — {{ SITE_NAME }}{% endblock %}
+
+{% block content %}
+<div class="ef-page-header">
+    <nav class="ef-breadcrumb">
+        <a href="{% url 'transactions:list' %}">Transactions</a>
+        <span class="sep">/</span>
+        <a href="{% url 'transactions:detail' transaction.pk %}">{{ transaction.reference }}</a>
+        <span class="sep">/</span>
+        <span class="current">Séquestre</span>
+    </nav>
+</div>
+
+<div class="ef-page-content" style="max-width:720px; margin:0 auto">
+    <div class="ef-card">
+        <div class="ef-card-body" style="padding:2rem">
+            <!-- Header icon -->
+            <div style="text-align:center; margin-bottom:1.5rem">
+                <div style="width:72px; height:72px; border-radius:50%; background:rgba(11,61,46,0.08); display:inline-flex; align-items:center; justify-content:center; margin-bottom:1rem">
+                    <i class="bi bi-safe" style="font-size:2.2rem; color:#0B3D2E"></i>
+                </div>
+                <h2 style="font-family:var(--font-display); color:#0B3D2E; margin:0 0 .25rem">Séquestre Numérique EYE-Foncier</h2>
+                <p style="color:#6b7280; margin:0">Paiement 100% sécurisé — Fonds bloqués jusqu'à confirmation</p>
+            </div>
+
+            <!-- Summary -->
+            <div style="background:#F7F4EE; border-radius:.5rem; padding:1rem; margin-bottom:1.5rem">
+                <div style="display:grid; grid-template-columns:1fr 1fr 1fr; text-align:center; gap:.5rem">
+                    <div>
+                        <p style="color:#6b7280; font-size:.8rem; margin-bottom:.25rem">Parcelle</p>
+                        <p style="font-weight:700; margin:0">{{ transaction.parcelle.lot_number }}</p>
+                    </div>
+                    <div>
+                        <p style="color:#6b7280; font-size:.8rem; margin-bottom:.25rem">Montant</p>
+                        <p style="font-family:var(--font-mono); font-weight:700; color:#0B3D2E; margin:0">{{ transaction.amount|floatformat:0 }} FCFA</p>
+                    </div>
+                    <div>
+                        <p style="color:#6b7280; font-size:.8rem; margin-bottom:.25rem">Vendeur</p>
+                        <p style="font-weight:700; margin:0">{{ transaction.seller.get_full_name }}</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step cards -->
+            <h4 style="font-family:var(--font-display); color:#0B3D2E; font-size:1rem; margin-bottom:1rem">Comment fonctionne le séquestre ?</h4>
+
+            <div style="display:flex; flex-direction:column; gap:.75rem; margin-bottom:1.5rem">
+                <div class="ef-card" style="border-left:3px solid #0B3D2E">
+                    <div class="ef-card-body" style="padding:.75rem 1rem; display:flex; align-items:center; gap:.75rem">
+                        <span style="width:28px; height:28px; border-radius:50%; background:#0B3D2E; color:#fff; display:inline-flex; align-items:center; justify-content:center; font-size:.8rem; font-weight:700; flex-shrink:0">1</span>
+                        <span style="font-size:.875rem">Vous versez les fonds sur le compte EYE-Foncier <strong>(étape actuelle)</strong></span>
+                    </div>
+                </div>
+                <div class="ef-card">
+                    <div class="ef-card-body" style="padding:.75rem 1rem; display:flex; align-items:center; gap:.75rem">
+                        <span style="width:28px; height:28px; border-radius:50%; background:#F7F4EE; color:#0B3D2E; display:inline-flex; align-items:center; justify-content:center; font-size:.8rem; font-weight:700; flex-shrink:0">2</span>
+                        <span style="font-size:.875rem">Le vendeur vous transmet les documents légaux via la plateforme</span>
+                    </div>
+                </div>
+                <div class="ef-card">
+                    <div class="ef-card-body" style="padding:.75rem 1rem; display:flex; align-items:center; gap:.75rem">
+                        <span style="width:28px; height:28px; border-radius:50%; background:#F7F4EE; color:#0B3D2E; display:inline-flex; align-items:center; justify-content:center; font-size:.8rem; font-weight:700; flex-shrink:0">3</span>
+                        <span style="font-size:.875rem">Vous confirmez la réception et la conformité des documents</span>
+                    </div>
+                </div>
+                <div class="ef-card">
+                    <div class="ef-card-body" style="padding:.75rem 1rem; display:flex; align-items:center; gap:.75rem">
+                        <span style="width:28px; height:28px; border-radius:50%; background:#F7F4EE; color:#0B3D2E; display:inline-flex; align-items:center; justify-content:center; font-size:.8rem; font-weight:700; flex-shrink:0">4</span>
+                        <span style="font-size:.875rem">EYE-Foncier libère les fonds au vendeur — transaction finalisée</span>
+                    </div>
+                </div>
+            </div>
+
+            <div style="background:rgba(11,61,46,0.06); border-radius:.5rem; padding:.75rem; margin-bottom:1.5rem; font-size:.85rem; color:#0B3D2E">
+                <i class="bi bi-shield-check" style="color:#E8793B"></i>
+                <strong>Protection acheteur :</strong> En cas de litige, EYE-Foncier conserve les fonds et arbitre la résolution.
+            </div>
+
+            <form method="post">
+                {% csrf_token %}
+                <div class="ef-form-group">
+                    <label style="display:flex; align-items:center; gap:.5rem; font-size:.875rem; cursor:pointer">
+                        <input type="checkbox" id="confirmEscrow" required>
+                        Je confirme vouloir déposer <strong>{{ transaction.amount|floatformat:0 }} FCFA</strong> en séquestre EYE-Foncier
+                    </label>
+                </div>
+                <button type="submit" class="ef-btn ef-btn-primary ef-btn-block" style="font-size:1rem; padding:.75rem">
+                    <i class="bi bi-lock-fill"></i> Déposer en Séquestre
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

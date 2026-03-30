@@ -1,0 +1,151 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}Signer le contrat — EYE-FONCIER{% endblock %}
+
+{% block content %}
+<div class="container py-4" style="max-width:800px">
+    <div class="mb-4">
+        <a href="{% url 'transactions:detail' pk=transaction.pk %}" style="color:var(--green-700);font-size:.85rem;text-decoration:none">
+            <i class="bi bi-arrow-left"></i> Retour a la transaction
+        </a>
+    </div>
+
+    <div class="card border-0 shadow-sm" style="border-radius:var(--radius-lg)">
+        <div class="card-body p-4">
+            <div class="text-center mb-4">
+                <div style="width:64px;height:64px;background:#f0fdf4;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;margin-bottom:12px">
+                    <i class="bi bi-pen" style="font-size:1.6rem;color:var(--green-700)"></i>
+                </div>
+                <h4 class="fw-bold" style="font-family:var(--font-display);color:var(--green-900)">Signature du Compromis de Vente</h4>
+                <p style="color:var(--gray-400);font-size:.9rem">Ref: {{ transaction.reference }} — Lot {{ transaction.parcelle.lot_number }}</p>
+            </div>
+
+            <!-- Resume du contrat -->
+            <div class="p-3 mb-4" style="background:#f8faf9;border-radius:var(--radius-md);border:1px solid #e5e7eb">
+                <div class="row">
+                    <div class="col-6">
+                        <small style="color:var(--gray-400);font-size:.75rem">Acheteur</small>
+                        <p class="mb-2 fw-semibold" style="font-size:.88rem">{{ transaction.buyer.get_full_name }}</p>
+                    </div>
+                    <div class="col-6">
+                        <small style="color:var(--gray-400);font-size:.75rem">Vendeur</small>
+                        <p class="mb-2 fw-semibold" style="font-size:.88rem">{{ transaction.seller.get_full_name }}</p>
+                    </div>
+                    <div class="col-6">
+                        <small style="color:var(--gray-400);font-size:.75rem">Parcelle</small>
+                        <p class="mb-2 fw-semibold" style="font-size:.88rem">{{ transaction.parcelle.title }}</p>
+                    </div>
+                    <div class="col-6">
+                        <small style="color:var(--gray-400);font-size:.75rem">Montant</small>
+                        <p class="mb-0 fw-bold" style="font-size:1rem;color:var(--green-700);font-family:var(--font-mono)">{{ transaction.amount|floatformat:0 }} FCFA</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Statut des signatures existantes -->
+            {% if existing_signatures %}
+            <div class="mb-4">
+                <h6 class="fw-bold" style="font-size:.85rem;color:var(--green-900)">Signatures existantes</h6>
+                {% for sig in existing_signatures %}
+                <div class="d-flex align-items-center gap-2 mb-2">
+                    <span class="badge" style="background:#dcfce7;color:#16a34a;font-size:.72rem">Signe</span>
+                    <span style="font-size:.85rem">{{ sig.get_role_display }} — {{ sig.signer.get_full_name }}</span>
+                    <span style="font-size:.75rem;color:var(--gray-400)">{{ sig.signed_at|date:"d/m/Y H:i" }}</span>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            <!-- Canvas de signature -->
+            <form method="post" id="signatureForm">
+                {% csrf_token %}
+                <div class="mb-3">
+                    <label class="form-label fw-bold" style="font-size:.88rem;color:var(--green-900)">
+                        Votre signature ({{ signer_role|title }})
+                    </label>
+                    <p style="font-size:.8rem;color:var(--gray-400)">
+                        Dessinez votre signature dans le cadre ci-dessous a l'aide de la souris ou du doigt.
+                    </p>
+                    <div style="border:2px dashed var(--green-100);border-radius:var(--radius-md);background:#fafafa;position:relative">
+                        <canvas id="signatureCanvas" width="700" height="200" style="width:100%;cursor:crosshair;touch-action:none"></canvas>
+                    </div>
+                    <div class="d-flex justify-content-end mt-2">
+                        <button type="button" id="clearSignature" class="btn btn-sm" style="font-size:.78rem;color:var(--gray-400)">
+                            <i class="bi bi-eraser"></i> Effacer
+                        </button>
+                    </div>
+                </div>
+                <input type="hidden" name="signature_data" id="signatureData">
+
+                <div class="form-check mb-4">
+                    <input class="form-check-input" type="checkbox" id="agreeCheck" required>
+                    <label class="form-check-label" for="agreeCheck" style="font-size:.85rem">
+                        Je confirme avoir lu et accepte les termes du compromis de vente pour la parcelle
+                        <strong>{{ transaction.parcelle.lot_number }}</strong>.
+                    </label>
+                </div>
+
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn flex-fill" id="submitBtn" style="background:var(--green-900);color:#fff;border-radius:var(--radius-sm)" disabled>
+                        <i class="bi bi-pen"></i> Signer le contrat
+                    </button>
+                    <a href="{% url 'transactions:detail' pk=transaction.pk %}" class="btn" style="border:1px solid var(--gray-200);color:var(--gray-600);border-radius:var(--radius-sm)">
+                        Annuler
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var canvas = document.getElementById('signatureCanvas');
+    var ctx = canvas.getContext('2d');
+    var drawing = false;
+    var hasDrawn = false;
+
+    canvas.width = canvas.offsetWidth * 2;
+    canvas.height = 400;
+    ctx.scale(2, 2);
+    ctx.lineWidth = 2;
+    ctx.lineCap = 'round';
+    ctx.strokeStyle = '#0B3D2E';
+
+    function getPos(e) {
+        var rect = canvas.getBoundingClientRect();
+        var clientX = e.touches ? e.touches[0].clientX : e.clientX;
+        var clientY = e.touches ? e.touches[0].clientY : e.clientY;
+        return { x: clientX - rect.left, y: clientY - rect.top };
+    }
+
+    canvas.addEventListener('mousedown', function(e) { drawing = true; var p = getPos(e); ctx.beginPath(); ctx.moveTo(p.x, p.y); });
+    canvas.addEventListener('mousemove', function(e) { if (!drawing) return; hasDrawn = true; var p = getPos(e); ctx.lineTo(p.x, p.y); ctx.stroke(); });
+    canvas.addEventListener('mouseup', function() { drawing = false; updateBtn(); });
+    canvas.addEventListener('mouseleave', function() { drawing = false; });
+
+    canvas.addEventListener('touchstart', function(e) { e.preventDefault(); drawing = true; var p = getPos(e); ctx.beginPath(); ctx.moveTo(p.x, p.y); });
+    canvas.addEventListener('touchmove', function(e) { e.preventDefault(); if (!drawing) return; hasDrawn = true; var p = getPos(e); ctx.lineTo(p.x, p.y); ctx.stroke(); });
+    canvas.addEventListener('touchend', function() { drawing = false; updateBtn(); });
+
+    document.getElementById('clearSignature').addEventListener('click', function() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        hasDrawn = false;
+        updateBtn();
+    });
+
+    function updateBtn() {
+        var cb = document.getElementById('agreeCheck');
+        document.getElementById('submitBtn').disabled = !(hasDrawn && cb.checked);
+    }
+    document.getElementById('agreeCheck').addEventListener('change', updateBtn);
+
+    document.getElementById('signatureForm').addEventListener('submit', function(e) {
+        if (!hasDrawn) { e.preventDefault(); alert('Veuillez dessiner votre signature.'); return; }
+        document.getElementById('signatureData').value = canvas.toDataURL('image/png');
+    });
+});
+</script>
+{% endblock %}

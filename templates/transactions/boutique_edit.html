@@ -1,0 +1,221 @@
+{% extends "layouts/base.html" %}
+{% load static %}
+
+{% block title %}Personnaliser ma boutique — {{ SITE_NAME }}{% endblock %}
+
+{% block extra_css %}
+<style>
+.edit-page{max-width:900px;margin:0 auto;padding:0 clamp(16px,4vw,48px) 60px}
+.edit-card{background:var(--white);border-radius:var(--radius-lg);box-shadow:var(--shadow-sm);border:1px solid var(--gray-200);overflow:hidden;margin-bottom:1.25rem}
+.edit-card-header{padding:16px 20px;border-bottom:1px solid var(--gray-100);display:flex;align-items:center;gap:10px}
+.edit-card-header h5{font-family:var(--font-display);font-weight:700;color:var(--green-900);margin:0;font-size:.95rem}
+.edit-card-body{padding:20px}
+.form-label-ef{font-size:.82rem;font-weight:600;color:var(--dark);margin-bottom:4px}
+.form-hint{font-size:.72rem;color:var(--gray-400);margin-top:2px}
+.form-control-ef{
+    padding:10px 14px;border-radius:var(--radius-sm);border:1.5px solid var(--gray-200);
+    font-size:.85rem;font-family:var(--font-body);width:100%;transition:all var(--transition);
+    background:var(--sand);
+}
+.form-control-ef:focus{border-color:var(--orange);background:var(--white);box-shadow:0 0 0 3px rgba(232,121,59,.12);outline:none}
+textarea.form-control-ef{resize:vertical;min-height:100px}
+.upload-zone{
+    border:2px dashed var(--gray-200);border-radius:var(--radius-md);padding:24px;text-align:center;
+    cursor:pointer;transition:all .2s;position:relative;overflow:hidden;
+}
+.upload-zone:hover{border-color:var(--orange);background:var(--orange-light)}
+.upload-zone img{max-height:120px;border-radius:var(--radius-sm);margin-top:8px}
+.upload-zone input{position:absolute;inset:0;opacity:0;cursor:pointer}
+.color-preview{width:36px;height:36px;border-radius:var(--radius-sm);border:2px solid var(--gray-200);cursor:pointer}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="edit-page">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 style="font-family:var(--font-display);font-weight:800;color:var(--green-900);margin:0">Personnaliser ma boutique</h2>
+            <p style="color:var(--gray-400);font-size:.85rem;margin:4px 0 0">Configurez l'apparence et les informations de votre espace vendeur</p>
+        </div>
+        <a href="{% url 'transactions:boutique_dashboard' %}" class="ef-btn ef-btn-outline-green" style="font-size:.82rem">
+            <i class="bi bi-arrow-left me-1"></i> Retour
+        </a>
+    </div>
+
+    <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+
+        <!-- Identite -->
+        <div class="edit-card">
+            <div class="edit-card-header">
+                <i class="bi bi-shop" style="color:var(--green-700);font-size:1.1rem"></i>
+                <h5>Identite de la boutique</h5>
+            </div>
+            <div class="edit-card-body">
+                <div class="row g-3">
+                    <div class="col-md-8">
+                        <label class="form-label-ef">Nom de la boutique *</label>
+                        <input type="text" name="name" value="{{ boutique.name }}" class="form-control-ef" required maxlength="200">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label-ef">Specialite</label>
+                        <input type="text" name="specialty" value="{{ boutique.specialty }}" class="form-control-ef" placeholder="Ex: Terrains residentiels" maxlength="200">
+                        <div class="form-hint">Ce qui vous distingue</div>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label-ef">Description</label>
+                        <textarea name="description" class="form-control-ef" rows="4" placeholder="Presentez votre activite, vos services, votre experience..." maxlength="2000">{{ boutique.description }}</textarea>
+                        <div class="form-hint">2000 caracteres max — visible sur votre page publique</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Visuels -->
+        <div class="edit-card">
+            <div class="edit-card-header">
+                <i class="bi bi-image" style="color:var(--orange);font-size:1.1rem"></i>
+                <h5>Logo & Banniere</h5>
+            </div>
+            <div class="edit-card-body">
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label class="form-label-ef">Logo de la boutique</label>
+                        <div class="upload-zone" id="logoZone">
+                            <i class="bi bi-camera" style="font-size:1.5rem;color:var(--gray-300)"></i>
+                            <div style="font-size:.78rem;color:var(--gray-400);margin-top:4px">Cliquez pour choisir</div>
+                            {% if boutique.logo %}
+                            <img src="{{ boutique.logo.url }}" alt="Logo actuel">
+                            {% endif %}
+                            <input type="file" name="logo" accept="image/*" onchange="previewFile(this,'logoZone')">
+                        </div>
+                        <div class="form-hint">Format carre recommande (300x300px)</div>
+                    </div>
+                    <div class="col-md-8">
+                        <label class="form-label-ef">Banniere</label>
+                        <div class="upload-zone" id="bannerZone" style="min-height:160px">
+                            <i class="bi bi-panorama" style="font-size:2rem;color:var(--gray-300)"></i>
+                            <div style="font-size:.78rem;color:var(--gray-400);margin-top:4px">Cliquez pour choisir une banniere (1200x400px recommande)</div>
+                            {% if boutique.banner %}
+                            <img src="{{ boutique.banner.url }}" alt="Banniere actuelle" style="max-height:100px;max-width:100%">
+                            {% endif %}
+                            <input type="file" name="banner" accept="image/*" onchange="previewFile(this,'bannerZone')">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Contact -->
+        <div class="edit-card">
+            <div class="edit-card-header">
+                <i class="bi bi-telephone" style="color:#2563eb;font-size:1.1rem"></i>
+                <h5>Contact & Localisation</h5>
+            </div>
+            <div class="edit-card-body">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label-ef"><i class="bi bi-telephone me-1"></i> Telephone</label>
+                        <input type="tel" name="phone" value="{{ boutique.phone }}" class="form-control-ef" placeholder="+225 07 00 00 00 00">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label-ef"><i class="bi bi-whatsapp me-1" style="color:#25D366"></i> Numero WhatsApp</label>
+                        <input type="tel" name="whatsapp" value="{{ boutique.whatsapp }}" class="form-control-ef" placeholder="2250700000000">
+                        <div class="form-hint">Format international sans + (ex: 2250709422551)</div>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label-ef">Message WhatsApp pre-rempli</label>
+                        <input type="text" name="whatsapp_message" value="{{ boutique.whatsapp_message }}" class="form-control-ef" placeholder="Bonjour, je suis interesse par vos parcelles..." maxlength="300">
+                        <div class="form-hint">Ce message sera pre-rempli quand un visiteur clique sur votre bouton WhatsApp</div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label-ef"><i class="bi bi-envelope me-1"></i> Email</label>
+                        <input type="email" name="email" value="{{ boutique.email }}" class="form-control-ef" placeholder="contact@example.com">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label-ef"><i class="bi bi-geo-alt me-1"></i> Adresse</label>
+                        <input type="text" name="address" value="{{ boutique.address }}" class="form-control-ef" placeholder="Rue, quartier...">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label-ef">Ville</label>
+                        <input type="text" name="city" value="{{ boutique.city }}" class="form-control-ef" placeholder="Abidjan">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label-ef">Commune</label>
+                        <input type="text" name="commune" value="{{ boutique.commune }}" class="form-control-ef" placeholder="Cocody">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Liens & Theme -->
+        <div class="edit-card">
+            <div class="edit-card-header">
+                <i class="bi bi-palette" style="color:#8b5cf6;font-size:1.1rem"></i>
+                <h5>Liens & Personnalisation</h5>
+            </div>
+            <div class="edit-card-body">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label-ef"><i class="bi bi-globe me-1"></i> Site web</label>
+                        <input type="url" name="website" value="{{ boutique.website }}" class="form-control-ef" placeholder="https://mon-site.com">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label-ef"><i class="bi bi-facebook me-1" style="color:#1877F2"></i> Page Facebook</label>
+                        <input type="url" name="facebook" value="{{ boutique.facebook }}" class="form-control-ef" placeholder="https://facebook.com/ma-page">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label-ef"><i class="bi bi-instagram me-1" style="color:#E4405F"></i> Instagram</label>
+                        <input type="text" name="instagram" value="{{ boutique.instagram }}" class="form-control-ef" placeholder="@mon_compte">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label-ef"><i class="bi bi-palette me-1"></i> Couleur du theme</label>
+                        <div class="d-flex align-items-center gap-3">
+                            <input type="color" name="theme_color" value="{{ boutique.theme_color|default:'#0B3D2E' }}" class="color-preview" id="themeColor">
+                            <span style="font-size:.78rem;color:var(--gray-400)" id="colorHex">{{ boutique.theme_color|default:'#0B3D2E' }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="d-flex gap-3 justify-content-between flex-wrap">
+            <a href="{% url 'transactions:boutique_public' boutique.slug %}" class="ef-btn ef-btn-outline-green" style="font-size:.85rem">
+                <i class="bi bi-eye me-1"></i> Apercu public
+            </a>
+            <button type="submit" class="ef-btn ef-btn-primary" style="font-size:.85rem;padding:12px 32px">
+                <i class="bi bi-check-lg me-1"></i> Enregistrer les modifications
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function previewFile(input, zoneId) {
+    var zone = document.getElementById(zoneId);
+    if (input.files && input.files[0]) {
+        var reader = new FileReader();
+        reader.onload = function(e) {
+            var existingImg = zone.querySelector('img');
+            if (existingImg) {
+                existingImg.src = e.target.result;
+            } else {
+                var img = document.createElement('img');
+                img.src = e.target.result;
+                img.style.maxHeight = '120px';
+                img.style.borderRadius = 'var(--radius-sm)';
+                img.style.marginTop = '8px';
+                zone.appendChild(img);
+            }
+        };
+        reader.readAsDataURL(input.files[0]);
+    }
+}
+document.getElementById('themeColor').addEventListener('input', function() {
+    document.getElementById('colorHex').textContent = this.value;
+});
+</script>
+{% endblock %}

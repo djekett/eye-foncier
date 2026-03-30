@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<style>
+    @page { size: A4; margin: 2cm; }
+    body { font-family: Helvetica, Arial, sans-serif; font-size: 10pt; color: #1a1a1a; line-height: 1.5; }
+    .header { display: flex; justify-content: space-between; margin-bottom: 30px; }
+    .logo-block { }
+    .logo-title { font-size: 22pt; font-weight: 800; color: #0B3D2E; letter-spacing: 1px; margin: 0; }
+    .logo-sub { font-size: 8pt; color: #6b7280; margin: 0; }
+    .invoice-title { text-align: right; }
+    .invoice-title h2 { font-size: 18pt; color: #0B3D2E; margin: 0 0 4px; }
+    .invoice-number { font-size: 11pt; font-weight: 700; color: #E8793B; }
+    .kente-line { height: 4px; background: linear-gradient(90deg, #E8790A 0%, #E8790A 25%, #16a34a 25%, #16a34a 50%, #E8790A 50%, #E8790A 75%, #16a34a 75%); margin: 0 0 20px; }
+
+    .info-grid { width: 100%; margin-bottom: 20px; }
+    .info-grid td { vertical-align: top; padding: 0; width: 50%; }
+    .info-box { background: #f8faf9; border-radius: 6px; padding: 12px 16px; }
+    .info-box h4 { font-size: 8pt; text-transform: uppercase; letter-spacing: 1px; color: #6b7280; margin: 0 0 6px; }
+    .info-box p { margin: 2px 0; font-size: 9pt; }
+    .info-box .name { font-weight: 700; font-size: 10pt; color: #0B3D2E; }
+
+    .meta-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+    .meta-table td { padding: 6px 12px; font-size: 9pt; }
+    .meta-table .label { color: #6b7280; font-weight: 600; width: 140px; background: #f8faf9; }
+    .meta-table .value { font-weight: 600; color: #1a1a1a; }
+
+    table.items { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+    table.items thead th { background: #0B3D2E; color: white; padding: 10px 12px; font-size: 8pt; text-transform: uppercase; letter-spacing: 0.5px; text-align: left; }
+    table.items thead th:last-child { text-align: right; }
+    table.items tbody td { padding: 10px 12px; border-bottom: 1px solid #e5e7eb; font-size: 9pt; }
+    table.items tbody td:last-child { text-align: right; font-family: 'Courier New', monospace; }
+    table.items tbody td.detail { font-size: 8pt; color: #6b7280; font-style: italic; }
+    table.items tfoot td { padding: 8px 12px; font-size: 9pt; }
+    table.items tfoot .total-row { font-weight: 700; font-size: 11pt; color: #0B3D2E; border-top: 2px solid #0B3D2E; }
+    .amount { font-family: 'Courier New', monospace; font-weight: 700; }
+
+    .status-badge { display: inline-block; padding: 4px 14px; border-radius: 12px; font-size: 9pt; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
+    .status-paid { background: #dcfce7; color: #166534; }
+    .status-issued { background: #fef3c7; color: #92400e; }
+    .status-draft { background: #f3f4f6; color: #6b7280; }
+
+    .footer { margin-top: 30px; border-top: 1px solid #e5e7eb; padding-top: 16px; }
+    .footer p { font-size: 8pt; color: #9ca3af; margin: 2px 0; text-align: center; }
+    .footer .legal { font-size: 7pt; color: #d1d5db; }
+
+    .payment-info { background: #eff6ff; border-radius: 6px; padding: 12px 16px; margin-bottom: 20px; }
+    .payment-info h4 { font-size: 8pt; text-transform: uppercase; color: #1e40af; margin: 0 0 6px; }
+    .payment-info p { font-size: 9pt; margin: 2px 0; }
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<table width="100%" style="margin-bottom: 10px">
+    <tr>
+        <td style="vertical-align: top">
+            <p class="logo-title">EYE-FONCIER</p>
+            <p class="logo-sub">Plateforme de Transaction Fonciere Securisee</p>
+        </td>
+        <td style="text-align: right; vertical-align: top">
+            <h2 style="font-size: 18pt; color: #0B3D2E; margin: 0 0 4px">FACTURE</h2>
+            <span class="invoice-number">{{ invoice.invoice_number }}</span>
+        </td>
+    </tr>
+</table>
+
+<div class="kente-line"></div>
+
+<!-- Émetteur / Client -->
+<table class="info-grid">
+    <tr>
+        <td style="padding-right: 10px">
+            <div class="info-box">
+                <h4>Emetteur</h4>
+                <p class="name">{{ company.name }}</p>
+                <p>{{ company.address }}</p>
+                <p>Tel: {{ company.phone }}</p>
+                <p>{{ company.email }}</p>
+                <p style="font-size:8pt;color:#9ca3af">RCCM: {{ company.rccm }} | CC: {{ company.cc }}</p>
+            </div>
+        </td>
+        <td style="padding-left: 10px">
+            <div class="info-box">
+                <h4>Client</h4>
+                <p class="name">{{ invoice.client_name }}</p>
+                <p>{{ invoice.client_email }}</p>
+                {% if invoice.client_phone %}<p>Tel: {{ invoice.client_phone }}</p>{% endif %}
+            </div>
+        </td>
+    </tr>
+</table>
+
+<!-- Méta-données -->
+<table class="meta-table">
+    <tr>
+        <td class="label">Date d'emission</td>
+        <td class="value">{{ invoice.issued_at|date:"d/m/Y" }}</td>
+        <td class="label">Statut</td>
+        <td>
+            <span class="status-badge {% if invoice.status == 'paid' %}status-paid{% elif invoice.status == 'issued' %}status-issued{% else %}status-draft{% endif %}">
+                {{ invoice.get_status_display }}
+            </span>
+        </td>
+    </tr>
+    <tr>
+        <td class="label">Type</td>
+        <td class="value">{{ invoice.get_invoice_type_display }}</td>
+        <td class="label">Reference paiement</td>
+        <td class="value">{{ invoice.payment_reference|default:"—" }}</td>
+    </tr>
+    {% if invoice.payment_method %}
+    <tr>
+        <td class="label">Mode de paiement</td>
+        <td class="value">{{ invoice.get_payment_method_display }}</td>
+        <td class="label">Date paiement</td>
+        <td class="value">{{ invoice.paid_at|date:"d/m/Y H:i"|default:"—" }}</td>
+    </tr>
+    {% endif %}
+</table>
+
+<!-- Lignes de facture -->
+<table class="items">
+    <thead>
+        <tr>
+            <th style="width:55%">Description</th>
+            <th style="width:10%;text-align:center">Qte</th>
+            <th style="width:17%;text-align:right">Prix unit.</th>
+            <th style="width:18%;text-align:right">Total</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for item in invoice.line_items %}
+        <tr>
+            <td>
+                {{ item.description }}
+                {% if item.detail %}<br><span class="detail">{{ item.detail }}</span>{% endif %}
+            </td>
+            <td style="text-align:center">{{ item.quantity }}</td>
+            <td style="text-align:right" class="amount">{{ item.unit_price|floatformat:0 }} FCFA</td>
+            <td style="text-align:right" class="amount">{{ item.total|floatformat:0 }} FCFA</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+    <tfoot>
+        <tr>
+            <td colspan="3" style="text-align:right;color:#6b7280">Sous-total HT</td>
+            <td style="text-align:right" class="amount">{{ invoice.subtotal|floatformat:0 }} FCFA</td>
+        </tr>
+        {% if invoice.tax_amount %}
+        <tr>
+            <td colspan="3" style="text-align:right;color:#6b7280">TVA ({{ invoice.tax_rate }}%)</td>
+            <td style="text-align:right" class="amount">{{ invoice.tax_amount|floatformat:0 }} FCFA</td>
+        </tr>
+        {% endif %}
+        <tr>
+            <td colspan="3" style="text-align:right" class="total-row">TOTAL TTC</td>
+            <td style="text-align:right" class="total-row amount">{{ invoice.total|floatformat:0 }} FCFA</td>
+        </tr>
+    </tfoot>
+</table>
+
+<!-- Description -->
+{% if invoice.description %}
+<div class="payment-info">
+    <h4>Details</h4>
+    <p>{{ invoice.description }}</p>
+</div>
+{% endif %}
+
+<!-- Footer -->
+<div class="footer">
+    <p><strong>{{ company.name }}</strong> — {{ company.address }}</p>
+    <p>{{ company.email }} | {{ company.phone }}</p>
+    <p class="legal">RCCM: {{ company.rccm }} — Compte contribuable: {{ company.cc }}</p>
+    <p class="legal">Facture generee automatiquement par la plateforme EYE-FONCIER. Ce document fait office de justificatif de paiement.</p>
+</div>
+
+</body>
+</html>

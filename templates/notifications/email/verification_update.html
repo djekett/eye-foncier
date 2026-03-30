@@ -1,0 +1,38 @@
+{% extends "notifications/email/base_email.html" %}
+
+{% block title %}Mise à jour vérification{% endblock %}
+
+{% block content %}
+<h2 style="color:#16a34a;margin-bottom:16px;">{{ title }}</h2>
+
+<p>Bonjour {{ recipient.first_name|default:recipient.email }},</p>
+
+<p>{{ message }}</p>
+
+{% if data.parcelle_lot %}
+<div style="background:#f8fafc;border-radius:8px;padding:16px;margin:16px 0;">
+    <table style="width:100%;border-collapse:collapse;">
+        <tr>
+            <td style="padding:6px 0;color:#6b7280;">Parcelle</td>
+            <td style="padding:6px 0;font-weight:bold;">{{ data.parcelle_lot }}</td>
+        </tr>
+        <tr>
+            <td style="padding:6px 0;color:#6b7280;">Statut</td>
+            <td style="padding:6px 0;font-weight:bold;color:#16a34a;">{{ data.status }}</td>
+        </tr>
+    </table>
+</div>
+{% endif %}
+
+{% if data.action_url %}
+<div style="text-align:center;margin:24px 0;">
+    <a href="{{ site_url }}{{ data.action_url }}" style="display:inline-block;background:#16a34a;color:#fff;padding:12px 32px;border-radius:8px;text-decoration:none;font-weight:bold;">
+        Suivre la vérification
+    </a>
+</div>
+{% endif %}
+
+<p style="color:#6b7280;font-size:13px;">
+    Vous recevrez une notification à chaque avancée du processus de vérification.
+</p>
+{% endblock %}

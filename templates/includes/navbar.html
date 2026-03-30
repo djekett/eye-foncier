@@ -1,0 +1,308 @@
+{% load static %}
+<nav class="ef-nav" id="mainNavbar">
+    <div class="ef-nav-inner">
+        <!-- Logo -->
+        <a class="ef-logo" href="{% url 'websig:home' %}">
+            <div class="ef-logo-icon">
+                <img src="{% static 'img/logo.png' %}" alt="Logo">
+            </div>
+            <span>EYE</span>-FONCIER
+        </a>
+
+        <!-- Nav Links -->
+        <ul class="ef-nav-links">
+            <li><a href="{% url 'websig:home' %}" {% if request.resolver_match.url_name == 'home' %}class="active"{% endif %}>Accueil</a></li>
+            <li><a href="{% url 'parcelles:list' %}" {% if 'parcelles' in request.resolver_match.app_name %}class="active"{% endif %}>Parcelles</a></li>
+            <li><a href="{% url 'websig:map' %}" {% if request.resolver_match.url_name == 'map' %}class="active"{% endif %}>Carte</a></li>
+            <li><a href="{% url 'transactions:boutiques_list' %}" {% if request.resolver_match.url_name == 'boutiques_list' %}class="active"{% endif %}>Boutiques</a></li>
+            <li class="dropdown">
+                <a class="dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" style="cursor:pointer">
+                    Ressources
+                </a>
+                <ul class="dropdown-menu">
+                    <li><a class="dropdown-item" href="{% url 'content:articles' %}"><i class="bi bi-newspaper me-2" style="color:var(--green-700)"></i>Blog & Articles</a></li>
+                    <li><a class="dropdown-item" href="{% url 'content:announcements' %}"><i class="bi bi-megaphone me-2" style="color:var(--orange)"></i>Annonces</a></li>
+                    <li><a class="dropdown-item" href="{% url 'content:documentation' %}"><i class="bi bi-book me-2" style="color:var(--blue)"></i>Documentation</a></li>
+                </ul>
+            </li>
+        </ul>
+
+        <!-- Right Actions -->
+        <div class="ef-nav-right">
+            {% if user.is_authenticated %}
+                <!-- Notification Bell -->
+                <a href="{% url 'notifications:list' %}" class="ef-nav-bell" title="Notifications">
+                    <i class="bi bi-bell"></i>
+                    {% if unread_notification_count %}<span class="ef-nav-bell-badge">{{ unread_notification_count }}</span>{% endif %}
+                </a>
+
+                {% if user.is_superuser or user.role == 'vendeur' or user.role == 'promoteur' or user.role == 'admin' %}
+                <a class="ef-nav-cta-outline" href="{% url 'parcelles:create' %}">
+                    <i class="bi bi-plus-circle me-1"></i> Deposer
+                </a>
+                {% endif %}
+
+                <!-- Profile Dropdown -->
+                <div class="dropdown">
+                    <a class="ef-nav-profile-trigger" href="#" role="button" data-bs-toggle="dropdown">
+                        <div class="ef-nav-avatar">
+                            {% if user.profile.avatar %}
+                                <img src="{{ user.profile.avatar.url }}" alt="{{ user.first_name }}">
+                            {% else %}
+                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                            {% endif %}
+                        </div>
+                        <div class="ef-nav-profile-info d-none d-lg-block">
+                            <span class="ef-nav-profile-name">
+                                {{ user.first_name|default:user.username }}
+                                {% if user.is_verified %}
+                                    <i class="bi bi-patch-check-fill" title="Verifie" style="font-size:11px;color:var(--green-700)"></i>
+                                {% endif %}
+                            </span>
+                            <span class="ef-nav-profile-role">{{ user.get_role_display|default:"Membre" }}</span>
+                        </div>
+                        <i class="bi bi-chevron-down d-none d-lg-inline" style="font-size:10px;color:var(--gray-400)"></i>
+                    </a>
+                    <ul class="dropdown-menu dropdown-menu-end ef-profile-dropdown">
+                        <!-- Profile Header in dropdown -->
+                        <li class="ef-dropdown-header">
+                            <div class="ef-nav-avatar" style="width:40px;height:40px;font-size:16px">
+                                {% if user.profile.avatar %}
+                                    <img src="{{ user.profile.avatar.url }}" alt="{{ user.first_name }}">
+                                {% else %}
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                                {% endif %}
+                            </div>
+                            <div>
+                                <div style="font-weight:700;font-size:.88rem;color:var(--green-900)">
+                                    {{ user.first_name }} {{ user.last_name|default:"" }}
+                                </div>
+                                <div style="font-size:.78rem;color:var(--gray-400)">{{ user.email }}</div>
+                            </div>
+                        </li>
+                        <li><hr class="dropdown-divider" style="margin:.25rem 0"></li>
+                        <li><a class="dropdown-item" href="{% url 'accounts:dashboard' %}">
+                            <i class="bi bi-speedometer2 me-2" style="color:var(--green-700)"></i>Tableau de bord</a></li>
+                        <li><a class="dropdown-item" href="{% url 'accounts:profile' %}">
+                            <i class="bi bi-person me-2" style="color:var(--green-700)"></i>Mon profil</a></li>
+                        <li><a class="dropdown-item" href="{% url 'transactions:list' %}">
+                            <i class="bi bi-receipt me-2" style="color:var(--green-700)"></i>Mes transactions</a></li>
+                        {% if user.role == 'acheteur' %}
+                        <li><a class="dropdown-item" href="{% url 'transactions:list' %}">
+                            <i class="bi bi-wallet2 me-2" style="color:var(--green-700)"></i>Mes cotations
+                            {% if active_cotations_count %}<span class="badge bg-success ms-1">{{ active_cotations_count }}</span>{% endif %}
+                        </a></li>
+                        {% endif %}
+                        {% if user.role == 'vendeur' or user.role == 'promoteur' %}
+                        <li><a class="dropdown-item" href="{% url 'transactions:boutique_dashboard' %}">
+                            <i class="bi bi-shop me-2" style="color:var(--green-700)"></i>Ma boutique
+                            {% if has_boutique %}<i class="bi bi-check-circle-fill text-success ms-1" style="font-size:.7rem"></i>{% endif %}
+                        </a></li>
+                        <li><a class="dropdown-item" href="{% url 'parcelles:lotissement_list' %}">
+                            <i class="bi bi-building me-2" style="color:var(--orange)"></i>Mes lotissements</a></li>
+                        {% endif %}
+                        {% if user.is_admin_role or user.is_geometre %}
+                        <li><a class="dropdown-item" href="{% url 'parcelles:geometre_dashboard' %}">
+                            <i class="bi bi-shield-check me-2" style="color:var(--orange)"></i>Espace Géomètre</a></li>
+                        <li><a class="dropdown-item" href="{% url 'transactions:verification_list' %}">
+                            <i class="bi bi-clipboard-check me-2" style="color:var(--blue)"></i>Vérifications
+                            {% if pending_verifications_count %}<span class="badge bg-warning text-dark ms-1">{{ pending_verifications_count }}</span>{% endif %}
+                        </a></li>
+                        {% endif %}
+                        <li><a class="dropdown-item" href="{% url 'transactions:invoice_list' %}">
+                            <i class="bi bi-receipt-cutoff me-2" style="color:var(--green-700)"></i>Mes factures</a></li>
+                        <li><a class="dropdown-item" href="{% url 'parcelles:my_promotions' %}">
+                            <i class="bi bi-megaphone me-2" style="color:var(--orange)"></i>Mes promotions</a></li>
+                        <li><a class="dropdown-item" href="{% url 'analysis:dashboard' %}">
+                            <i class="bi bi-bar-chart-line me-2" style="color:var(--blue)"></i>Analyses SIG</a></li>
+                        <li><a class="dropdown-item" href="{% url 'accounts:certification' %}">
+                            <i class="bi bi-patch-check me-2" style="color:var(--gold)"></i>Certification</a></li>
+                        <li><hr class="dropdown-divider" style="margin:.25rem 0"></li>
+                        <li>
+                            <form method="post" action="{% url 'accounts:logout' %}">
+                                {% csrf_token %}
+                                <button type="submit" class="dropdown-item text-danger">
+                                    <i class="bi bi-box-arrow-right me-2"></i>Deconnexion
+                                </button>
+                            </form>
+                        </li>
+                    </ul>
+                </div>
+            {% else %}
+                <a class="ef-nav-cta-outline" href="{% url 'accounts:login' %}">Connexion</a>
+                <a class="ef-nav-cta" href="{% url 'accounts:register' %}">Inscription</a>
+            {% endif %}
+        </div>
+
+        <!-- Hamburger Mobile -->
+        <button class="ef-hamburger" id="efHamburger" aria-label="Menu">
+            <span></span><span></span><span></span>
+        </button>
+    </div>
+</nav>
+
+<!-- Mobile Menu Overlay -->
+<div class="ef-mobile-overlay" id="efMobileOverlay"></div>
+<div class="ef-mobile-drawer" id="efMobileDrawer">
+    <div class="ef-mobile-drawer-header">
+        <a class="ef-logo" href="{% url 'websig:home' %}" style="font-size:18px">
+            <div class="ef-logo-icon" style="width:30px;height:30px">
+                <img src="{% static 'img/logo.png' %}" alt="Logo">
+            </div>
+            <span>EYE</span>-FONCIER
+        </a>
+        <button class="ef-mobile-drawer-close" id="efMobileClose" aria-label="Fermer">
+            <i class="bi bi-x-lg"></i>
+        </button>
+    </div>
+
+    {% if user.is_authenticated %}
+    <div class="ef-mobile-user-card">
+        <div class="ef-nav-avatar" style="width:42px;height:42px;font-size:16px">
+            {% if user.profile.avatar %}
+                <img src="{{ user.profile.avatar.url }}" alt="{{ user.first_name }}">
+            {% else %}
+                <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            {% endif %}
+        </div>
+        <div>
+            <div style="font-weight:700;color:var(--green-900);font-size:.92rem">
+                {{ user.first_name|default:user.username }}
+                {% if user.is_verified %}<i class="bi bi-patch-check-fill" style="font-size:11px;color:var(--green-700)"></i>{% endif %}
+            </div>
+            <div style="font-size:.78rem;color:var(--gray-400)">{{ user.get_role_display|default:"Membre" }}</div>
+        </div>
+    </div>
+    {% endif %}
+
+    <nav class="ef-mobile-nav">
+        <div class="ef-mobile-nav-section">
+            <div class="ef-mobile-nav-label">Navigation</div>
+            <a href="{% url 'websig:home' %}" class="ef-mobile-nav-link">
+                <i class="bi bi-house"></i>Accueil
+            </a>
+            <a href="{% url 'parcelles:list' %}" class="ef-mobile-nav-link">
+                <i class="bi bi-grid-3x3-gap"></i>Parcelles
+            </a>
+            <a href="{% url 'websig:map' %}" class="ef-mobile-nav-link">
+                <i class="bi bi-map"></i>Carte interactive
+            </a>
+            <a href="{% url 'transactions:boutiques_list' %}" class="ef-mobile-nav-link">
+                <i class="bi bi-shop-window"></i>Boutiques
+            </a>
+        </div>
+
+        <div class="ef-mobile-nav-section">
+            <div class="ef-mobile-nav-label">Ressources</div>
+            <a href="{% url 'content:articles' %}" class="ef-mobile-nav-link">
+                <i class="bi bi-newspaper"></i>Blog & Articles
+            </a>
+            <a href="{% url 'content:announcements' %}" class="ef-mobile-nav-link">
+                <i class="bi bi-megaphone"></i>Annonces
+            </a>
+            <a href="{% url 'content:documentation' %}" class="ef-mobile-nav-link">
+                <i class="bi bi-book"></i>Documentation
+            </a>
+        </div>
+
+        {% if user.is_authenticated %}
+        <div class="ef-mobile-nav-section">
+            <div class="ef-mobile-nav-label">Mon espace</div>
+            <a href="{% url 'accounts:dashboard' %}" class="ef-mobile-nav-link">
+                <i class="bi bi-speedometer2"></i>Tableau de bord
+            </a>
+            <a href="{% url 'accounts:profile' %}" class="ef-mobile-nav-link">
+                <i class="bi bi-person"></i>Mon profil
+            </a>
+            <a href="{% url 'transactions:list' %}" class="ef-mobile-nav-link">
+                <i class="bi bi-receipt"></i>Mes transactions
+            </a>
+            {% if user.role == 'acheteur' %}
+            <a href="{% url 'transactions:list' %}" class="ef-mobile-nav-link">
+                <i class="bi bi-wallet2"></i>Mes cotations
+                {% if active_cotations_count %}<span class="ef-badge ef-badge-green" style="font-size:.7rem;padding:2px 6px;margin-left:auto">{{ active_cotations_count }}</span>{% endif %}
+            </a>
+            {% endif %}
+            {% if user.role == 'vendeur' or user.role == 'promoteur' %}
+            <a href="{% url 'transactions:boutique_dashboard' %}" class="ef-mobile-nav-link">
+                <i class="bi bi-shop"></i>Ma boutique
+            </a>
+            <a href="{% url 'parcelles:lotissement_list' %}" class="ef-mobile-nav-link">
+                <i class="bi bi-building"></i>Lotissements
+            </a>
+            {% endif %}
+            {% if user.is_admin_role or user.is_geometre %}
+            <a href="{% url 'transactions:verification_list' %}" class="ef-mobile-nav-link">
+                <i class="bi bi-clipboard-check"></i>Vérifications
+                {% if pending_verifications_count %}<span class="ef-badge ef-badge-orange" style="font-size:.7rem;padding:2px 6px;margin-left:auto">{{ pending_verifications_count }}</span>{% endif %}
+            </a>
+            {% endif %}
+            <a href="{% url 'notifications:list' %}" class="ef-mobile-nav-link">
+                <i class="bi bi-bell"></i>Notifications
+                {% if unread_notification_count %}<span class="ef-badge ef-badge-orange" style="font-size:.7rem;padding:2px 6px;margin-left:auto">{{ unread_notification_count }}</span>{% endif %}
+            </a>
+            <a href="{% url 'analysis:dashboard' %}" class="ef-mobile-nav-link">
+                <i class="bi bi-bar-chart-line"></i>Analyses SIG
+            </a>
+        </div>
+        {% endif %}
+    </nav>
+
+    <div class="ef-mobile-drawer-footer">
+        {% if user.is_authenticated %}
+            {% if user.is_superuser or user.role == 'vendeur' or user.role == 'promoteur' or user.role == 'admin' %}
+            <a href="{% url 'parcelles:create' %}" class="ef-btn ef-btn-primary ef-btn-block" style="margin-bottom:.5rem">
+                <i class="bi bi-plus-circle me-1"></i>Deposer une parcelle
+            </a>
+            {% endif %}
+            <form method="post" action="{% url 'accounts:logout' %}">
+                {% csrf_token %}
+                <button type="submit" class="ef-btn ef-btn-ghost ef-btn-block" style="color:var(--danger)">
+                    <i class="bi bi-box-arrow-right me-1"></i>Deconnexion
+                </button>
+            </form>
+        {% else %}
+            <a href="{% url 'accounts:login' %}" class="ef-btn ef-btn-outline-green ef-btn-block" style="margin-bottom:.5rem">Connexion</a>
+            <a href="{% url 'accounts:register' %}" class="ef-btn ef-btn-primary ef-btn-block">Inscription</a>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+(function(){
+    // Scroll effect
+    var nav = document.getElementById('mainNavbar');
+    if (!nav) return;
+    var scrolled = false;
+    window.addEventListener('scroll', function(){
+        var s = window.scrollY > 10;
+        if (s !== scrolled) {
+            scrolled = s;
+            nav.classList.toggle('scrolled', s);
+        }
+    }, {passive: true});
+
+    // Mobile drawer
+    var hamburger = document.getElementById('efHamburger');
+    var overlay = document.getElementById('efMobileOverlay');
+    var drawer = document.getElementById('efMobileDrawer');
+    var closeBtn = document.getElementById('efMobileClose');
+
+    function openDrawer() {
+        document.body.style.overflow = 'hidden';
+        overlay.classList.add('open');
+        drawer.classList.add('open');
+        hamburger.classList.add('active');
+    }
+    function closeDrawer() {
+        document.body.style.overflow = '';
+        overlay.classList.remove('open');
+        drawer.classList.remove('open');
+        hamburger.classList.remove('active');
+    }
+
+    if (hamburger) hamburger.addEventListener('click', openDrawer);
+    if (closeBtn) closeBtn.addEventListener('click', closeDrawer);
+    if (overlay) overlay.addEventListener('click', closeDrawer);
+})();
+</script>

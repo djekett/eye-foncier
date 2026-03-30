@@ -1,0 +1,22 @@
+{% extends "notifications/email/base_email.html" %}
+
+{% block title %}Nouveau client intéressé{% endblock %}
+
+{% block content %}
+<h2 style="color:#16a34a;margin-bottom:16px;">Un acheteur qualifié</h2>
+
+<p>Bonjour {{ recipient.first_name|default:recipient.email }},</p>
+
+<p>{{ message }}</p>
+
+<div style="background:#fef9c3;border-radius:8px;padding:16px;margin:20px 0;border-left:4px solid #f59e0b;">
+    <h4 style="margin-top:0;color:#92400e;">Prochaines étapes</h4>
+    <p style="margin-bottom:0;">Un vérificateur Eye-Foncier vous contactera pour collecter les documents 
+    physiques de la parcelle. Merci de préparer les originaux.</p>
+</div>
+
+<p style="color:#6b7280;font-size:13px;">
+    La cotation de l'acheteur garantit son sérieux. Eye-Foncier sécurise la transaction
+    pour les deux parties.
+</p>
+{% endblock %}

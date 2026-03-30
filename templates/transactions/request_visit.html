@@ -1,0 +1,66 @@
+{% extends "layouts/base.html" %}
+{% block title %}Bon de Visite — {{ SITE_NAME }}{% endblock %}
+
+{% block content %}
+<div class="ef-page-header">
+    <nav class="ef-breadcrumb">
+        <a href="{% url 'parcelles:detail' parcelle.pk %}">{{ parcelle.title }}</a>
+        <span class="sep">/</span>
+        <span class="current">Demander une visite</span>
+    </nav>
+</div>
+
+<div class="ef-page-content" style="max-width:720px; margin:0 auto">
+    <div class="ef-card">
+        <div class="ef-card-body" style="padding:2rem">
+            <!-- Header icon -->
+            <div style="text-align:center; margin-bottom:1.5rem">
+                <div style="width:72px; height:72px; border-radius:50%; background:rgba(232,121,59,0.1); display:inline-flex; align-items:center; justify-content:center; margin-bottom:1rem">
+                    <i class="bi bi-ticket-perforated" style="font-size:2.2rem; color:#E8793B"></i>
+                </div>
+                <h2 style="font-family:var(--font-display); color:#0B3D2E; margin:0 0 .25rem">Bon de Visite Numérique</h2>
+                <p style="color:#6b7280; margin:0">Planifiez votre visite sur la parcelle <strong>{{ parcelle.lot_number }}</strong></p>
+            </div>
+
+            <!-- Parcelle summary -->
+            <div style="background:#F7F4EE; border-radius:.5rem; padding:1rem; margin-bottom:1.5rem; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:.75rem">
+                <div>
+                    <h4 style="font-family:var(--font-display); color:#0B3D2E; margin:0 0 .25rem; font-size:1rem">{{ parcelle.title }}</h4>
+                    <p style="font-size:.85rem; color:#6b7280; margin-bottom:.15rem">
+                        <i class="bi bi-geo-alt" style="color:#E8793B"></i> {{ parcelle.address|default:"Adresse non renseignée" }}
+                    </p>
+                    <p style="font-size:.85rem; color:#6b7280; margin:0">
+                        <i class="bi bi-rulers"></i> {{ parcelle.surface_m2|floatformat:0 }} m² — {{ parcelle.get_land_type_display }}
+                    </p>
+                </div>
+                <div style="text-align:right">
+                    <span style="font-family:var(--font-mono); font-weight:700; color:#0B3D2E">{{ parcelle.price|floatformat:0 }} FCFA</span>
+                </div>
+            </div>
+
+            <form method="post">
+                {% csrf_token %}
+                <div class="ef-form-group">
+                    <label class="ef-form-label">Date souhaitée de visite <span style="color:#dc2626">*</span></label>
+                    <input type="date" name="visit_date" class="ef-form-control" required min="{{ "now"|date:"Y-m-d" }}">
+                    <span style="font-size:.8rem; color:#6b7280">Le vendeur sera notifié et confirmera le créneau.</span>
+                </div>
+                <div class="ef-form-group">
+                    <label class="ef-form-label">Notes / questions (optionnel)</label>
+                    <textarea name="visit_notes" class="ef-form-control" rows="3"
+                              placeholder="Ex: je souhaite voir les limites exactes, venir avec un géomètre..."></textarea>
+                </div>
+
+                <div style="background:rgba(11,61,46,0.06); border-radius:.5rem; padding:.75rem; margin-bottom:1.5rem; font-size:.85rem; color:#0B3D2E">
+                    <i class="bi bi-info-circle" style="color:#E8793B"></i>
+                    Le bon de visite est un engagement : EYE-Foncier assure le suivi de votre visite jusqu'à la décision d'achat. Après la visite, vous pourrez donner votre avis.
+                </div>
+
+                <button type="submit" class="ef-btn ef-btn-primary ef-btn-block" style="background:#E8793B; border-color:#E8793B; font-size:1rem; padding:.75rem">
+                    <i class="bi bi-ticket-perforated"></i> Générer mon Bon de Visite
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

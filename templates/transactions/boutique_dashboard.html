@@ -1,0 +1,363 @@
+{% extends "layouts/base.html" %}
+{% load humanize static %}
+
+{% block title %}Ma Boutique — {{ boutique.name }} | Eye-Foncier{% endblock %}
+
+{% block extra_css %}
+<style>
+    .boutique-hero {
+        background: linear-gradient(135deg, var(--green-900) 0%, #0d4f3a 50%, var(--green-900) 100%);
+        border-radius: var(--radius-lg);
+        padding: 32px 36px;
+        position: relative;
+        overflow: hidden;
+        color: var(--white);
+    }
+    .boutique-hero::before {
+        content: '';
+        position: absolute;
+        top: 0; right: 0; bottom: 0; left: 0;
+        background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.03'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E") repeat;
+        opacity: .5;
+    }
+    .boutique-hero > * { position: relative; z-index: 1; }
+    .boutique-avatar {
+        width: 80px; height: 80px; border-radius: 50%;
+        background: rgba(255,255,255,.15);
+        border: 3px solid rgba(255,255,255,.3);
+        display: flex; align-items: center; justify-content: center;
+        font-size: 2rem; color: var(--white);
+        overflow: hidden;
+    }
+    .boutique-avatar img { width: 100%; height: 100%; object-fit: cover; }
+    .boutique-stat-pill {
+        background: rgba(255,255,255,.12);
+        backdrop-filter: blur(8px);
+        border: 1px solid rgba(255,255,255,.15);
+        border-radius: var(--radius-md);
+        padding: 14px 20px;
+        text-align: center;
+        transition: all var(--transition);
+    }
+    .boutique-stat-pill:hover { background: rgba(255,255,255,.2); transform: translateY(-2px); }
+    .boutique-stat-value {
+        font-family: var(--font-mono); font-weight: 800; font-size: 1.5rem;
+        display: block; line-height: 1.2;
+    }
+    .boutique-stat-label { font-size: .72rem; opacity: .7; font-weight: 600; text-transform: uppercase; letter-spacing: .5px; }
+
+    /* Grid de parcelles marketplace */
+    .parcelle-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; }
+    .parcelle-card {
+        background: var(--white);
+        border-radius: var(--radius-lg);
+        border: 1px solid var(--gray-200);
+        overflow: hidden;
+        transition: all .3s ease;
+        position: relative;
+    }
+    .parcelle-card:hover { box-shadow: var(--shadow-lg); transform: translateY(-4px); border-color: var(--green-300); }
+    .parcelle-card-img {
+        height: 180px; background: linear-gradient(135deg, var(--green-50) 0%, #e8f5f0 100%);
+        display: flex; align-items: center; justify-content: center;
+        position: relative; overflow: hidden;
+    }
+    .parcelle-card-img img { width: 100%; height: 100%; object-fit: cover; }
+    .parcelle-card-img .no-img { font-size: 3rem; color: var(--green-300); }
+    .parcelle-card-badge {
+        position: absolute; top: 12px; left: 12px;
+        font-size: .68rem; font-weight: 700; padding: 4px 12px;
+        border-radius: var(--radius-sm); text-transform: uppercase;
+        letter-spacing: .5px;
+    }
+    .parcelle-card-views {
+        position: absolute; top: 12px; right: 12px;
+        background: rgba(0,0,0,.55); backdrop-filter: blur(4px);
+        color: #fff; font-size: .7rem; font-weight: 600;
+        padding: 4px 10px; border-radius: var(--radius-sm);
+        display: flex; align-items: center; gap: 4px;
+    }
+    .badge-disponible { background: var(--success); color: #fff; }
+    .badge-reserve { background: var(--warning); color: #fff; }
+    .badge-vendu { background: var(--danger); color: #fff; }
+    .badge-brouillon { background: var(--gray-400); color: #fff; }
+    .parcelle-card-body { padding: 16px 20px; }
+    .parcelle-card-price {
+        font-family: var(--font-mono); font-weight: 800; font-size: 1.15rem;
+        color: var(--green-900);
+    }
+    .parcelle-card-price small { font-size: .65rem; font-weight: 400; color: var(--gray-400); }
+    .parcelle-card-meta { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 8px; }
+    .parcelle-card-meta span {
+        font-size: .75rem; color: var(--gray-400); font-weight: 500;
+        display: flex; align-items: center; gap: 4px;
+    }
+    .parcelle-card-actions {
+        display: flex; gap: 8px; padding: 12px 20px;
+        border-top: 1px solid var(--gray-100);
+    }
+    .parcelle-card-actions a {
+        flex: 1; text-align: center; font-size: .78rem; font-weight: 600;
+        padding: 8px 12px; border-radius: var(--radius-sm);
+        text-decoration: none; transition: all var(--transition);
+    }
+    .btn-parcelle-view { background: var(--green-50); color: var(--green-900); }
+    .btn-parcelle-view:hover { background: var(--green-900); color: #fff; }
+    .btn-parcelle-edit { background: var(--orange-light); color: var(--orange); }
+    .btn-parcelle-edit:hover { background: var(--orange); color: #fff; }
+
+    .validation-alert {
+        background: linear-gradient(135deg, #fff7ed, #fffbeb);
+        border: 1px solid #fed7aa;
+        border-radius: var(--radius-md);
+        padding: 14px 18px;
+        font-size: .85rem;
+    }
+
+    /* Filtres */
+    .boutique-filters {
+        display: flex; gap: 8px; flex-wrap: wrap;
+    }
+    .boutique-filter-chip {
+        padding: 6px 16px; border-radius: 20px; font-size: .78rem; font-weight: 600;
+        cursor: pointer; border: 1px solid var(--gray-200); background: var(--white);
+        color: var(--gray-500); transition: all var(--transition);
+    }
+    .boutique-filter-chip:hover, .boutique-filter-chip.active {
+        background: var(--green-900); color: #fff; border-color: var(--green-900);
+    }
+
+    /* Empty state */
+    .boutique-empty {
+        text-align: center; padding: 60px 20px;
+        background: var(--white); border-radius: var(--radius-lg);
+        border: 2px dashed var(--gray-200);
+    }
+    .boutique-empty i { font-size: 3.5rem; color: var(--green-300); display: block; margin-bottom: 16px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+
+    <!-- ══ HERO BOUTIQUE ══ -->
+    <div class="boutique-hero mb-4">
+        <div class="d-flex flex-wrap align-items-center gap-4 mb-4">
+            <div class="boutique-avatar">
+                {% if boutique.logo %}
+                    <img src="{{ boutique.logo.url }}" alt="{{ boutique.name }}">
+                {% else %}
+                    <i class="bi bi-shop"></i>
+                {% endif %}
+            </div>
+            <div class="flex-grow-1">
+                <h2 class="fw-bold mb-1" style="font-family:var(--font-display);letter-spacing:-.5px">{{ boutique.name }}</h2>
+                <div class="d-flex flex-wrap align-items-center gap-2">
+                    <span style="display:inline-flex;align-items:center;gap:4px;font-size:.72rem;font-weight:600;background:rgba(5,150,105,.3);color:#a7f3d0;border-radius:var(--radius-sm);padding:3px 12px">
+                        <i class="bi bi-patch-check-fill" style="font-size:.65rem"></i> {{ boutique.get_status_display }}
+                    </span>
+                    <span style="font-size:.78rem;opacity:.6">Membre depuis {{ boutique.created_at|date:"F Y" }}</span>
+                    {% if request.user.is_verified %}
+                    <span style="display:inline-flex;align-items:center;gap:4px;font-size:.72rem;font-weight:600;background:rgba(232,121,59,.3);color:#fed7aa;border-radius:var(--radius-sm);padding:3px 12px">
+                        <i class="bi bi-shield-check"></i> Vendeur Vérifié
+                    </span>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="d-flex gap-2 flex-wrap">
+                <a href="{% url 'transactions:boutique_public' boutique.slug %}" class="btn" style="font-size:.78rem;padding:8px 16px;background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.3);border-radius:var(--radius-sm);text-decoration:none;font-weight:600;transition:all .2s" onmouseover="this.style.background='rgba(255,255,255,.25)'" onmouseout="this.style.background='rgba(255,255,255,.15)'">
+                    <i class="bi bi-eye me-1"></i> Voir ma boutique
+                </a>
+                <a href="{% url 'transactions:boutique_edit' %}" class="btn" style="font-size:.78rem;padding:8px 16px;background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.3);border-radius:var(--radius-sm);text-decoration:none;font-weight:600;transition:all .2s" onmouseover="this.style.background='rgba(255,255,255,.25)'" onmouseout="this.style.background='rgba(255,255,255,.15)'">
+                    <i class="bi bi-palette me-1"></i> Personnaliser
+                </a>
+                <a href="{% url 'parcelles:create' %}" class="btn-ef-orange" style="font-size:.85rem;padding:10px 24px">
+                    <i class="bi bi-plus-circle me-1"></i> Publier
+                </a>
+            </div>
+        </div>
+
+        <!-- Stats pills -->
+        <div class="row g-3">
+            <div class="col-6 col-md-3">
+                <div class="boutique-stat-pill">
+                    <span class="boutique-stat-value" style="color:#a7f3d0">{{ boutique.total_parcelles }}</span>
+                    <span class="boutique-stat-label">Parcelles</span>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="boutique-stat-pill">
+                    <span class="boutique-stat-value" style="color:#93c5fd">{{ boutique.total_ventes }}</span>
+                    <span class="boutique-stat-label">Ventes</span>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="boutique-stat-pill">
+                    <span class="boutique-stat-value" style="color:#fcd34d">
+                        {% if boutique.rating %}{{ boutique.rating }}<small style="font-size:.6rem;opacity:.5">/5</small>{% else %}—{% endif %}
+                    </span>
+                    <span class="boutique-stat-label">Note</span>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="boutique-stat-pill">
+                    <span class="boutique-stat-value" style="color:#f9a8d4">{{ parcelles_en_attente|default:"0" }}</span>
+                    <span class="boutique-stat-label">En attente</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% if parcelles_non_validees %}
+    <div class="validation-alert mb-3">
+        <i class="bi bi-exclamation-triangle-fill text-warning me-2"></i>
+        <strong>{{ parcelles_non_validees }} parcelle{{ parcelles_non_validees|pluralize }}</strong> en attente de validation par un géomètre.
+        Les parcelles validées apparaissent automatiquement sur la carte publique.
+    </div>
+    {% endif %}
+
+    <!-- ══ FILTRES + COMPTEUR ══ -->
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+        <div class="boutique-filters" id="boutiqueFilters">
+            <span class="boutique-filter-chip active" data-filter="all">Toutes ({{ parcelles.count }})</span>
+            <span class="boutique-filter-chip" data-filter="disponible">
+                <i class="bi bi-circle-fill" style="font-size:.45rem;color:var(--success)"></i> Disponible
+            </span>
+            <span class="boutique-filter-chip" data-filter="reserve">
+                <i class="bi bi-circle-fill" style="font-size:.45rem;color:var(--warning)"></i> Réservé
+            </span>
+            <span class="boutique-filter-chip" data-filter="vendu">
+                <i class="bi bi-circle-fill" style="font-size:.45rem;color:var(--danger)"></i> Vendu
+            </span>
+        </div>
+        <div style="font-size:.82rem;color:var(--gray-400)">
+            <i class="bi bi-grid-3x3-gap me-1"></i> {{ parcelles.count }} parcelle{{ parcelles.count|pluralize }}
+        </div>
+    </div>
+
+    <!-- ══ GRILLE PARCELLES MARKETPLACE ══ -->
+    {% if parcelles %}
+    <div class="parcelle-grid" id="parcelleGrid">
+        {% for p in parcelles %}
+        <div class="parcelle-card" data-status="{{ p.status }}">
+            <div class="parcelle-card-img">
+                {% if p.medias.first and p.medias.first.file %}
+                    <img src="{{ p.medias.first.file.url }}" alt="{{ p.title }}" loading="lazy">
+                {% else %}
+                    <i class="bi bi-geo-alt no-img"></i>
+                {% endif %}
+                <span class="parcelle-card-badge badge-{{ p.status }}">{{ p.get_status_display }}</span>
+                <span class="parcelle-card-views"><i class="bi bi-eye-fill"></i> {{ p.views_count }}</span>
+                {% if not p.is_validated %}
+                <span class="parcelle-card-badge" style="left:auto;right:12px;top:auto;bottom:12px;background:rgba(217,119,6,.9)">
+                    <i class="bi bi-hourglass-split"></i> Validation
+                </span>
+                {% endif %}
+            </div>
+            <div class="parcelle-card-body">
+                <h6 class="fw-bold mb-1" style="font-size:.92rem;color:var(--green-900)">{{ p.title|truncatewords:8 }}</h6>
+                <div class="parcelle-card-price">
+                    {{ p.price|floatformat:0|intcomma }} <small>FCFA</small>
+                    {% if p.price_per_m2 %}
+                    <span style="font-size:.68rem;font-weight:400;color:var(--gray-400);margin-left:4px">({{ p.price_per_m2|floatformat:0|intcomma }} /m²)</span>
+                    {% endif %}
+                </div>
+                <div class="parcelle-card-meta">
+                    <span><i class="bi bi-rulers"></i> {{ p.surface_m2|floatformat:0 }} m²</span>
+                    <span><i class="bi bi-geo"></i> {{ p.zone.name|default:"—" }}</span>
+                    <span><i class="bi bi-tag"></i> {{ p.get_land_type_display }}</span>
+                    <span><i class="bi bi-hash"></i> {{ p.lot_number }}</span>
+                </div>
+            </div>
+            <div class="parcelle-card-actions">
+                <a href="{% url 'parcelles:detail' pk=p.pk %}" class="btn-parcelle-view">
+                    <i class="bi bi-eye me-1"></i> Voir
+                </a>
+                <a href="{% url 'parcelles:edit' pk=p.pk %}" class="btn-parcelle-edit">
+                    <i class="bi bi-pencil me-1"></i> Modifier
+                </a>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="boutique-empty">
+        <i class="bi bi-shop-window"></i>
+        <h5 class="fw-bold" style="color:var(--green-900)">Votre vitrine est vide</h5>
+        <p style="color:var(--gray-400);max-width:400px;margin:0 auto 20px">
+            Publiez votre première parcelle pour commencer à vendre. Vos biens apparaîtront ici avec photos, prix et statistiques de vue.
+        </p>
+        <a href="{% url 'parcelles:create' %}" class="btn-ef-orange">
+            <i class="bi bi-plus-circle me-1"></i> Publier ma première parcelle
+        </a>
+    </div>
+    {% endif %}
+
+    <!-- ══ AVIS CLIENTS RECUS ══ -->
+    {% if recent_reviews %}
+    <div class="mt-4" style="background:var(--white);border-radius:var(--radius-lg);border:1px solid var(--gray-200);overflow:hidden">
+        <div style="padding:16px 20px;border-bottom:1px solid var(--gray-100);display:flex;justify-content:space-between;align-items:center">
+            <h5 style="font-family:var(--font-display);font-weight:700;color:var(--green-900);margin:0;font-size:.95rem">
+                <i class="bi bi-star-fill me-2" style="color:#f59e0b"></i>Derniers avis clients
+            </h5>
+            <a href="{% url 'transactions:boutique_public' boutique.slug %}" style="font-size:.78rem;color:var(--green-700);text-decoration:none;font-weight:600">
+                Voir tous <i class="bi bi-arrow-right"></i>
+            </a>
+        </div>
+        {% for review in recent_reviews %}
+        <div style="padding:14px 20px;border-bottom:1px solid var(--gray-100);{% if forloop.last %}border-bottom:none{% endif %}">
+            <div style="display:flex;justify-content:space-between;align-items:start">
+                <div>
+                    <span style="font-weight:700;font-size:.85rem;color:var(--dark)">
+                        <i class="bi bi-person-circle me-1" style="color:var(--gray-300)"></i>
+                        {{ review.author.get_full_name|default:review.author.username }}
+                    </span>
+                    {% if review.is_verified %}
+                    <span style="display:inline-flex;align-items:center;gap:3px;font-size:.65rem;font-weight:600;color:#059669;background:rgba(5,150,105,.08);padding:2px 8px;border-radius:10px;margin-left:4px">
+                        <i class="bi bi-patch-check-fill"></i> Verifie
+                    </span>
+                    {% endif %}
+                    <div style="display:flex;gap:2px;margin-top:3px">
+                        {% for i in "12345" %}
+                        <i class="bi bi-star-fill" style="font-size:.7rem;color:{% if review.score >= forloop.counter %}#f59e0b{% else %}var(--gray-200){% endif %}"></i>
+                        {% endfor %}
+                    </div>
+                </div>
+                <span style="font-size:.72rem;color:var(--gray-400)">{{ review.created_at|timesince }}</span>
+            </div>
+            {% if review.comment %}
+            <p style="font-size:.82rem;color:var(--gray-600);margin:8px 0 0;line-height:1.5">{{ review.comment|truncatewords:30 }}</p>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Filtre par statut
+    var chips = document.querySelectorAll('#boutiqueFilters .boutique-filter-chip');
+    var cards = document.querySelectorAll('#parcelleGrid .parcelle-card');
+
+    chips.forEach(function(chip) {
+        chip.addEventListener('click', function() {
+            chips.forEach(function(c) { c.classList.remove('active'); });
+            this.classList.add('active');
+            var filter = this.dataset.filter;
+
+            cards.forEach(function(card) {
+                if (filter === 'all' || card.dataset.status === filter) {
+                    card.style.display = '';
+                    card.style.animation = 'fadeIn .3s ease';
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+        });
+    });
+});
+</script>
+{% endblock %}

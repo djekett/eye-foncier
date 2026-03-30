@@ -1,0 +1,155 @@
+{% extends "layouts/base.html" %}
+{% load humanize %}
+
+{% block title %}Mon Score Financier — {{ SITE_NAME }}{% endblock %}
+
+{% block content %}
+<div class="container" style="padding-bottom:60px;max-width:900px">
+
+    <h4 class="mb-4" style="font-weight:800;color:var(--green-900)">
+        <i class="bi bi-speedometer2 me-2"></i>Mon Score Financier
+    </h4>
+
+    <div class="row g-4">
+        <!-- Score actuel -->
+        <div class="col-md-5">
+            <div class="card h-100" style="border:none;border-radius:var(--radius-lg);box-shadow:var(--shadow-sm)">
+                <div class="card-body text-center p-4">
+                    {% if score.overall_score %}
+                    <!-- Gauge -->
+                    <div style="position:relative;width:160px;height:160px;margin:0 auto 16px">
+                        <svg viewBox="0 0 36 36" style="width:160px;height:160px;transform:rotate(-90deg)">
+                            <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                                  fill="none" stroke="#e5e7eb" stroke-width="3"/>
+                            <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                                  fill="none"
+                                  stroke="{% if score.overall_score >= 60 %}#22c55e{% elif score.overall_score >= 40 %}#f59e0b{% else %}#ef4444{% endif %}"
+                                  stroke-width="3"
+                                  stroke-dasharray="{{ score.overall_score }}, 100"
+                                  stroke-linecap="round"/>
+                        </svg>
+                        <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center">
+                            <div style="font-size:2.2rem;font-weight:900;color:var(--green-900)">{{ score.overall_score|floatformat:0 }}</div>
+                            <div style="font-size:.75rem;color:var(--gray-400)">/ 100</div>
+                        </div>
+                    </div>
+
+                    <!-- Grade -->
+                    <div class="mb-3">
+                        <span style="display:inline-block;padding:6px 20px;border-radius:20px;font-weight:800;font-size:1.1rem;
+                            {% if score.grade == 'A' %}background:#dcfce7;color:#16a34a
+                            {% elif score.grade == 'B' %}background:#dbeafe;color:#2563eb
+                            {% elif score.grade == 'C' %}background:#fef3c7;color:#f59e0b
+                            {% elif score.grade == 'D' %}background:#fed7aa;color:#ea580c
+                            {% else %}background:#fecaca;color:#dc2626{% endif %}">
+                            Grade {{ score.grade }}
+                        </span>
+                    </div>
+
+                    <!-- Breakdown -->
+                    <div class="text-start" style="font-size:.85rem">
+                        <div class="d-flex justify-content-between mb-2">
+                            <span>KYC & Identité</span>
+                            <strong>{{ score.score_kyc|floatformat:0 }}/100</strong>
+                        </div>
+                        <div class="progress mb-3" style="height:6px">
+                            <div class="progress-bar bg-success" style="width:{{ score.score_kyc }}%"></div>
+                        </div>
+                        <div class="d-flex justify-content-between mb-2">
+                            <span>Revenus</span>
+                            <strong>{{ score.score_revenue|floatformat:0 }}/100</strong>
+                        </div>
+                        <div class="progress mb-3" style="height:6px">
+                            <div class="progress-bar bg-primary" style="width:{{ score.score_revenue }}%"></div>
+                        </div>
+                        <div class="d-flex justify-content-between mb-2">
+                            <span>Historique</span>
+                            <strong>{{ score.score_history|floatformat:0 }}/100</strong>
+                        </div>
+                        <div class="progress mb-3" style="height:6px">
+                            <div class="progress-bar bg-warning" style="width:{{ score.score_history }}%"></div>
+                        </div>
+                        <div class="d-flex justify-content-between mb-2">
+                            <span>Mobile Money</span>
+                            <strong>{{ score.score_mobile_money|floatformat:0 }}/100</strong>
+                        </div>
+                        <div class="progress mb-3" style="height:6px">
+                            <div class="progress-bar bg-info" style="width:{{ score.score_mobile_money }}%"></div>
+                        </div>
+                    </div>
+
+                    {% if score.max_purchase_capacity %}
+                    <hr>
+                    <div class="text-start" style="font-size:.85rem">
+                        <div class="d-flex justify-content-between mb-1">
+                            <span>Capacité mensuelle</span>
+                            <strong style="color:var(--green-700)">{{ score.monthly_capacity|intcomma }} FCFA</strong>
+                        </div>
+                        <div class="d-flex justify-content-between">
+                            <span>Capacité max d'achat</span>
+                            <strong style="color:var(--green-700)">{{ score.max_purchase_capacity|intcomma }} FCFA</strong>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    {% else %}
+                    <i class="bi bi-shield-exclamation" style="font-size:3rem;color:var(--gray-300)"></i>
+                    <p class="text-muted mt-3">Complétez le formulaire pour calculer votre score.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Formulaire -->
+        <div class="col-md-7">
+            <div class="card" style="border:none;border-radius:var(--radius-lg);box-shadow:var(--shadow-sm)">
+                <div class="card-body p-4">
+                    <h6 class="mb-3" style="font-weight:700;color:var(--green-800)">
+                        <i class="bi bi-pencil-square me-1"></i> Mon profil financier
+                    </h6>
+                    <form method="post" enctype="multipart/form-data">
+                        {% csrf_token %}
+
+                        <div class="mb-3">
+                            <label for="id_employment_type" class="form-label">{{ form.employment_type.label }}</label>
+                            {{ form.employment_type }}
+                        </div>
+                        <div class="mb-3">
+                            <label for="id_employer_name" class="form-label">{{ form.employer_name.label }}</label>
+                            {{ form.employer_name }}
+                        </div>
+                        <div class="mb-3">
+                            <label for="id_revenue_declared" class="form-label">{{ form.revenue_declared.label }}</label>
+                            {{ form.revenue_declared }}
+                            <div class="form-text">Revenus nets mensuels en FCFA</div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="id_revenue_proof" class="form-label">{{ form.revenue_proof.label }}</label>
+                            {{ form.revenue_proof }}
+                            <div class="form-text">Fiche de paie, attestation d'emploi, relevé Mobile Money...</div>
+                        </div>
+                        <div class="mb-3">
+                            <div class="form-check">
+                                {{ form.mobile_money_verified }}
+                                <label class="form-check-label" for="id_mobile_money_verified">
+                                    {{ form.mobile_money_verified.label }}
+                                </label>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="btn btn-success w-100">
+                            <i class="bi bi-calculator me-1"></i> Calculer mon score
+                        </button>
+                    </form>
+
+                    <div class="mt-3 text-center">
+                        <a href="{% url 'transactions:simulator' %}" class="btn btn-outline-primary">
+                            <i class="bi bi-graph-up me-1"></i> Simulateur d'achat
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

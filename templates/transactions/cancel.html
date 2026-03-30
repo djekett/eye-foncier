@@ -1,0 +1,60 @@
+{% extends "layouts/base.html" %}
+{% load humanize %}
+
+{% block title %}Annuler la transaction — {{ SITE_NAME }}{% endblock %}
+
+{% block content %}
+<div class="container" style="padding-bottom:60px;max-width:700px">
+
+    <div class="d-flex align-items-center gap-2 mb-4">
+        <a href="{% url 'transactions:detail' transaction.pk %}" class="btn btn-sm btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i>
+        </a>
+        <h4 class="mb-0" style="font-weight:800;color:#dc2626">
+            <i class="bi bi-x-circle me-2"></i>Annuler la transaction
+        </h4>
+    </div>
+
+    <div class="alert alert-warning" style="border-radius:var(--radius-md)">
+        <strong>Attention :</strong> Cette action est irréversible.
+        {% if transaction.escrow_funded and not transaction.escrow_released %}
+        <br>Le séquestre de <strong>{{ transaction.escrow_amount|intcomma }} FCFA</strong> fera l'objet d'un remboursement.
+        {% endif %}
+    </div>
+
+    <div class="card" style="border:none;border-radius:var(--radius-lg);box-shadow:var(--shadow-sm)">
+        <div class="card-body p-4">
+            <div class="mb-3">
+                <span class="text-muted" style="font-size:.85rem">Transaction</span>
+                <p style="font-weight:700;color:var(--green-900)">{{ transaction.reference }}</p>
+            </div>
+            <div class="mb-3">
+                <span class="text-muted" style="font-size:.85rem">Parcelle</span>
+                <p style="font-weight:600">{{ transaction.parcelle.title }} — Lot {{ transaction.parcelle.lot_number }}</p>
+            </div>
+            <div class="mb-4">
+                <span class="text-muted" style="font-size:.85rem">Montant</span>
+                <p style="font-weight:700;font-size:1.1rem">{{ transaction.amount|intcomma }} FCFA</p>
+            </div>
+
+            <form method="post">
+                {% csrf_token %}
+                <div class="mb-3">
+                    <label for="reason" class="form-label" style="font-weight:600">Raison de l'annulation</label>
+                    <textarea name="reason" id="reason" class="form-control" rows="3"
+                              placeholder="Décrivez la raison de l'annulation..."
+                              style="border-radius:var(--radius-md)"></textarea>
+                </div>
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn px-4" style="background:#dc2626;color:#fff;border:none;border-radius:var(--radius-md)">
+                        <i class="bi bi-x-circle me-1"></i> Confirmer l'annulation
+                    </button>
+                    <a href="{% url 'transactions:detail' transaction.pk %}" class="btn btn-outline-secondary" style="border-radius:var(--radius-md)">
+                        Retour
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

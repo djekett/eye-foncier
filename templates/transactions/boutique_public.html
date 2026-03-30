@@ -1,0 +1,481 @@
+{% extends "layouts/base.html" %}
+{% load static humanize %}
+
+{% block title %}{{ boutique.name }} — {{ SITE_NAME }}{% endblock %}
+
+{% block extra_css %}
+<style>
+.boutique-page{max-width:1200px;margin:0 auto;padding:0 clamp(16px,4vw,48px) 60px}
+
+/* Banner */
+.boutique-banner{position:relative;height:220px;border-radius:var(--radius-lg);overflow:hidden;margin-bottom:0;background:linear-gradient(135deg,#0B3D2E 0%,#145a3e 50%,#E8793B 100%)}
+.boutique-banner img{width:100%;height:100%;object-fit:cover}
+.boutique-banner-overlay{position:absolute;inset:0;background:linear-gradient(180deg,transparent 40%,rgba(11,61,46,.6) 100%)}
+
+/* Profile header — solid card, clearly separated from banner */
+.boutique-profile{
+    position:relative;z-index:2;display:flex;align-items:flex-start;gap:20px;
+    padding:20px 24px;margin-top:-50px;margin-bottom:1.5rem;
+    background:var(--white);border-radius:var(--radius-lg);
+    box-shadow:var(--shadow-md);border:1px solid var(--gray-200);
+    margin-left:16px;margin-right:16px
+}
+.boutique-avatar{width:80px;height:80px;border-radius:var(--radius-lg);border:3px solid var(--white);box-shadow:var(--shadow-sm);background:var(--sand);display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0}
+.boutique-avatar img{width:100%;height:100%;object-fit:cover}
+.boutique-avatar-icon{font-size:2.2rem;color:var(--green-700)}
+.boutique-info{flex:1;padding-bottom:0}
+.boutique-name{font-family:var(--font-display);font-weight:800;font-size:1.3rem;color:var(--green-900);margin:0;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.boutique-meta{font-size:.82rem;color:var(--gray-500);margin-top:6px;display:flex;gap:16px;flex-wrap:wrap}
+.boutique-meta i{font-size:.75rem}
+
+/* Profile responsive */
+@media (max-width:640px){
+    .boutique-profile{flex-direction:column;align-items:center;text-align:center;padding:16px;margin-left:8px;margin-right:8px;margin-top:-40px;gap:12px}
+    .boutique-name{justify-content:center}
+    .boutique-meta{justify-content:center}
+    .boutique-info>div:last-child{justify-content:center}
+}
+
+/* Rating stars */
+.stars{display:inline-flex;gap:2px}
+.star{font-size:1rem;color:var(--gray-200)}
+.star.filled{color:#f59e0b}
+.star.half{background:linear-gradient(90deg,#f59e0b 50%,var(--gray-200) 50%);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.rating-big{font-family:var(--font-display);font-weight:900;font-size:2rem;color:var(--green-900);line-height:1}
+.rating-count{font-size:.78rem;color:var(--gray-400)}
+
+/* Badges */
+.trust-badge{display:inline-flex;align-items:center;gap:5px;padding:4px 12px;border-radius:20px;font-size:.72rem;font-weight:700}
+.badge-certified{background:rgba(37,99,235,.1);color:#2563eb}
+.badge-verified{background:rgba(5,150,105,.1);color:#059669}
+.badge-trusted{background:rgba(245,158,11,.1);color:#d97706}
+.badge-top{background:rgba(139,92,246,.1);color:#8b5cf6}
+
+/* Stats bar */
+.stat-bar{display:flex;gap:1rem;padding:16px 20px;background:var(--white);border-radius:var(--radius-lg);box-shadow:var(--shadow-sm);border:1px solid var(--gray-200);margin-bottom:1.5rem;flex-wrap:wrap;justify-content:center}
+.stat-item{text-align:center;flex:1;min-width:80px}
+.stat-val{font-family:var(--font-display);font-weight:900;font-size:1.3rem;color:var(--green-900)}
+.stat-lbl{font-size:.72rem;color:var(--gray-400);margin-top:2px}
+
+/* Cards */
+.section-card{background:var(--white);border-radius:var(--radius-lg);box-shadow:var(--shadow-sm);border:1px solid var(--gray-200);overflow:hidden;margin-bottom:1.25rem}
+.section-header{padding:16px 20px;border-bottom:1px solid var(--gray-100);display:flex;align-items:center;gap:10px}
+.section-header h5{font-family:var(--font-display);font-weight:700;color:var(--green-900);margin:0;font-size:.95rem}
+.section-body{padding:20px}
+
+/* Parcelle grid */
+.parcelle-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:1rem}
+.shop-parcelle-card{border-radius:var(--radius-md);border:1px solid var(--gray-200);overflow:hidden;transition:all .2s;text-decoration:none;color:inherit;display:block}
+.shop-parcelle-card:hover{transform:translateY(-3px);box-shadow:var(--shadow-md)}
+.shop-parcelle-img{height:140px;background:linear-gradient(135deg,var(--green-50),var(--orange-light));display:flex;align-items:center;justify-content:center;overflow:hidden;position:relative}
+.shop-parcelle-img img{width:100%;height:100%;object-fit:cover}
+.shop-parcelle-img .no-img{font-size:2rem;color:var(--green-700);opacity:.3}
+.shop-parcelle-body{padding:12px 14px}
+.shop-parcelle-status{position:absolute;top:8px;left:8px;font-size:.65rem;font-weight:700;padding:3px 10px;border-radius:12px;color:#fff}
+
+/* Review card */
+.review-card{padding:16px;border-bottom:1px solid var(--gray-100)}
+.review-card:last-child{border-bottom:none}
+.review-author{font-weight:700;font-size:.85rem;color:var(--dark);display:flex;align-items:center;gap:6px}
+.review-date{font-size:.72rem;color:var(--gray-400)}
+.review-comment{font-size:.85rem;color:var(--gray-600);line-height:1.6;margin-top:6px}
+.review-verified{display:inline-flex;align-items:center;gap:3px;font-size:.68rem;font-weight:600;color:#059669;background:rgba(5,150,105,.08);padding:2px 8px;border-radius:10px}
+
+/* Rating bars */
+.rating-bar-row{display:flex;align-items:center;gap:8px;margin-bottom:4px}
+.rating-bar-label{font-size:.75rem;font-weight:600;color:var(--gray-500);width:20px;text-align:right}
+.rating-bar{flex:1;height:8px;border-radius:4px;background:var(--gray-100);overflow:hidden}
+.rating-bar-fill{height:100%;border-radius:4px;background:#f59e0b;transition:width .5s}
+.rating-bar-count{font-size:.72rem;color:var(--gray-400);width:28px}
+
+/* Star input */
+.star-input{display:flex;gap:4px;flex-direction:row-reverse;justify-content:flex-end}
+.star-input input{display:none}
+.star-input label{font-size:1.8rem;color:var(--gray-200);cursor:pointer;transition:color .15s}
+.star-input label:hover,.star-input label:hover~label,.star-input input:checked~label{color:#f59e0b}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="boutique-page">
+
+    <!-- Banner -->
+    <div class="boutique-banner" {% if boutique.theme_color %}style="background:linear-gradient(135deg,{{ boutique.theme_color }} 0%,{{ boutique.theme_color }}88 50%,#E8793B 100%)"{% endif %}>
+        {% if boutique.banner %}
+        <img src="{{ boutique.banner.url }}" alt="Banniere">
+        {% endif %}
+        <div class="boutique-banner-overlay"></div>
+    </div>
+
+    <!-- Profile Header -->
+    <div class="boutique-profile">
+        <div class="boutique-avatar">
+            {% if boutique.logo %}
+            <img src="{{ boutique.logo.url }}" alt="{{ boutique.name }}">
+            {% else %}
+            <i class="bi bi-shop boutique-avatar-icon"></i>
+            {% endif %}
+        </div>
+        <div class="boutique-info">
+            <h1 class="boutique-name">
+                {{ boutique.name }}
+                {% if seller_certified %}
+                <span class="trust-badge badge-certified"><i class="bi bi-patch-check-fill"></i> Vendeur certifie</span>
+                {% endif %}
+                {% if boutique.rating >= 4 %}
+                <span class="trust-badge badge-trusted"><i class="bi bi-award-fill"></i> Boutique fiable</span>
+                {% endif %}
+            </h1>
+            {% if boutique.specialty %}
+            <div style="font-size:.78rem;color:var(--gray-500);margin-top:2px"><i class="bi bi-tag me-1"></i>{{ boutique.specialty }}</div>
+            {% endif %}
+            <div class="boutique-meta">
+                {% if boutique.location_display %}<span><i class="bi bi-geo-alt-fill"></i> {{ boutique.location_display }}</span>{% endif %}
+                {% if boutique.phone %}<span><i class="bi bi-telephone-fill"></i> {{ boutique.phone }}</span>{% endif %}
+                <span><i class="bi bi-calendar3"></i> Depuis {{ boutique.created_at|date:"M Y" }}</span>
+                <span><i class="bi bi-person-fill"></i> {{ boutique.owner.get_full_name }}</span>
+            </div>
+            <!-- Liens sociaux & WhatsApp strategique -->
+            <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
+                {% if boutique.whatsapp_link %}
+                <a href="{{ boutique.whatsapp_link }}" target="_blank" rel="noopener"
+                   style="display:inline-flex;align-items:center;gap:6px;padding:6px 16px;border-radius:20px;background:#25D366;color:#fff;text-decoration:none;font-size:.78rem;font-weight:700;transition:all .2s;box-shadow:0 2px 8px rgba(37,211,102,.25)"
+                   onmouseover="this.style.transform='translateY(-1px)'" onmouseout="this.style.transform=''">
+                    <i class="bi bi-whatsapp"></i> Contacter sur WhatsApp
+                </a>
+                {% endif %}
+                {% if boutique.website %}
+                <a href="{{ boutique.website }}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:4px;padding:4px 12px;border-radius:20px;border:1px solid var(--gray-200);font-size:.72rem;color:var(--gray-500);text-decoration:none;transition:all .2s" onmouseover="this.style.borderColor='var(--green-700)';this.style.color='var(--green-700)'" onmouseout="this.style.borderColor='var(--gray-200)';this.style.color='var(--gray-500)'">
+                    <i class="bi bi-globe"></i> Site web
+                </a>
+                {% endif %}
+                {% if boutique.facebook %}
+                <a href="{{ boutique.facebook }}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:4px;padding:4px 12px;border-radius:20px;border:1px solid var(--gray-200);font-size:.72rem;color:var(--gray-500);text-decoration:none;transition:all .2s" onmouseover="this.style.borderColor='#1877F2';this.style.color='#1877F2'" onmouseout="this.style.borderColor='var(--gray-200)';this.style.color='var(--gray-500)'">
+                    <i class="bi bi-facebook"></i> Facebook
+                </a>
+                {% endif %}
+                {% if boutique.instagram %}
+                <a href="https://instagram.com/{{ boutique.instagram|cut:'@' }}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:4px;padding:4px 12px;border-radius:20px;border:1px solid var(--gray-200);font-size:.72rem;color:var(--gray-500);text-decoration:none;transition:all .2s" onmouseover="this.style.borderColor='#E4405F';this.style.color='#E4405F'" onmouseout="this.style.borderColor='var(--gray-200)';this.style.color='var(--gray-500)'">
+                    <i class="bi bi-instagram"></i> {{ boutique.instagram }}
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Stats Bar -->
+    <div class="stat-bar">
+        <div class="stat-item">
+            <div class="stat-val">{{ boutique.total_parcelles }}</div>
+            <div class="stat-lbl"><i class="bi bi-grid-3x3"></i> Parcelles</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-val">{{ boutique.total_ventes }}</div>
+            <div class="stat-lbl"><i class="bi bi-bag-check"></i> Ventes</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-val" style="color:#f59e0b">
+                {% if review_stats.avg_score %}{{ review_stats.avg_score|floatformat:1 }}{% else %}—{% endif %}
+            </div>
+            <div class="stat-lbl"><i class="bi bi-star-fill" style="color:#f59e0b"></i> Note moy.</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-val">{{ review_stats.total|default:0 }}</div>
+            <div class="stat-lbl"><i class="bi bi-chat-square-text"></i> Avis</div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- Colonne gauche : Parcelles -->
+        <div class="col-lg-8">
+            {% if boutique.description %}
+            <div class="section-card">
+                <div class="section-header">
+                    <i class="bi bi-info-circle" style="color:var(--green-700)"></i>
+                    <h5>A propos</h5>
+                </div>
+                <div class="section-body" style="font-size:.88rem;color:var(--gray-600);line-height:1.6">
+                    {{ boutique.description|linebreaksbr }}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Parcelles -->
+            <div class="section-card">
+                <div class="section-header">
+                    <i class="bi bi-grid-3x3-gap" style="color:var(--orange)"></i>
+                    <h5>Parcelles en vente ({{ parcelles.count }})</h5>
+                </div>
+                <div class="section-body">
+                    {% if parcelles %}
+                    <div class="parcelle-grid">
+                        {% for p in parcelles %}
+                        <a href="{% url 'parcelles:detail' p.pk %}" class="shop-parcelle-card">
+                            <div class="shop-parcelle-img">
+                                {% if p.main_image %}
+                                <img src="{{ p.main_image }}" alt="" loading="lazy">
+                                {% else %}
+                                <i class="bi bi-geo-alt-fill no-img"></i>
+                                {% endif %}
+                                <span class="shop-parcelle-status" style="background:{{ p.status_color }}">{{ p.get_status_display }}</span>
+                                {% if p.is_validated %}
+                                <span style="position:absolute;top:8px;right:8px" class="trust-badge badge-verified"><i class="bi bi-shield-check"></i> Verifiee</span>
+                                {% endif %}
+                            </div>
+                            <div class="shop-parcelle-body">
+                                <div style="font-weight:700;font-size:.88rem;color:var(--dark)">{{ p.title|truncatewords:6 }}</div>
+                                <div style="font-size:.75rem;color:var(--gray-400)">
+                                    <i class="bi bi-geo-alt" style="font-size:.65rem"></i> {{ p.zone.name|default:"" }}
+                                    {% if p.surface_m2 %}&middot; {{ p.surface_m2|floatformat:0 }} m2{% endif %}
+                                </div>
+                                <div style="font-family:var(--font-mono);font-weight:800;font-size:.95rem;color:var(--green-900);margin-top:6px">
+                                    {{ p.price|floatformat:0|intcomma }} FCFA
+                                </div>
+                            </div>
+                        </a>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div style="text-align:center;padding:40px;color:var(--gray-400)">
+                        <i class="bi bi-grid" style="font-size:2rem"></i>
+                        <p style="margin-top:8px">Aucune parcelle en vente actuellement</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Colonne droite : Avis & Contact -->
+        <div class="col-lg-4">
+            <!-- Rating Summary -->
+            <div class="section-card">
+                <div class="section-header">
+                    <i class="bi bi-star-fill" style="color:#f59e0b"></i>
+                    <h5>Avis clients</h5>
+                </div>
+                <div class="section-body">
+                    <div style="display:flex;gap:20px;align-items:center;margin-bottom:16px">
+                        <div style="text-align:center">
+                            <div class="rating-big">{% if review_stats.avg_score %}{{ review_stats.avg_score|floatformat:1 }}{% else %}—{% endif %}</div>
+                            <div class="stars" style="margin-top:4px">
+                                {% for i in "12345" %}
+                                <i class="bi bi-star-fill star {% if review_stats.avg_score >= forloop.counter %}filled{% endif %}"></i>
+                                {% endfor %}
+                            </div>
+                            <div class="rating-count">{{ review_stats.total|default:0 }} avis</div>
+                        </div>
+                        <div style="flex:1">
+                            <div class="rating-bar-row">
+                                <span class="rating-bar-label">5</span>
+                                <div class="rating-bar">
+                                    <div class="rating-bar-fill" style="width:{% if review_stats.total > 0 %}{% widthratio review_stats.stars_5 review_stats.total 100 %}{% else %}0{% endif %}%"></div>
+                                </div>
+                                <span class="rating-bar-count">{{ review_stats.stars_5|default:0 }}</span>
+                            </div>
+                            <div class="rating-bar-row">
+                                <span class="rating-bar-label">4</span>
+                                <div class="rating-bar">
+                                    <div class="rating-bar-fill" style="width:{% if review_stats.total > 0 %}{% widthratio review_stats.stars_4 review_stats.total 100 %}{% else %}0{% endif %}%"></div>
+                                </div>
+                                <span class="rating-bar-count">{{ review_stats.stars_4|default:0 }}</span>
+                            </div>
+                            <div class="rating-bar-row">
+                                <span class="rating-bar-label">3</span>
+                                <div class="rating-bar">
+                                    <div class="rating-bar-fill" style="width:{% if review_stats.total > 0 %}{% widthratio review_stats.stars_3 review_stats.total 100 %}{% else %}0{% endif %}%"></div>
+                                </div>
+                                <span class="rating-bar-count">{{ review_stats.stars_3|default:0 }}</span>
+                            </div>
+                            <div class="rating-bar-row">
+                                <span class="rating-bar-label">2</span>
+                                <div class="rating-bar">
+                                    <div class="rating-bar-fill" style="width:{% if review_stats.total > 0 %}{% widthratio review_stats.stars_2 review_stats.total 100 %}{% else %}0{% endif %}%"></div>
+                                </div>
+                                <span class="rating-bar-count">{{ review_stats.stars_2|default:0 }}</span>
+                            </div>
+                            <div class="rating-bar-row">
+                                <span class="rating-bar-label">1</span>
+                                <div class="rating-bar">
+                                    <div class="rating-bar-fill" style="width:{% if review_stats.total > 0 %}{% widthratio review_stats.stars_1 review_stats.total 100 %}{% else %}0{% endif %}%"></div>
+                                </div>
+                                <span class="rating-bar-count">{{ review_stats.stars_1|default:0 }}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Review Form -->
+                    {% if can_review %}
+                    <form method="post" action="{% url 'transactions:boutique_review' boutique.slug %}" style="border-top:1px solid var(--gray-100);padding-top:16px">
+                        {% csrf_token %}
+                        <div style="font-weight:700;font-size:.85rem;color:var(--dark);margin-bottom:8px">Donner votre avis</div>
+                        <div class="star-input" style="margin-bottom:10px">
+                            {% for i in "54321" %}
+                            <input type="radio" name="score" value="{{ i }}" id="star{{ i }}" required>
+                            <label for="star{{ i }}"><i class="bi bi-star-fill"></i></label>
+                            {% endfor %}
+                        </div>
+                        <textarea name="comment" class="form-control" rows="3" placeholder="Partagez votre experience..." style="font-size:.85rem;margin-bottom:10px"></textarea>
+                        <button type="submit" class="ef-btn ef-btn-primary w-100" style="font-size:.85rem;padding:10px">
+                            <i class="bi bi-send"></i> Publier mon avis
+                        </button>
+                    </form>
+                    {% elif user_review %}
+                    <div style="border-top:1px solid var(--gray-100);padding-top:12px;text-align:center;font-size:.82rem;color:var(--gray-400)">
+                        <i class="bi bi-check-circle-fill" style="color:#059669"></i> Vous avez deja note cette boutique ({{ user_review.score }}/5)
+                    </div>
+                    {% elif not request.user.is_authenticated %}
+                    <div style="border-top:1px solid var(--gray-100);padding-top:12px;text-align:center">
+                        <a href="{% url 'accounts:login' %}?next={{ request.path }}" class="ef-btn ef-btn-outline-primary" style="font-size:.82rem">
+                            <i class="bi bi-box-arrow-in-right"></i> Connectez-vous pour laisser un avis
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Reviews List -->
+            {% if reviews %}
+            <div class="section-card">
+                <div class="section-header">
+                    <i class="bi bi-chat-square-text" style="color:var(--green-700)"></i>
+                    <h5>Derniers avis</h5>
+                </div>
+                {% for review in reviews %}
+                <div class="review-card">
+                    <div style="display:flex;justify-content:space-between;align-items:start">
+                        <div>
+                            <div class="review-author">
+                                <i class="bi bi-person-circle" style="color:var(--gray-300)"></i>
+                                {{ review.author.get_full_name|default:review.author.username }}
+                                {% if review.is_verified %}
+                                <span class="review-verified"><i class="bi bi-patch-check-fill"></i> Achat verifie</span>
+                                {% endif %}
+                            </div>
+                            <div class="stars" style="margin-top:3px">
+                                {% for i in "12345" %}
+                                <i class="bi bi-star-fill star {% if review.score >= forloop.counter %}filled{% endif %}" style="font-size:.72rem"></i>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        <span class="review-date">{{ review.created_at|timesince }} ago</span>
+                    </div>
+                    {% if review.comment %}
+                    <div class="review-comment">{{ review.comment }}</div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            <!-- Contact -->
+            <div class="section-card">
+                <div class="section-header">
+                    <i class="bi bi-telephone" style="color:#2563eb"></i>
+                    <h5>Contact</h5>
+                </div>
+                <div class="section-body">
+                    {% if boutique.phone %}
+                    <a href="tel:{{ boutique.phone }}" style="display:flex;align-items:center;gap:10px;padding:10px;border-radius:var(--radius-md);border:1px solid var(--gray-200);text-decoration:none;color:var(--dark);margin-bottom:8px;transition:background .15s" onmouseover="this.style.background='var(--sand)'" onmouseout="this.style.background=''">
+                        <i class="bi bi-telephone-fill" style="color:#059669;font-size:1.1rem"></i>
+                        <span style="font-weight:600;font-size:.88rem">{{ boutique.phone }}</span>
+                    </a>
+                    {% endif %}
+                    {% if boutique.email %}
+                    <a href="mailto:{{ boutique.email }}" style="display:flex;align-items:center;gap:10px;padding:10px;border-radius:var(--radius-md);border:1px solid var(--gray-200);text-decoration:none;color:var(--dark);margin-bottom:8px;transition:background .15s" onmouseover="this.style.background='var(--sand)'" onmouseout="this.style.background=''">
+                        <i class="bi bi-envelope-fill" style="color:#2563eb;font-size:1.1rem"></i>
+                        <span style="font-weight:600;font-size:.88rem">{{ boutique.email }}</span>
+                    </a>
+                    {% endif %}
+                    {% if boutique.address %}
+                    <div style="display:flex;align-items:center;gap:10px;padding:10px;border-radius:var(--radius-md);border:1px solid var(--gray-200);font-size:.85rem;color:var(--gray-600)">
+                        <i class="bi bi-geo-alt-fill" style="color:var(--orange);font-size:1.1rem"></i>
+                        {{ boutique.address }}{% if boutique.city %}, {{ boutique.city }}{% endif %}
+                    </div>
+                    {% endif %}
+
+                    {% if boutique.whatsapp_link %}
+                    <a href="{{ boutique.whatsapp_link }}" target="_blank" rel="noopener"
+                       style="display:flex;align-items:center;justify-content:center;gap:8px;padding:12px;border-radius:var(--radius-md);background:#25D366;color:#fff;text-decoration:none;font-size:.88rem;font-weight:700;margin-top:10px;transition:all .2s;box-shadow:0 4px 12px rgba(37,211,102,.3)"
+                       onmouseover="this.style.transform='translateY(-1px)';this.style.boxShadow='0 6px 16px rgba(37,211,102,.4)'" onmouseout="this.style.transform='';this.style.boxShadow='0 4px 12px rgba(37,211,102,.3)'">
+                        <i class="bi bi-whatsapp" style="font-size:1.2rem"></i> Contacter sur WhatsApp
+                    </a>
+                    {% elif boutique.phone %}
+                    <a href="https://wa.me/{{ boutique.phone|cut:' '|cut:'-'|cut:'+' }}" target="_blank" rel="noopener"
+                       style="display:flex;align-items:center;justify-content:center;gap:8px;padding:12px;border-radius:var(--radius-md);background:#25D366;color:#fff;text-decoration:none;font-size:.88rem;font-weight:700;margin-top:10px;transition:all .2s"
+                       onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">
+                        <i class="bi bi-whatsapp" style="font-size:1.2rem"></i> Contacter sur WhatsApp
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Badges de confiance -->
+            <div class="section-card">
+                <div class="section-header">
+                    <i class="bi bi-shield-check" style="color:#059669"></i>
+                    <h5>Confiance & Securite</h5>
+                </div>
+                <div class="section-body" style="display:flex;flex-direction:column;gap:10px">
+                    <div style="display:flex;align-items:center;gap:10px;font-size:.82rem">
+                        <i class="bi bi-check-circle-fill" style="color:#059669;font-size:1.1rem"></i>
+                        <span>Boutique active depuis {{ boutique.created_at|date:"M Y" }}</span>
+                    </div>
+                    {% if seller_certified %}
+                    <div style="display:flex;align-items:center;gap:10px;font-size:.82rem">
+                        <i class="bi bi-patch-check-fill" style="color:#2563eb;font-size:1.1rem"></i>
+                        <span style="font-weight:600;color:#2563eb">Vendeur certifie Eye-Foncier</span>
+                    </div>
+                    {% endif %}
+                    {% if boutique.rating >= 4 %}
+                    <div style="display:flex;align-items:center;gap:10px;font-size:.82rem">
+                        <i class="bi bi-award-fill" style="color:#d97706;font-size:1.1rem"></i>
+                        <span style="font-weight:600;color:#d97706">Boutique fiable — Note >= 4/5</span>
+                    </div>
+                    {% endif %}
+                    {% if boutique.total_ventes > 0 %}
+                    <div style="display:flex;align-items:center;gap:10px;font-size:.82rem">
+                        <i class="bi bi-bag-check-fill" style="color:#8b5cf6;font-size:1.1rem"></i>
+                        <span>{{ boutique.total_ventes }} vente{{ boutique.total_ventes|pluralize }} realisee{{ boutique.total_ventes|pluralize }}</span>
+                    </div>
+                    {% endif %}
+                    <div style="display:flex;align-items:center;gap:10px;font-size:.82rem">
+                        <i class="bi bi-lock-fill" style="color:var(--gray-400);font-size:1.1rem"></i>
+                        <span style="color:var(--gray-500)">Paiement securise via Eye-Foncier</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+/* Animation etoiles au hover du formulaire */
+document.querySelectorAll('.star-input label').forEach(function(lbl) {
+    lbl.addEventListener('mouseenter', function() {
+        this.style.transform = 'scale(1.2)';
+    });
+    lbl.addEventListener('mouseleave', function() {
+        this.style.transform = 'scale(1)';
+    });
+});
+
+/* Animation entree des parcelle cards */
+var observer = new IntersectionObserver(function(entries) {
+    entries.forEach(function(entry) {
+        if (entry.isIntersecting) {
+            entry.target.style.opacity = '1';
+            entry.target.style.transform = 'translateY(0)';
+        }
+    });
+}, { threshold: 0.1 });
+
+document.querySelectorAll('.shop-parcelle-card').forEach(function(card, i) {
+    card.style.opacity = '0';
+    card.style.transform = 'translateY(20px)';
+    card.style.transition = 'all 0.4s ease ' + (i * 0.08) + 's';
+    observer.observe(card);
+});
+</script>
+{% endblock %}

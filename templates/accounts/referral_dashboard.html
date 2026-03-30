@@ -1,0 +1,139 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}Parrainage — EYE-FONCIER{% endblock %}
+
+{% block content %}
+<div class="container py-4" style="max-width:900px">
+    <div class="mb-4">
+        <h2 class="fw-bold" style="font-family:var(--font-display);color:var(--green-900)">
+            <i class="bi bi-people"></i> Mon Parrainage
+        </h2>
+        <p style="color:var(--gray-400)">Invitez vos proches et gagnez des recompenses</p>
+    </div>
+
+    <!-- Code de parrainage -->
+    <div class="card border-0 shadow-sm mb-4" style="border-radius:var(--radius-lg);background:linear-gradient(135deg,var(--green-900),#166534)">
+        <div class="card-body p-4 text-center text-white">
+            <p class="mb-2" style="font-size:.85rem;opacity:.8">Votre code de parrainage</p>
+            <h3 class="fw-bold mb-3" style="font-family:var(--font-mono);letter-spacing:2px">{{ referral_code }}</h3>
+            <div class="d-flex gap-2 justify-content-center flex-wrap">
+                <button onclick="copyCode()" class="btn btn-sm" style="background:rgba(255,255,255,.2);color:#fff;border-radius:var(--radius-sm)">
+                    <i class="bi bi-clipboard"></i> Copier le code
+                </button>
+                <button onclick="shareLink()" class="btn btn-sm" style="background:rgba(255,255,255,.2);color:#fff;border-radius:var(--radius-sm)">
+                    <i class="bi bi-share"></i> Partager le lien
+                </button>
+            </div>
+            <p class="mt-3 mb-0" style="font-size:.78rem;opacity:.7">
+                Lien : {{ request.scheme }}://{{ request.get_host }}{% url 'accounts:register' %}?ref={{ referral_code }}
+            </p>
+        </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-md-3">
+            <div class="card border-0 shadow-sm text-center p-3" style="border-radius:var(--radius-md)">
+                <div style="font-size:1.8rem;font-weight:800;color:var(--green-900)">{{ stats.total_invited }}</div>
+                <div style="font-size:.78rem;color:var(--gray-400)">Invites</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="card border-0 shadow-sm text-center p-3" style="border-radius:var(--radius-md)">
+                <div style="font-size:1.8rem;font-weight:800;color:#16a34a">{{ stats.registered }}</div>
+                <div style="font-size:.78rem;color:var(--gray-400)">Inscrits</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="card border-0 shadow-sm text-center p-3" style="border-radius:var(--radius-md)">
+                <div style="font-size:1.8rem;font-weight:800;color:#E8790A">{{ stats.converted }}</div>
+                <div style="font-size:.78rem;color:var(--gray-400)">Convertis</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="card border-0 shadow-sm text-center p-3" style="border-radius:var(--radius-md)">
+                <div style="font-size:1.8rem;font-weight:800;color:var(--gold)">{{ stats.total_earnings|floatformat:0 }}</div>
+                <div style="font-size:.78rem;color:var(--gray-400)">FCFA gagnes</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Liste des filleuls -->
+    <div class="card border-0 shadow-sm" style="border-radius:var(--radius-lg)">
+        <div class="card-body p-4">
+            <h5 class="fw-bold mb-3" style="color:var(--green-900)">
+                <i class="bi bi-person-plus"></i> Mes filleuls
+            </h5>
+            {% if referrals %}
+            <div class="table-responsive">
+                <table class="table" style="font-size:.85rem">
+                    <thead>
+                        <tr style="color:var(--gray-400)">
+                            <th>Filleul</th>
+                            <th>Date</th>
+                            <th>Statut</th>
+                            <th>Recompense</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for ref in referrals %}
+                        <tr>
+                            <td>
+                                <strong style="color:var(--green-900)">{{ ref.referred.get_full_name|default:ref.referred.email }}</strong>
+                            </td>
+                            <td style="color:var(--gray-400)">{{ ref.created_at|date:"d/m/Y" }}</td>
+                            <td>
+                                {% if ref.status == "converted" %}
+                                <span class="badge" style="background:#dcfce7;color:#16a34a">Converti</span>
+                                {% elif ref.status == "registered" %}
+                                <span class="badge" style="background:#dbeafe;color:#2563eb">Inscrit</span>
+                                {% else %}
+                                <span class="badge" style="background:#fef3c7;color:#d97706">En attente</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if ref.reward_claimed %}
+                                <span style="color:#16a34a;font-weight:600">{{ ref.reward_amount|floatformat:0 }} FCFA</span>
+                                {% else %}
+                                <span style="color:var(--gray-300)">—</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center py-4">
+                <i class="bi bi-people" style="font-size:2.5rem;color:var(--gray-200)"></i>
+                <p class="mt-2 mb-0" style="color:var(--gray-400);font-size:.9rem">Aucun filleul pour le moment. Partagez votre code !</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- CTA Ambassadeur -->
+    <div class="text-center mt-4">
+        <p style="color:var(--gray-400);font-size:.9rem">Vous voulez aller plus loin ?</p>
+        <a href="{% url 'accounts:ambassador_apply' %}" class="btn" style="background:var(--gold);color:#fff;border-radius:var(--radius-sm);padding:10px 24px">
+            <i class="bi bi-star"></i> Devenir Ambassadeur
+        </a>
+    </div>
+</div>
+
+<script>
+function copyCode() {
+    navigator.clipboard.writeText("{{ referral_code }}");
+    alert("Code copie !");
+}
+function shareLink() {
+    const url = "{{ request.scheme }}://{{ request.get_host }}{% url 'accounts:register' %}?ref={{ referral_code }}";
+    if (navigator.share) {
+        navigator.share({title: "EYE-FONCIER", text: "Rejoignez EYE-FONCIER avec mon code de parrainage !", url: url});
+    } else {
+        navigator.clipboard.writeText(url);
+        alert("Lien copie !");
+    }
+}
+</script>
+{% endblock %}

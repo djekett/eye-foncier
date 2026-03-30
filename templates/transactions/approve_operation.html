@@ -1,0 +1,65 @@
+{% extends "layouts/base.html" %}
+{% load humanize %}
+
+{% block title %}Approuver — {{ SITE_NAME }}{% endblock %}
+
+{% block content %}
+<div class="container" style="padding-bottom:60px;max-width:700px">
+
+    <div class="d-flex align-items-center gap-2 mb-4">
+        <a href="{% url 'transactions:detail' transaction.pk %}" class="btn btn-sm btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i>
+        </a>
+        <h4 class="mb-0" style="font-weight:800;color:var(--green-900)">
+            <i class="bi bi-check-circle me-2"></i>Approuver l'opération
+        </h4>
+    </div>
+
+    <div class="alert alert-info" style="border-radius:var(--radius-md);font-size:.9rem">
+        <i class="bi bi-info-circle me-1"></i>
+        <strong>{{ approval.requested_by.get_full_name }}</strong> demande votre approbation pour cette opération.
+        Une fois approuvée, l'opération sera exécutée immédiatement.
+    </div>
+
+    <div class="card" style="border:none;border-radius:var(--radius-lg);box-shadow:var(--shadow-sm)">
+        <div class="card-body p-4">
+            <div class="row mb-3">
+                <div class="col-6">
+                    <span class="text-muted" style="font-size:.85rem">Opération</span>
+                    <p style="font-weight:700;color:var(--green-900)">{{ label }}</p>
+                </div>
+                <div class="col-6">
+                    <span class="text-muted" style="font-size:.85rem">Transaction</span>
+                    <p style="font-weight:700">{{ transaction.reference }}</p>
+                </div>
+            </div>
+            <div class="row mb-3">
+                <div class="col-6">
+                    <span class="text-muted" style="font-size:.85rem">Parcelle</span>
+                    <p style="font-weight:600">{{ transaction.parcelle.title }} — Lot {{ transaction.parcelle.lot_number }}</p>
+                </div>
+                <div class="col-6">
+                    <span class="text-muted" style="font-size:.85rem">Montant</span>
+                    <p style="font-weight:700;font-size:1.1rem">{{ transaction.amount|intcomma }} FCFA</p>
+                </div>
+            </div>
+            <div class="mb-4">
+                <span class="text-muted" style="font-size:.85rem">Demandeur</span>
+                <p style="font-weight:600">{{ approval.requested_by.get_full_name }} ({{ approval.requested_by.email }})</p>
+            </div>
+
+            <div class="d-flex gap-2">
+                <form method="post" style="flex:1">
+                    {% csrf_token %}
+                    <button type="submit" class="btn w-100" style="background:var(--green-900);color:#fff;border:none;border-radius:var(--radius-md);font-weight:600">
+                        <i class="bi bi-check-circle me-1"></i> Approuver
+                    </button>
+                </form>
+                <a href="{% url 'transactions:reject_operation' approval.pk %}" class="btn btn-outline-danger" style="border-radius:var(--radius-md);flex:1;text-align:center">
+                    <i class="bi bi-x-circle me-1"></i> Refuser
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

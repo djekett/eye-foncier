@@ -1,0 +1,78 @@
+{% extends "layouts/base.html" %}
+{% block title %}Confirmation documents — {{ SITE_NAME }}{% endblock %}
+
+{% block content %}
+<div class="ef-page-header">
+    <nav class="ef-breadcrumb">
+        <a href="{% url 'transactions:detail' transaction.pk %}">{{ transaction.reference }}</a>
+        <span class="sep">/</span>
+        <span class="current">Confirmation des documents</span>
+    </nav>
+</div>
+
+<div class="ef-page-content" style="max-width:720px; margin:0 auto">
+    <div class="ef-card">
+        <div class="ef-card-body" style="padding:2rem">
+            <!-- Header icon -->
+            <div style="text-align:center; margin-bottom:1.5rem">
+                <div style="width:72px; height:72px; border-radius:50%; background:rgba(11,61,46,0.08); display:inline-flex; align-items:center; justify-content:center; margin-bottom:1rem">
+                    <i class="bi bi-file-earmark-check" style="font-size:2.2rem; color:#0B3D2E"></i>
+                </div>
+                <h2 style="font-family:var(--font-display); color:#0B3D2E; margin:0 0 .25rem">Confirmer la réception des documents</h2>
+                <p style="color:#6b7280; margin:0">Parcelle <strong>{{ transaction.parcelle.lot_number }}</strong> — {{ transaction.parcelle.title }}</p>
+            </div>
+
+            <!-- Warning -->
+            <div style="background:rgba(232,121,59,0.1); border-radius:.5rem; padding:.75rem; margin-bottom:1.5rem; font-size:.85rem; color:#92400e">
+                <i class="bi bi-exclamation-triangle" style="color:#E8793B"></i>
+                <strong>Attention :</strong> En confirmant, vous autorisez EYE-Foncier à libérer les fonds
+                (<strong style="font-family:var(--font-mono)">{{ transaction.escrow_amount|floatformat:0 }} FCFA</strong>) au vendeur. Cette action est irréversible.
+            </div>
+
+            <!-- Checklist -->
+            <div style="background:#F7F4EE; border-radius:.5rem; padding:1rem; margin-bottom:1.5rem">
+                <h4 style="font-size:.9rem; font-weight:600; color:#0B3D2E; margin-bottom:.75rem">Vérifiez que vous avez bien reçu :</h4>
+                <div class="ef-form-group" style="margin-bottom:.5rem">
+                    <label style="display:flex; align-items:center; gap:.5rem; font-size:.85rem; cursor:pointer">
+                        <input class="check-doc" type="checkbox" id="doc1">
+                        Titre foncier ou ACD original
+                    </label>
+                </div>
+                <div class="ef-form-group" style="margin-bottom:.5rem">
+                    <label style="display:flex; align-items:center; gap:.5rem; font-size:.85rem; cursor:pointer">
+                        <input class="check-doc" type="checkbox" id="doc2">
+                        Plan cadastral certifié
+                    </label>
+                </div>
+                <div class="ef-form-group" style="margin-bottom:0">
+                    <label style="display:flex; align-items:center; gap:.5rem; font-size:.85rem; cursor:pointer">
+                        <input class="check-doc" type="checkbox" id="doc3">
+                        Contrat de vente signé
+                    </label>
+                </div>
+            </div>
+
+            <form method="post">
+                {% csrf_token %}
+                <div class="ef-form-group">
+                    <label style="display:flex; align-items:center; gap:.5rem; font-size:.875rem; cursor:pointer">
+                        <input type="checkbox" id="finalConfirm" required>
+                        Je confirme avoir reçu et vérifié l'ensemble des documents légaux
+                    </label>
+                </div>
+                <button type="submit" class="ef-btn ef-btn-primary ef-btn-block" id="btnConfirm" disabled style="font-size:1rem; padding:.75rem">
+                    <i class="bi bi-check2-all"></i> Confirmer la réception
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.getElementById('finalConfirm').addEventListener('change', function(){
+    document.getElementById('btnConfirm').disabled = !this.checked;
+});
+</script>
+{% endblock %}

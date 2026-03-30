@@ -1,0 +1,107 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}{{ doc.title }} — Documentation — {{ SITE_NAME }}{% endblock %}
+
+{% block extra_css %}
+<style>
+.doc-detail-content{line-height:1.85;font-size:1.02rem;color:var(--gray-600);font-family:var(--font-body)}
+.doc-detail-content p{margin-bottom:1.2rem}
+.doc-nav-link{display:flex;align-items:center;gap:8px;padding:10px 14px;text-decoration:none;color:var(--green-900);font-size:.88rem;font-weight:500;border-radius:8px;transition:all .2s;border-bottom:1px solid #f1f5f9;font-family:var(--font-body)}
+.doc-nav-link:last-child{border-bottom:none}
+.doc-nav-link:hover{background:var(--green-50);color:var(--green-900)}
+.doc-nav-link i{color:var(--green-700);font-size:.85rem;flex-shrink:0}
+.doc-child-link{text-decoration:none;display:block;height:100%}
+.doc-child-link:hover .ef-card{transform:translateY(-3px);box-shadow:0 8px 24px rgba(11,61,46,.1)}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="ef-page-header">
+    <div class="container">
+        <nav class="ef-breadcrumb mb-3">
+            <a href="{% url 'content:documentation' %}">Documentation</a>
+            <span class="sep">/</span>
+            {% if doc.parent %}
+            <a href="{% url 'content:doc_detail' doc.parent.slug %}">{{ doc.parent.title|truncatechars:30 }}</a>
+            <span class="sep">/</span>
+            {% endif %}
+            <span class="current">{{ doc.title|truncatechars:40 }}</span>
+        </nav>
+    </div>
+</div>
+
+<div class="ef-page-content container">
+    <div class="row g-4">
+        <div class="col-lg-8">
+            <div class="ef-card">
+                <div class="ef-card-body p-4">
+                    <div class="d-flex align-items-center gap-2 mb-3">
+                        <div class="d-inline-flex align-items-center justify-content-center" style="width:40px;height:40px;border-radius:12px;background:var(--green-50)">
+                            <i class="{{ doc.icon }}" style="font-size:1.1rem;color:var(--green-700)"></i>
+                        </div>
+                        <span class="ef-badge ef-badge-success">{{ doc.get_doc_type_display }}</span>
+                    </div>
+                    <h2 style="font-weight:700;letter-spacing:-.02em;color:var(--green-900);font-family:var(--font-display)" class="mb-4">{{ doc.title }}</h2>
+                    <div class="doc-detail-content">
+                        {{ doc.content|linebreaksbr }}
+                    </div>
+                    <div class="mt-4 pt-3" style="border-top:1px solid #f1f5f9;font-size:.84rem;color:var(--gray-400);font-family:var(--font-body)">
+                        <i class="bi bi-clock me-1"></i>Mis à jour le {{ doc.updated_at|date:"d/m/Y" }}
+                    </div>
+                </div>
+            </div>
+
+            {% if children %}
+            <h5 style="font-weight:700;font-family:var(--font-display);color:var(--green-900)" class="mt-4 mb-3"><i class="bi bi-list-nested me-2" style="color:var(--orange)"></i>Dans cette section</h5>
+            <div class="row g-3">
+                {% for child in children %}
+                <div class="col-md-6">
+                    <a href="{% url 'content:doc_detail' child.slug %}" class="doc-child-link">
+                        <div class="ef-card h-100" style="transition:all .2s">
+                            <div class="ef-card-body p-3">
+                                <div class="d-flex align-items-center gap-2 mb-1">
+                                    <i class="{{ child.icon }}" style="font-size:.85rem;color:var(--green-700)"></i>
+                                    <h6 style="font-weight:700;color:var(--green-900);font-size:.9rem;font-family:var(--font-display);margin-bottom:0">{{ child.title }}</h6>
+                                </div>
+                                <p style="color:var(--gray-400);font-size:.84rem;font-family:var(--font-body);margin:4px 0 0">{{ child.content|truncatechars:80 }}</p>
+                            </div>
+                        </div>
+                    </a>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="col-lg-4">
+            {% if siblings %}
+            <div class="ef-card sticky-top" style="top:80px">
+                <div class="ef-card-header p-3">
+                    <h6 style="font-weight:700;font-family:var(--font-display);color:var(--green-900);margin-bottom:0"><i class="bi bi-list-ul me-1" style="color:var(--green-700)"></i> Navigation</h6>
+                </div>
+                <div class="ef-card-body p-3 pt-0">
+                    {% for s in siblings %}
+                    <a href="{% url 'content:doc_detail' s.slug %}" class="doc-nav-link">
+                        <i class="{{ s.icon }}"></i>
+                        <span>{{ s.title }}</span>
+                    </a>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            <div class="ef-card mt-3">
+                <div class="ef-card-body text-center p-4">
+                    <div class="d-inline-flex align-items-center justify-content-center mb-2" style="width:48px;height:48px;border-radius:50%;background:var(--green-50)">
+                        <i class="bi bi-question-circle" style="font-size:1.3rem;color:var(--green-700)"></i>
+                    </div>
+                    <h6 style="font-weight:700;font-family:var(--font-display);color:var(--green-900)" class="mt-1">Besoin d'aide ?</h6>
+                    <p style="color:var(--gray-400);font-size:.84rem;font-family:var(--font-body)" class="mb-3">Consultez nos autres ressources</p>
+                    <a href="{% url 'content:articles' %}" class="ef-btn ef-btn-sm ef-btn-outline-green w-100 mb-2"><i class="bi bi-journal me-1"></i>Blog</a>
+                    <a href="{% url 'content:announcements' %}" class="ef-btn ef-btn-sm ef-btn-outline-green w-100"><i class="bi bi-bell me-1"></i>Annonces</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,169 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="fr" data-bs-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="EYE-FONCIER — Plateforme de transaction fonciere securisee en Cote d'Ivoire. Achetez, vendez et verifiez vos biens en toute confiance.">
+    <meta name="theme-color" content="#0B3D2E">
+    <title>{% block title %}{{ SITE_NAME }}{% endblock %}</title>
+
+    <!-- Bootstrap 5 -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <!-- MapLibre GL JS CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" />
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{% static 'css/main.css' %}?v=10">
+    <link rel="icon" type="image/png" href="{% static 'img/logo.png' %}">
+    {% block extra_css %}{% endblock %}
+</head>
+<body class="d-flex flex-column min-vh-100 ef-page-enter">
+
+    <!-- Page Transition Overlay -->
+    <div class="ef-page-transition" id="efPageTransition">
+        <div class="ef-transition-logo">
+            <i class="bi bi-globe-americas" style="font-size:2rem;color:var(--white)"></i>
+        </div>
+    </div>
+
+    <!-- Kente Line -->
+    <div class="ef-kente-line"></div>
+
+    {% include "includes/navbar.html" %}
+
+    <!-- Messages -->
+    {% if messages %}
+    <div class="container mt-3" style="padding-top:24px">
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show d-flex align-items-center" role="alert" style="border-radius:var(--radius-md);border:none;font-size:.9rem;">
+            <i class="bi bi-{% if message.tags == 'success' %}check-circle{% elif message.tags == 'danger' %}exclamation-triangle{% elif message.tags == 'warning' %}exclamation-circle{% else %}info-circle{% endif %}-fill me-2"></i>
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Main Content -->
+    <main class="flex-grow-1" style="padding-top:100px">
+        {% block content %}{% endblock %}
+    </main>
+
+    {% block modals %}{% endblock %}
+
+    {% include "includes/footer.html" %}
+
+    <!-- Widget Flottant Certification -->
+    {% include "includes/certification_widget.html" %}
+
+    <!-- WhatsApp Float -->
+    <a href="https://wa.me/2250709422551" target="_blank" class="ef-whatsapp" title="Contactez-nous sur WhatsApp">
+        <i class="bi bi-whatsapp" style="font-size:24px"></i>
+    </a>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+    <script src="{% static 'js/main.js' %}"></script>
+
+    <!-- EYE-FONCIER Animation System -->
+    <script>
+    (function(){
+        /* ── Page Transition on Link Click ── */
+        var transition = document.getElementById('efPageTransition');
+
+        /* ── FIX: Reset transition on back/forward (bfcache restore) ── */
+        window.addEventListener('pageshow', function(e) {
+            if (e.persisted || (window.performance && window.performance.getEntriesByType('navigation').length &&
+                window.performance.getEntriesByType('navigation')[0].type === 'back_forward')) {
+                // Page restored from bfcache — clear frozen transition
+                transition.classList.remove('closing');
+                document.body.classList.remove('ef-page-exit');
+                document.body.classList.add('ef-page-enter');
+            }
+        });
+
+        /* ── Also reset on visibilitychange (tab switch) ── */
+        document.addEventListener('visibilitychange', function() {
+            if (!document.hidden) {
+                transition.classList.remove('closing');
+            }
+        });
+
+        document.addEventListener('click', function(e) {
+            var link = e.target.closest('a[href]');
+            if (!link) return;
+            var href = link.getAttribute('href');
+            // Skip: external, hash, new tab, special
+            if (!href || href.startsWith('#') || href.startsWith('javascript:')
+                || link.target === '_blank' || link.hasAttribute('download')
+                || e.ctrlKey || e.metaKey || e.shiftKey
+                || (href.startsWith('http') && !href.startsWith(location.origin))
+                || href.startsWith('mailto:') || href.startsWith('tel:')
+                || href.startsWith('whatsapp:') || href.startsWith('https://wa.me')) return;
+            e.preventDefault();
+            transition.classList.add('closing');
+            setTimeout(function(){ window.location.href = href; }, 450);
+        });
+
+        /* ── Scroll Reveal Observer ── */
+        var reveals = document.querySelectorAll('.ef-section, .ef-reveal, .ef-reveal-left, .ef-reveal-right, .ef-reveal-scale');
+        if (reveals.length) {
+            var revealObs = new IntersectionObserver(function(entries) {
+                entries.forEach(function(entry) {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('ef-visible', 'revealed');
+                        revealObs.unobserve(entry.target);
+                    }
+                });
+            }, { threshold: 0.08, rootMargin: '0px 0px -30px 0px' });
+            reveals.forEach(function(el) { revealObs.observe(el); });
+        }
+
+        /* ── Ripple Effect on Buttons ── */
+        document.addEventListener('click', function(e) {
+            var btn = e.target.closest('.ef-btn, .ef-btn-primary, .ef-btn-secondary, .detail-action-btn, .ef-search-btn, [class*="ef-btn-outline"]');
+            if (!btn) return;
+            var rect = btn.getBoundingClientRect();
+            var ripple = document.createElement('span');
+            ripple.className = 'ef-ripple';
+            var size = Math.max(rect.width, rect.height);
+            ripple.style.width = ripple.style.height = size + 'px';
+            ripple.style.left = (e.clientX - rect.left - size / 2) + 'px';
+            ripple.style.top = (e.clientY - rect.top - size / 2) + 'px';
+            btn.appendChild(ripple);
+            setTimeout(function() { ripple.remove(); }, 600);
+        });
+
+        /* ── Auto-reveal cards, info-rows, property cards on scroll ── */
+        var autoReveal = document.querySelectorAll('.ef-property-card, .ef-card, .detail-card, .bento-card, .ef-trust-card, .ef-how-step, .ef-category-card');
+        if (autoReveal.length) {
+            var cardObs = new IntersectionObserver(function(entries) {
+                entries.forEach(function(entry) {
+                    if (entry.isIntersecting) {
+                        entry.target.style.opacity = '1';
+                        entry.target.style.transform = 'translateY(0)';
+                        cardObs.unobserve(entry.target);
+                    }
+                });
+            }, { threshold: 0.05, rootMargin: '0px 0px -20px 0px' });
+            autoReveal.forEach(function(el, i) {
+                el.style.opacity = '0';
+                el.style.transform = 'translateY(20px)';
+                el.style.transition = 'opacity 0.5s cubic-bezier(0.22,1,0.36,1) ' + (i % 4) * 0.1 + 's, transform 0.5s cubic-bezier(0.22,1,0.36,1) ' + (i % 4) * 0.1 + 's';
+                cardObs.observe(el);
+            });
+        }
+    })();
+    </script>
+    {% block extra_js %}{% endblock %}
+    {% if user.is_authenticated and user.is_acheteur %}
+    {% include "includes/promotion_popup.html" %}
+    {% endif %}
+</body>
+</html>

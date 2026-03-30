@@ -1,0 +1,95 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}Certification — {{ cert.user.get_full_name }} — EYE-FONCIER{% endblock %}
+
+{% block content %}
+<div class="container py-4" style="max-width:700px">
+    <div class="mb-4">
+        <a href="{% url 'accounts:admin_moderation' %}" style="color:var(--green-700);font-size:.85rem;text-decoration:none">
+            <i class="bi bi-arrow-left"></i> Retour a la moderation
+        </a>
+    </div>
+
+    <div class="card border-0 shadow-sm" style="border-radius:var(--radius-lg)">
+        <div class="card-body p-4">
+            <h4 class="fw-bold mb-4" style="font-family:var(--font-display);color:var(--green-900)">
+                <i class="bi bi-patch-check"></i> Demande de certification
+            </h4>
+
+            <!-- Infos -->
+            <div class="p-3 mb-4" style="background:#f8faf9;border-radius:var(--radius-md);border:1px solid #e5e7eb">
+                <div class="row">
+                    <div class="col-md-6">
+                        <p class="mb-2" style="font-size:.85rem"><strong style="color:var(--green-900)">Demandeur :</strong> <span style="color:var(--gray-600)">{{ cert.user.get_full_name }}</span></p>
+                        <p class="mb-2" style="font-size:.85rem"><strong style="color:var(--green-900)">Email :</strong> <span style="color:var(--gray-600)">{{ cert.user.email }}</span></p>
+                        <p class="mb-0" style="font-size:.85rem"><strong style="color:var(--green-900)">Type :</strong>
+                            <span class="badge" style="background:#fef3c7;color:#92400e">{{ cert.get_cert_type_display }}</span>
+                        </p>
+                    </div>
+                    <div class="col-md-6">
+                        <p class="mb-2" style="font-size:.85rem"><strong style="color:var(--green-900)">Statut :</strong>
+                            <span class="badge" style="background:{% if cert.status == 'pending' %}#fef3c7;color:#d97706{% elif cert.status == 'scheduled' %}#dbeafe;color:#2563eb{% else %}#f3e8ff;color:#7c3aed{% endif %}">{{ cert.get_status_display }}</span>
+                        </p>
+                        <p class="mb-2" style="font-size:.85rem"><strong style="color:var(--green-900)">Date demande :</strong> <span style="color:var(--gray-600)">{{ cert.created_at|date:"d/m/Y H:i" }}</span></p>
+                        {% if cert.preferred_date %}
+                        <p class="mb-0" style="font-size:.85rem"><strong style="color:var(--green-900)">Date souhaitee :</strong> <span style="color:var(--gray-600)">{{ cert.preferred_date }}</span></p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            {% if cert.message %}
+            <div class="mb-4">
+                <h6 class="fw-bold" style="color:var(--green-900);font-size:.9rem">Message du demandeur</h6>
+                <div class="p-3" style="background:#fffbeb;border-radius:var(--radius-md);border:1px solid #fde68a;font-size:.85rem;color:#92400e">
+                    {{ cert.message }}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Caution -->
+            {% if cert.cert_type == "premium" %}
+            <div class="mb-4 p-3" style="background:{% if cert.caution_paid %}#f0fdf4{% else %}#fef2f2{% endif %};border-radius:var(--radius-md);border:1px solid {% if cert.caution_paid %}#bbf7d0{% else %}#fecaca{% endif %}">
+                <h6 class="fw-bold mb-1" style="font-size:.85rem;color:{% if cert.caution_paid %}#166534{% else %}#991b1b{% endif %}">
+                    <i class="bi bi-{% if cert.caution_paid %}check-circle{% else %}exclamation-triangle{% endif %}"></i>
+                    Caution vendeur : {{ cert.caution_amount|default:"25 000" }} FCFA
+                </h6>
+                <p class="mb-0" style="font-size:.8rem;color:{% if cert.caution_paid %}#166534{% else %}#991b1b{% endif %}">
+                    {% if cert.caution_paid %}Caution payee{% else %}Caution non payee{% endif %}
+                </p>
+            </div>
+            {% endif %}
+
+            <!-- Actions -->
+            <form method="post">
+                {% csrf_token %}
+                <div class="mb-3">
+                    <label class="form-label fw-bold" style="font-size:.85rem;color:var(--green-900)">Notes admin</label>
+                    <textarea name="admin_notes" class="form-control" rows="3" style="border-radius:var(--radius-sm)">{{ cert.admin_notes }}</textarea>
+                </div>
+
+                {% if cert.cert_type in "visio premium" %}
+                <div class="mb-3">
+                    <label class="form-label fw-bold" style="font-size:.85rem;color:var(--green-900)">Date du RDV (si programmation)</label>
+                    <input type="datetime-local" name="scheduled_at" class="form-control" style="border-radius:var(--radius-sm)">
+                </div>
+                {% endif %}
+
+                <div class="d-flex gap-2">
+                    <button type="submit" name="action" value="approve" class="btn flex-fill" style="background:#16a34a;color:#fff;border-radius:var(--radius-sm);padding:12px">
+                        <i class="bi bi-check-circle"></i> Approuver
+                    </button>
+                    {% if cert.cert_type in "visio premium" %}
+                    <button type="submit" name="action" value="schedule" class="btn flex-fill" style="background:#2563eb;color:#fff;border-radius:var(--radius-sm);padding:12px">
+                        <i class="bi bi-calendar-check"></i> Programmer RDV
+                    </button>
+                    {% endif %}
+                    <button type="submit" name="action" value="reject" class="btn flex-fill" style="background:#dc2626;color:#fff;border-radius:var(--radius-sm);padding:12px">
+                        <i class="bi bi-x-circle"></i> Rejeter
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

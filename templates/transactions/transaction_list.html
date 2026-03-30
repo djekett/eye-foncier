@@ -1,0 +1,134 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}Mes Transactions — {{ SITE_NAME }}{% endblock %}
+
+{% block content %}
+<div class="ef-page-header ef-reveal">
+    <h2 style="color:var(--green-900);font-family:var(--font-display)">
+        <i class="bi bi-receipt" style="color:var(--orange)"></i> Mes Transactions
+    </h2>
+</div>
+
+<div class="ef-page-content">
+    <!-- Stats row -->
+    <div class="ef-stagger" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:1rem;margin-bottom:1.5rem">
+        <div class="ef-card ef-stat-card-center">
+            <p class="ef-stat-label">Total</p>
+            <p class="ef-stat-value green">{{ stats.total|default:"0" }}</p>
+        </div>
+        <div class="ef-card ef-stat-card-center">
+            <p class="ef-stat-label">En cours</p>
+            <p class="ef-stat-value orange">{{ stats.active|default:"0" }}</p>
+        </div>
+        <div class="ef-card ef-stat-card-center">
+            <p class="ef-stat-label">Finalisées</p>
+            <p class="ef-stat-value green">{{ stats.completed|default:"0" }}</p>
+        </div>
+        <div class="ef-card ef-stat-card-center">
+            <p class="ef-stat-label">Annulées</p>
+            <p class="ef-stat-value danger">{{ stats.cancelled|default:"0" }}</p>
+        </div>
+    </div>
+
+    <!-- Filter bar -->
+    <div class="ef-card ef-reveal" style="margin-bottom:1.5rem">
+        <div class="ef-card-body" style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap">
+            <form method="get" style="display:flex;align-items:center;gap:.75rem;flex-wrap:wrap;width:100%">
+                <div class="ef-form-group" style="margin-bottom:0;flex:1;min-width:160px">
+                    <input type="text" name="q" value="{{ request.GET.q }}" class="ef-form-control" placeholder="Rechercher une référence...">
+                </div>
+                <div class="ef-form-group" style="margin-bottom:0;min-width:140px">
+                    <select name="status" class="ef-form-control">
+                        <option value="">Tous les statuts</option>
+                        <option value="pending" {% if request.GET.status == 'pending' %}selected{% endif %}>En attente</option>
+                        <option value="reserved" {% if request.GET.status == 'reserved' %}selected{% endif %}>Réservé</option>
+                        <option value="paid" {% if request.GET.status == 'paid' %}selected{% endif %}>Payé</option>
+                        <option value="completed" {% if request.GET.status == 'completed' %}selected{% endif %}>Finalisé</option>
+                        <option value="cancelled" {% if request.GET.status == 'cancelled' %}selected{% endif %}>Annulé</option>
+                    </select>
+                </div>
+                <button type="submit" class="ef-btn ef-btn-primary ef-btn-sm">
+                    <i class="bi bi-search"></i> Filtrer
+                </button>
+            </form>
+        </div>
+    </div>
+
+    {% if transactions %}
+    <div class="ef-card ef-reveal">
+        <div style="overflow-x:auto">
+            <table class="ef-table">
+                <thead>
+                    <tr>
+                        <th>Référence</th>
+                        <th>Parcelle</th>
+                        <th>{% if user.role == 'vendeur' %}Acheteur{% else %}Vendeur{% endif %}</th>
+                        <th class="ef-col-mono">Montant</th>
+                        <th>Statut</th>
+                        <th class="ef-col-muted">Date</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for tx in transactions %}
+                    <tr>
+                        <td style="font-weight:600">{{ tx.reference }}</td>
+                        <td>
+                            <a href="{% url 'parcelles:detail' tx.parcelle.pk %}" style="color:var(--green-900)">
+                                {{ tx.parcelle.title|truncatechars:25 }}
+                            </a>
+                        </td>
+                        <td>
+                            {% if user.role == 'vendeur' %}
+                            {{ tx.buyer.get_full_name }}
+                            {% else %}
+                            {{ tx.seller.get_full_name }}
+                            {% endif %}
+                        </td>
+                        <td class="ef-col-mono" style="font-weight:700">{{ tx.amount|floatformat:0 }} FCFA</td>
+                        <td>
+                            <span class="ef-badge {% if tx.status == 'pending' or tx.status == 'reserved' %}ef-badge-warning{% elif tx.status == 'paid' %}ef-badge-info{% elif tx.status == 'completed' %}ef-badge-success{% else %}ef-badge-danger{% endif %}">
+                                {{ tx.get_status_display }}
+                            </span>
+                        </td>
+                        <td class="ef-col-muted">{{ tx.created_at|date:"d/m/Y" }}</td>
+                        <td>
+                            <a href="{% url 'transactions:detail' tx.pk %}" class="ef-btn ef-btn-outline-green ef-btn-sm">
+                                <i class="bi bi-eye"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Pagination -->
+    {% if is_paginated %}
+    <div style="display:flex;justify-content:center;margin-top:1.5rem;gap:.5rem">
+        {% if page_obj.has_previous %}
+        <a href="?page={{ page_obj.previous_page_number }}" class="ef-btn ef-btn-outline-green ef-btn-sm">
+            <i class="bi bi-chevron-left"></i> Précédent
+        </a>
+        {% endif %}
+        <span style="display:flex;align-items:center;padding:0 1rem;font-size:.875rem;color:var(--gray-400)">
+            Page {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}
+        </span>
+        {% if page_obj.has_next %}
+        <a href="?page={{ page_obj.next_page_number }}" class="ef-btn ef-btn-outline-green ef-btn-sm">
+            Suivant <i class="bi bi-chevron-right"></i>
+        </a>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    {% else %}
+    <div class="ef-empty-state ef-reveal-scale">
+        <i class="bi bi-receipt" style="font-size:3rem;color:var(--gray-200)"></i>
+        <h3 style="font-family:var(--font-display);color:var(--green-900);margin-top:1rem">Aucune transaction</h3>
+        <p style="color:var(--gray-400)">Vous n'avez aucune transaction pour le moment.</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

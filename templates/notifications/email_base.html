@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="margin:0;padding:0;background-color:#f4f7f6;font-family:Arial,Helvetica,sans-serif">
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:600px;margin:0 auto;background:#ffffff">
+        <!-- Header -->
+        <tr>
+            <td style="background:#0B3D2E;padding:24px 32px;text-align:center">
+                <h1 style="color:#ffffff;margin:0;font-size:22px;font-weight:800;letter-spacing:1px">
+                    EYE-FONCIER
+                </h1>
+            </td>
+        </tr>
+        <!-- Kente accent -->
+        <tr>
+            <td style="height:4px;background:linear-gradient(90deg,#E8790A 0%,#E8790A 25%,#16a34a 25%,#16a34a 50%,#E8790A 50%,#E8790A 75%,#16a34a 75%,#16a34a 100%)"></td>
+        </tr>
+        <!-- Body -->
+        {% block email_content %}
+        <tr>
+            <td style="padding:32px">
+                <h2 style="color:#0B3D2E;margin:0 0 16px;font-size:18px;font-weight:700">
+                    {{ title }}
+                </h2>
+                <p style="color:#374151;font-size:15px;line-height:1.6;margin:0 0 24px">
+                    {{ message }}
+                </p>
+                <!-- Détails enrichis si disponibles -->
+                {% if data.reference or data.amount %}
+                <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f8faf9;border-radius:8px;margin:0 0 24px">
+                    <tr>
+                        <td style="padding:16px">
+                            {% if data.reference %}
+                            <p style="color:#6b7280;font-size:13px;margin:0 0 6px">
+                                <strong style="color:#0B3D2E">Référence :</strong> {{ data.reference }}
+                            </p>
+                            {% endif %}
+                            {% if data.parcelle_lot %}
+                            <p style="color:#6b7280;font-size:13px;margin:0 0 6px">
+                                <strong style="color:#0B3D2E">Parcelle :</strong> Lot {{ data.parcelle_lot }}{% if data.parcelle_title %} — {{ data.parcelle_title }}{% endif %}
+                            </p>
+                            {% endif %}
+                            {% if data.amount %}
+                            <p style="color:#6b7280;font-size:13px;margin:0">
+                                <strong style="color:#0B3D2E">Montant :</strong> {{ data.amount }} FCFA
+                            </p>
+                            {% endif %}
+                        </td>
+                    </tr>
+                </table>
+                {% endif %}
+                {% if data.action_url %}
+                <table role="presentation" cellspacing="0" cellpadding="0" style="margin:0 auto">
+                    <tr>
+                        <td style="background:#16a34a;border-radius:8px;padding:12px 28px">
+                            <a href="{{ data.action_url }}" style="color:#ffffff;text-decoration:none;font-weight:700;font-size:14px">
+                                Voir les détails
+                            </a>
+                        </td>
+                    </tr>
+                </table>
+                {% elif data.parcelle_id %}
+                <table role="presentation" cellspacing="0" cellpadding="0" style="margin:0 auto">
+                    <tr>
+                        <td style="background:#16a34a;border-radius:8px;padding:12px 28px">
+                            <a href="#" style="color:#ffffff;text-decoration:none;font-weight:700;font-size:14px">
+                                Voir les détails
+                            </a>
+                        </td>
+                    </tr>
+                </table>
+                {% endif %}
+            </td>
+        </tr>
+        {% endblock %}
+        <!-- Footer -->
+        <tr>
+            <td style="background:#f8faf9;padding:20px 32px;border-top:1px solid #e5e7eb">
+                <p style="color:#9ca3af;font-size:12px;margin:0;text-align:center">
+                    Bonjour {{ recipient.first_name|default:"" }}, vous recevez cet email car vous êtes inscrit sur EYE-FONCIER.
+                    <br>
+                    <a href="/notifications/preferences/" style="color:#16a34a;text-decoration:underline">Gérer mes préférences de notification</a>
+                </p>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>

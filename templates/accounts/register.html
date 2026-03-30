@@ -1,0 +1,199 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}Inscription — {{ SITE_NAME }}{% endblock %}
+
+{% block content %}
+<div class="ef-auth-layout">
+    <!-- Visual Side -->
+    <div class="ef-auth-visual ef-reveal-left">
+        <div class="ef-auth-visual-content">
+            <div style="width:60px;height:60px;border-radius:var(--radius-md);background:rgba(232,121,59,.2);display:flex;align-items:center;justify-content:center;margin:0 auto 20px">
+                <i class="bi bi-people-fill" style="font-size:1.6rem;color:var(--orange)"></i>
+            </div>
+            <h2>Rejoignez la communaute Eye-Foncier</h2>
+            <div class="ef-kente-line"></div>
+            <p>Que vous soyez acheteur, vendeur ou professionnel, accedez a la plateforme fonciere la plus securisee de Cote d'Ivoire.</p>
+            <div class="ef-auth-features">
+                <div class="ef-auth-feature">
+                    <i class="bi bi-person-check"></i>
+                    <span>Verification KYC securisee</span>
+                </div>
+                <div class="ef-auth-feature">
+                    <i class="bi bi-calculator"></i>
+                    <span>Simulateur d'achat-vente integre</span>
+                </div>
+                <div class="ef-auth-feature">
+                    <i class="bi bi-safe"></i>
+                    <span>Coffre-fort numerique pour vos documents</span>
+                </div>
+                <div class="ef-auth-feature">
+                    <i class="bi bi-phone"></i>
+                    <span>Paiement via Mobile Money</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Form Side -->
+    <div class="ef-auth-form-side ef-reveal-right">
+        <div class="ef-auth-card-v5" style="max-width:540px">
+            <div class="text-center">
+                <a href="{% url 'websig:home' %}" class="text-decoration-none">
+                    <span style="font-family:var(--font-display);font-size:1.5rem;font-weight:800">
+                        <span style="color:var(--orange)">EYE</span><span style="color:var(--green-900)">-FONCIER</span>
+                    </span>
+                </a>
+            </div>
+
+            <div class="text-center" style="margin-top:20px">
+                <div class="auth-icon" style="background:var(--orange-light);color:var(--orange)">
+                    <i class="bi bi-person-plus-fill"></i>
+                </div>
+                <h4>Creer un compte</h4>
+                <p class="auth-subtitle">Rejoignez la plateforme fonciere securisee</p>
+            </div>
+
+            <form method="post">
+                {% csrf_token %}
+
+                {% if form.errors %}
+                <div style="background:rgba(220,38,38,.08);border:1px solid rgba(220,38,38,.2);border-radius:var(--radius-sm);padding:10px 14px;margin-bottom:16px;font-size:.85rem;color:var(--danger)">
+                    <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;font-weight:600">
+                        <i class="bi bi-exclamation-triangle-fill"></i> Veuillez corriger les erreurs :
+                    </div>
+                    {% for field, errors in form.errors.items %}
+                        {% for error in errors %}
+                        <div style="font-size:.82rem;padding-left:22px">{{ error }}</div>
+                        {% endfor %}
+                    {% endfor %}
+                </div>
+                {% endif %}
+
+                <!-- Role Selection -->
+                <div class="ef-form-group">
+                    <label class="ef-form-label">Je suis</label>
+                    <div class="ef-role-selector">
+                        {% for radio in form.role %}
+                        <label class="ef-role-card" data-role-card>
+                            {{ radio.tag }}
+                            {% if radio.choice_label == 'Acheteur' %}
+                                <i class="bi bi-bag-check"></i>
+                            {% elif radio.choice_label == 'Vendeur' %}
+                                <i class="bi bi-shop"></i>
+                            {% elif radio.choice_label == 'Geometre' %}
+                                <i class="bi bi-rulers"></i>
+                            {% else %}
+                                <i class="bi bi-person"></i>
+                            {% endif %}
+                            <div class="role-label">{{ radio.choice_label }}</div>
+                        </label>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <div class="ef-form-group">
+                            <label class="ef-form-label">Prenom</label>
+                            {{ form.first_name }}
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="ef-form-group">
+                            <label class="ef-form-label">Nom</label>
+                            {{ form.last_name }}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <div class="ef-form-group">
+                            <label class="ef-form-label">Email</label>
+                            <div class="ef-input-icon">
+                                <i class="bi bi-envelope"></i>
+                                {{ form.email }}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="ef-form-group">
+                            <label class="ef-form-label">Pseudo</label>
+                            <div class="ef-input-icon">
+                                <i class="bi bi-at"></i>
+                                {{ form.username }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="ef-form-group">
+                    <label class="ef-form-label">Telephone</label>
+                    <div class="ef-input-icon">
+                        <i class="bi bi-phone"></i>
+                        {{ form.phone }}
+                    </div>
+                </div>
+
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <div class="ef-form-group">
+                            <label class="ef-form-label">Mot de passe</label>
+                            <div class="ef-input-icon">
+                                <i class="bi bi-lock"></i>
+                                {{ form.password1 }}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="ef-form-group">
+                            <label class="ef-form-label">Confirmer</label>
+                            <div class="ef-input-icon">
+                                <i class="bi bi-lock-fill"></i>
+                                {{ form.password2 }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <button type="submit" class="ef-btn ef-btn-primary ef-btn-block" style="padding:12px;font-size:.9rem;margin-top:8px">
+                    <i class="bi bi-person-plus"></i> Creer mon compte
+                </button>
+            </form>
+
+            <div class="ef-auth-trust-bar">
+                <div class="ef-auth-trust-item">
+                    <i class="bi bi-shield-fill-check"></i> Securise
+                </div>
+                <div class="ef-auth-trust-item">
+                    <i class="bi bi-lock-fill"></i> Donnees protegees
+                </div>
+            </div>
+
+            <div class="text-center" style="margin-top:16px">
+                <p style="color:var(--gray-400);font-size:.88rem;margin:0">
+                    Deja inscrit ?
+                    <a href="{% url 'accounts:login' %}" style="color:var(--green-900);font-weight:700;text-decoration:none">Se connecter</a>
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Role card selection
+    document.querySelectorAll('[data-role-card]').forEach(function(card) {
+        var radio = card.querySelector('input[type="radio"]');
+        if (radio && radio.checked) card.classList.add('selected');
+        card.addEventListener('click', function() {
+            document.querySelectorAll('[data-role-card]').forEach(function(c) { c.classList.remove('selected'); });
+            card.classList.add('selected');
+            if (radio) radio.checked = true;
+        });
+    });
+});
+</script>
+{% endblock %}

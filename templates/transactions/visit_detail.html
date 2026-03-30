@@ -1,0 +1,125 @@
+{% extends "layouts/base.html" %}
+{% block title %}Bon de Visite {{ bon.reference }} — {{ SITE_NAME }}{% endblock %}
+
+{% block content %}
+<div class="ef-page-header">
+    <h2 style="color:#0B3D2E; font-family:var(--font-display)">
+        <i class="bi bi-ticket-perforated" style="color:#E8793B"></i> Bon de Visite
+    </h2>
+</div>
+
+<div class="ef-page-content" style="max-width:720px; margin:0 auto">
+    <div class="ef-card">
+        <!-- Ticket header -->
+        <div class="ef-card-header" style="text-align:center; padding:1.5rem; background:#F7F4EE; border-bottom:2px dashed #E8793B">
+            <i class="bi bi-ticket-perforated" style="font-size:2rem; color:#E8793B"></i>
+            <h3 style="font-family:var(--font-display); color:#0B3D2E; margin:.75rem 0 .5rem">Bon de Visite</h3>
+            <span class="ef-badge ef-badge-info" style="font-size:.9rem">{{ bon.reference }}</span>
+        </div>
+
+        <div class="ef-card-body" style="padding:1.5rem">
+            <!-- Info grid -->
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-bottom:1.5rem">
+                <div>
+                    <div class="ef-info-row">
+                        <span class="ef-info-label">Parcelle</span>
+                        <span class="ef-info-value" style="font-weight:700">{{ bon.parcelle.title }}</span>
+                    </div>
+                    <span style="font-size:.8rem; color:#6b7280">Lot {{ bon.parcelle.lot_number }}</span>
+                </div>
+                <div>
+                    <div class="ef-info-row">
+                        <span class="ef-info-label">Visiteur</span>
+                        <span class="ef-info-value" style="font-weight:700">{{ bon.visitor.get_full_name }}</span>
+                    </div>
+                    <span style="font-size:.8rem; color:#6b7280">{{ bon.visitor.phone }}</span>
+                </div>
+                <div>
+                    <div class="ef-info-row">
+                        <span class="ef-info-label">Date prévue</span>
+                        <span class="ef-info-value" style="font-weight:700">
+                            <i class="bi bi-calendar-event" style="color:#E8793B"></i> {{ bon.visit_date|date:"d/m/Y" }}
+                        </span>
+                    </div>
+                </div>
+                <div>
+                    <div class="ef-info-row">
+                        <span class="ef-info-label">Statut</span>
+                        <span class="ef-info-value">
+                            <span class="ef-badge {% if bon.status == 'approved' %}ef-badge-success{% elif bon.status == 'used' %}ef-badge-info{% elif bon.status == 'pending' %}ef-badge-warning{% else %}ef-badge-danger{% endif %}" style="font-size:.85rem">
+                                {{ bon.get_status_display }}
+                            </span>
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            {% if bon.visit_notes %}
+            <div style="background:#F7F4EE; border-radius:.5rem; padding:1rem; margin-bottom:1rem">
+                <p style="font-size:.85rem; font-weight:600; color:#0B3D2E; margin-bottom:.25rem">Notes du visiteur :</p>
+                <p style="font-size:.85rem; color:#6b7280; margin:0">{{ bon.visit_notes }}</p>
+            </div>
+            {% endif %}
+
+            {% if bon.status == 'used' and bon.feedback %}
+            <div style="background:rgba(11,61,46,0.06); border-radius:.5rem; padding:1rem; margin-bottom:1rem">
+                <p style="font-size:.85rem; font-weight:600; color:#0B3D2E; margin-bottom:.25rem">Retour après visite :</p>
+                <p style="font-size:.85rem; margin-bottom:.25rem">{{ bon.feedback }}</p>
+                {% if bon.feedback_rating %}
+                <p style="margin:0">
+                    {% for i in "12345" %}
+                    <i class="bi bi-star{% if forloop.counter <= bon.feedback_rating %}-fill{% endif %}" style="color:{% if forloop.counter <= bon.feedback_rating %}#E8793B{% else %}#d1d5db{% endif %}"></i>
+                    {% endfor %}
+                </p>
+                {% endif %}
+            </div>
+            {% endif %}
+
+            <!-- Feedback form -->
+            {% if bon.visitor == request.user and bon.status != 'used' and bon.status != 'cancelled' %}
+            <div class="ef-card" style="margin-top:1.5rem; border-left:3px solid #0B3D2E">
+                <div class="ef-card-header" style="background:rgba(11,61,46,0.05)">
+                    <h4 style="font-family:var(--font-display); color:#0B3D2E; margin:0; font-size:1rem">
+                        <i class="bi bi-chat-quote" style="color:#E8793B"></i> Donner mon retour
+                    </h4>
+                </div>
+                <div class="ef-card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="ef-form-group">
+                            <label class="ef-form-label">Votre avis sur la visite</label>
+                            <textarea name="feedback" class="ef-form-control" rows="3"
+                                      placeholder="Le terrain correspond-il à la description ? État des accès, voisinage..."></textarea>
+                        </div>
+                        <div class="ef-form-group">
+                            <label class="ef-form-label">Note (1 = décevant, 5 = excellent)</label>
+                            <div style="display:flex; gap:1rem">
+                                {% for i in "12345" %}
+                                <label style="display:flex; align-items:center; gap:.25rem; cursor:pointer; font-size:.875rem">
+                                    <input type="radio" name="rating" value="{{ forloop.counter }}" id="r{{ forloop.counter }}">
+                                    {{ forloop.counter }}
+                                </label>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        <button type="submit" class="ef-btn ef-btn-primary ef-btn-block">
+                            <i class="bi bi-send"></i> Soumettre mon retour
+                        </button>
+                    </form>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Action buttons -->
+            <div style="text-align:center; margin-top:1.5rem; display:flex; justify-content:center; gap:.75rem">
+                <a href="{% url 'parcelles:detail' bon.parcelle.pk %}" class="ef-btn ef-btn-outline-green">
+                    <i class="bi bi-eye"></i> Voir la parcelle
+                </a>
+                <a href="{% url 'websig:map' %}?focus={{ bon.parcelle.pk }}" class="ef-btn ef-btn-primary">
+                    <i class="bi bi-geo-alt-fill"></i> Localiser sur la carte
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
