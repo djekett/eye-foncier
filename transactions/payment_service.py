@@ -136,9 +136,18 @@ def initiate_payment(
             logger.error("CinetPay initiation error: %s", data)
             raise PaymentError(error_msg)
 
+    except requests.Timeout:
+        logger.error("CinetPay timeout after 30s for amount=%s", amount_int)
+        raise PaymentError("Le service de paiement ne repond pas. Veuillez reessayer.")
+    except requests.ConnectionError:
+        logger.error("CinetPay connection failed")
+        raise PaymentError("Impossible de se connecter au service de paiement. Verifiez votre connexion.")
     except requests.RequestException as e:
         logger.error("CinetPay network error: %s", e)
-        raise PaymentError("Erreur réseau. Veuillez réessayer.")
+        raise PaymentError("Erreur reseau. Veuillez reessayer.")
+    except json.JSONDecodeError:
+        logger.error("CinetPay returned invalid JSON response")
+        raise PaymentError("Erreur du service de paiement. Veuillez contacter le support.")
     except PaymentError:
         raise
     except Exception as e:
@@ -219,14 +228,42 @@ def verify_payment(transaction_id):
 
 
 def validate_webhook_signature(request_data, signature_header):
-    """Valide la signature du webhook CinetPay."""
+    """Valide la signature du webhook CinetPay.
+
+    Utilise HMAC-SHA256 pour une validation cryptographiquement sure.
+    Fallback MD5 pour compatibilite avec les anciens webhooks CinetPay.
+    """
+    import hmac
+
     if not CINETPAY_SECRET_KEY:
         return True  # Mode test
 
-    computed = hashlib.md5(
-        (CINETPAY_SECRET_KEY + str(request_data.get("cpm_trans_id", ""))).encode()
+    trans_id = str(request_data.get("cpm_trans_id", ""))
+    payload = (CINETPAY_SECRET_KEY + trans_id).encode()
+
+    # Verification principale : HMAC-SHA256
+    computed_sha256 = hmac.new(
+        CINETPAY_SECRET_KEY.encode(), trans_id.encode(), hashlib.sha256
     ).hexdigest()
-    return computed == signature_header
+    if hmac.compare_digest(computed_sha256, signature_header or ""):
+        return True
+
+    # Fallback SHA-256 simple (sans HMAC)
+    computed_simple = hashlib.sha256(payload).hexdigest()
+    if hmac.compare_digest(computed_simple, signature_header or ""):
+        return True
+
+    # Dernier fallback : MD5 (compatibilite CinetPay legacy — a supprimer)
+    computed_md5 = hashlib.md5(payload).hexdigest()
+    if hmac.compare_digest(computed_md5, signature_header or ""):
+        logger.warning(
+            "Webhook signature validated with MD5 (deprecated) for trans_id=%s. "
+            "CinetPay should migrate to SHA-256.",
+            trans_id,
+        )
+        return True
+
+    return False
 
 
 # ── Tarification ──
@@ -244,6 +281,33 @@ PRICING = {
         "standard": {"label": "Bon de visite", "price": 5000},
     },
 }
+
+def get_validated_price(category, tier):
+    """Retourne le prix serveur pour une categorie et un tier donnes.
+
+    Empeche toute manipulation du montant par le client.
+
+    Args:
+        category: str — 'promotion', 'certification', 'visit'
+        tier: str — 'basic', 'premium', 'standard', 'express', etc.
+
+    Returns:
+        int — prix en FCFA
+
+    Raises:
+        PaymentError — si la categorie ou le tier est invalide
+    """
+    cat = PRICING.get(category)
+    if not cat:
+        raise PaymentError(f"Categorie de paiement invalide : {category}")
+    item = cat.get(tier)
+    if not item:
+        raise PaymentError(f"Option invalide : {tier} pour {category}")
+    price = item.get("price") or item.get("price_week")
+    if not price or price <= 0:
+        raise PaymentError(f"Prix invalide pour {category}/{tier}")
+    return int(price)
+
 
 PAYMENT_METHODS = [
     {"id": "mobile_money_mtn", "name": "MTN Mobile Money", "icon": "bi-phone", "color": "#ffcc00"},

@@ -76,6 +76,7 @@ def reserve_parcelle_view(request, parcelle_pk):
                         amount=parcelle_locked.price,
                         status=Transaction.Status.PENDING,
                         payment_method="escrow" if use_escrow else "",
+                        escrow_amount=parcelle_locked.price if use_escrow else None,
                         notes=form.cleaned_data.get("notes", ""),
                     )
 

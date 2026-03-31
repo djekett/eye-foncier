@@ -50,14 +50,15 @@ def create_achat_cotation(buyer, parcelle):
         raise ValueError("Seuls les acheteurs peuvent payer une cotation d'achat.")
 
     # Verifier qu'il n'y a pas deja une cotation active (avec verrou)
+    # select_for_update() APRES filter() pour verrouiller les bonnes lignes
     existing = (
         Cotation.objects
-        .select_for_update()
         .filter(
             payer=buyer,
             parcelle=parcelle,
             status__in=[Cotation.Status.PAID, Cotation.Status.VALIDATED],
         )
+        .select_for_update()
         .exists()
     )
     if existing:

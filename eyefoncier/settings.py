@@ -199,6 +199,7 @@ JAZZMIN_UI_TWEAKS = {
 }
 
 MIDDLEWARE = [
+    "accounts.middleware.RequestIdMiddleware",  # Tracing — doit etre en premier
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "corsheaders.middleware.CorsMiddleware",
@@ -365,8 +366,11 @@ REST_FRAMEWORK = {
         "rest_framework.throttling.UserRateThrottle",
     ],
     "DEFAULT_THROTTLE_RATES": {
-        "anon": "60/minute",
-        "user": "200/minute",
+        "anon": "30/minute",
+        "user": "120/minute",
+        "login": "5/minute",       # Protection brute force
+        "payment": "10/hour",      # Endpoints de paiement sensibles
+        "upload": "20/hour",       # Uploads de fichiers
     },
 }
 
@@ -491,10 +495,19 @@ TWILIO_VERIFY_SERVICE_SID = os.environ.get("TWILIO_VERIFY_SERVICE_SID", "")
 TWILIO_CONTENT_SIDS = {}
 # URL publique de la plateforme (utilisée dans les liens WhatsApp)
 PLATFORM_URL = os.environ.get("PLATFORM_URL", "https://eye-foncier.com")
+SITE_WHATSAPP_NUMBER = os.environ.get("SITE_WHATSAPP_NUMBER", "")
 
 # ──────────────────────────────────────────────
 # Celery — File d'attente asynchrone
 # ──────────────────────────────────────────────
+# Exiger Redis en production (Celery, cache, notifications en dependent)
+if not DEBUG and not REDIS_URL:
+    raise ValueError(
+        "REDIS_URL est obligatoire en production. "
+        "Les notifications, le cache et les taches asynchrones en dependent. "
+        "Definissez REDIS_URL dans le fichier .env (ex: redis://localhost:6379/0)."
+    )
+
 CELERY_BROKER_URL = os.environ.get("CELERY_BROKER_URL", REDIS_URL or "redis://localhost:6379/1")
 CELERY_RESULT_BACKEND = os.environ.get("CELERY_RESULT_BACKEND", REDIS_URL or "redis://localhost:6379/2")
 CELERY_ACCEPT_CONTENT = ["json"]

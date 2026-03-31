@@ -70,9 +70,22 @@ def send_whatsapp_notification(self, notification_id):
 
         notification = Notification.objects.get(pk=notification_id)
         success = send_whatsapp(notification)
-        if not success and notification.retry_count < 3:
-            raise Exception("WhatsApp non envoyé, retry programmé")
 
+        if not success:
+            # Incrementer le compteur de tentatives AVANT de retenter
+            notification.retry_count += 1
+            if notification.retry_count >= 3:
+                notification.error_message = "Max retries exceeded (3 tentatives)"
+                notification.save(update_fields=["retry_count", "error_message"])
+                logger.warning(
+                    "WhatsApp max retries atteint pour notification %s", notification_id
+                )
+                return  # Abandonner, ne pas retenter
+            notification.save(update_fields=["retry_count"])
+            raise Exception("WhatsApp non envoyé, retry programmé (tentative %d/3)" % notification.retry_count)
+
+    except Notification.DoesNotExist:
+        logger.error("Notification %s introuvable", notification_id)
     except Exception as exc:
         logger.error("Échec envoi WhatsApp pour notification %s : %s", notification_id, exc)
         raise self.retry(exc=exc)

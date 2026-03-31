@@ -4,8 +4,15 @@ Système de notifications multicanal (in-app, email, SMS, WhatsApp, push).
 """
 import uuid
 from django.conf import settings
+from django.core.validators import RegexValidator
 from django.db import models
 from django.utils.translation import gettext_lazy as _
+
+# Validation format E.164 pour les numeros de telephone internationaux
+phone_e164_validator = RegexValidator(
+    regex=r'^\+[1-9]\d{1,14}$',
+    message=_("Format invalide. Utilisez le format international E.164 (ex: +2250712345678)."),
+)
 
 
 class Notification(models.Model):
@@ -120,7 +127,8 @@ class NotificationPreference(models.Model):
     # WhatsApp
     whatsapp_number = models.CharField(
         _("numéro WhatsApp"), max_length=20, blank=True, default="",
-        help_text=_("Numéro au format international (ex: +225XXXXXXXXXX)"),
+        validators=[phone_e164_validator],
+        help_text=_("Numero au format international E.164 (ex: +2250712345678)"),
     )
     whatsapp_consent = models.BooleanField(
         _("consentement WhatsApp"), default=False,

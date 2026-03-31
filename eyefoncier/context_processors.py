@@ -8,6 +8,7 @@ def site_context(request):
         "SITE_NAME": "EYE-FONCIER",
         "SITE_TAGLINE": "Plateforme WebSIG de Transaction Foncière Sécurisée",
         "DEBUG": settings.DEBUG,
+        "SITE_WHATSAPP_NUMBER": getattr(settings, "SITE_WHATSAPP_NUMBER", ""),
     }
 
     # Compteur de notifications non lues (navbar badge)

@@ -4,8 +4,37 @@ from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
+from django.http import JsonResponse
+from django.db import connection
+
+
+def health_check(request):
+    """Endpoint de sante pour Kubernetes/Docker/load balancer."""
+    checks = {"status": "ok"}
+    status_code = 200
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT 1")
+        checks["database"] = "ok"
+    except Exception as e:
+        checks["database"] = str(e)
+        checks["status"] = "degraded"
+        status_code = 503
+    try:
+        from django.core.cache import cache
+        cache.set("_health_check", "1", 5)
+        if cache.get("_health_check") == "1":
+            checks["cache"] = "ok"
+        else:
+            checks["cache"] = "unreachable"
+            checks["status"] = "degraded"
+    except Exception:
+        checks["cache"] = "unavailable"
+    return JsonResponse(checks, status=status_code)
+
 
 urlpatterns = [
+    path("health/", health_check, name="health_check"),
     path("admin/", admin.site.urls),
     path("", include("websig.urls")),
     path("compte/", include("accounts.urls")),

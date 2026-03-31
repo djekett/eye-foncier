@@ -75,6 +75,13 @@ class Ilot(models.Model):
 
     @property
     def parcelle_count(self):
+        """Nombre de parcelles dans l'ilot.
+
+        Utilise l'annotation _parcelle_count si disponible (QuerySet optimise),
+        sinon fallback vers une requete COUNT.
+        """
+        if hasattr(self, "_parcelle_count"):
+            return self._parcelle_count
         return self.parcelles.count()
 
 
